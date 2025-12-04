@@ -1,0 +1,16 @@
+{
+  "name": "examples",
+  "private": true,
+  "scripts": {
+    "start:basic-app": "bun basic-app.ts",
+    "start:full-app": "bun full-app.ts"
+  },
+  "dependencies": {
+    "@dangao/bun-server": "workspace:^",
+    "@dangao/logsmith": "workspace:^",
+    "reflect-metadata": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  }
+}

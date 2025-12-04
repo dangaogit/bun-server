@@ -1,0 +1,56 @@
+---
+alwaysApply: true
+---
+
+# Git Commit Guidelines for Cursor
+
+> 该规范旨在让 Cursor 用户快速编写一致的提交信息。所有提交都必须遵循下列规则。
+
+## 结构
+
+```
+<type>(<scope>): <summary>
+
+<body>
+
+<footer>
+```
+
+- `type`：小写英文，常用值
+  - `feat` 新特性
+  - `fix` 缺陷修复
+  - `refactor` 重构（无功能变化）
+  - `perf` 性能优化
+  - `docs` 文档更新
+  - `chore` 构建/依赖/脚手架等其他变更
+- `scope`：可选，用 `/` 表示多级目录，如 `di/container`、`docs`、`benchmark`
+- `summary`：一句话概述，≤ 72 字符，使用动词原形，首字母小写，无句号
+
+## Body
+
+- 使用英文描述“做了什么 + 为什么”，必要时列出要点
+- 每行 ≤ 80 字符
+- 若涉及 BREAKING CHANGE，在 Body 末尾单独段落说明
+
+示例：
+
+```
+feat(router): add static route cache
+
+- speed up lookup by caching method/path pairs
+- keep dynamic routes fallback for params
+```
+
+## Footer
+
+- 引用 issue / pr：`Refs: #123`、`Fixes: #456`
+- 多条 footer 之间空行
+
+## 其他规则
+
+1. 单个提交聚焦一件事，避免将文档/代码/依赖混在一起
+2. 如果仅更新文档，请使用 `docs: ...`
+3. 自动生成的文件（如 lockfile）可单独 `chore: update lockfile`
+4. 提交前运行 `bun test`（视改动类型适当运行 `bun run bench`）
+
+遵循以上约定有助于在 Cursor 中快速 review 与生成提交信息。

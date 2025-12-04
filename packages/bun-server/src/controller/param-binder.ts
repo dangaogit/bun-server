@@ -1,0 +1,125 @@
+import type { Context } from '../core/context';
+import { getParamMetadata, ParamType, type ParamMetadata } from './decorators';
+
+/**
+ * 参数绑定器
+ * 根据装饰器元数据绑定参数
+ */
+export class ParamBinder {
+  /**
+   * 绑定参数
+   * @param target - 目标对象
+   * @param propertyKey - 属性键
+   * @param context - 请求上下文
+   * @returns 参数数组
+   */
+  public static async bind(
+    target: any,
+    propertyKey: string,
+    context: Context,
+  ): Promise<unknown[]> {
+    const metadata = getParamMetadata(target, propertyKey);
+    const params: unknown[] = [];
+
+    // 按索引排序
+    metadata.sort((a, b) => a.index - b.index);
+
+    // 绑定参数
+    for (const meta of metadata) {
+      const value = await this.getValue(meta, context);
+      params[meta.index] = value;
+    }
+
+    // 确保参数数组是连续的（填充 undefined）
+    // 例如：如果只有 index 1 的参数，params 应该是 [undefined, value]
+    const maxIndex = metadata.length > 0 ? Math.max(...metadata.map((m) => m.index)) : -1;
+    for (let i = 0; i <= maxIndex; i++) {
+      if (!(i in params)) {
+        params[i] = undefined;
+      }
+    }
+
+    return params;
+  }
+
+  /**
+   * 获取参数值
+   * @param meta - 参数元数据
+   * @param context - 请求上下文
+   * @returns 参数值
+   */
+  private static async getValue(meta: ParamMetadata, context: Context): Promise<unknown> {
+    switch (meta.type) {
+      case ParamType.BODY:
+        return await this.getBodyValue(meta.key, context);
+      case ParamType.QUERY:
+        // Query 装饰器要求提供 key
+        if (!meta.key) {
+          throw new Error('@Query() decorator requires a key parameter');
+        }
+        return this.getQueryValue(meta.key, context);
+      case ParamType.PARAM:
+        // Param 装饰器要求提供 key
+        if (!meta.key) {
+          throw new Error('@Param() decorator requires a key parameter');
+        }
+        return this.getParamValue(meta.key, context);
+      case ParamType.HEADER:
+        // Header 装饰器要求提供 key
+        if (!meta.key) {
+          throw new Error('@Header() decorator requires a key parameter');
+        }
+        return this.getHeaderValue(meta.key, context);
+      default:
+        return undefined;
+    }
+  }
+
+  /**
+   * 获取 Body 值
+   * @param key - 键（可选）
+   * @param context - 请求上下文
+   * @returns Body 值
+   */
+  private static async getBodyValue(key: string | undefined, context: Context): Promise<unknown> {
+    const body = await context.getBody();
+    if (!key) {
+      return body;
+    }
+    if (typeof body === 'object' && body !== null) {
+      return (body as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }
+
+  /**
+   * 获取 Query 值
+   * @param key - 键
+   * @param context - 请求上下文
+   * @returns Query 值
+   */
+  private static getQueryValue(key: string, context: Context): string | null {
+    return context.getQuery(key);
+  }
+
+  /**
+   * 获取 Param 值
+   * @param key - 键
+   * @param context - 请求上下文
+   * @returns Param 值
+   */
+  private static getParamValue(key: string, context: Context): string | undefined {
+    return context.getParam(key);
+  }
+
+  /**
+   * 获取 Header 值
+   * @param key - 键
+   * @param context - 请求上下文
+   * @returns Header 值
+   */
+  private static getHeaderValue(key: string, context: Context): string | null {
+    return context.getHeader(key);
+  }
+}
+

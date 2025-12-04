@@ -1,0 +1,608 @@
+---
+description: Bun Server Framework 代码规范和最佳实践
+globs: "*.ts, *.tsx"
+alwaysApply: true
+---
+
+# Bun Server Framework 代码规范
+
+本文档定义了 Bun Server Framework 项目的代码规范和最佳实践，请严格遵循。
+
+## 核心原则
+
+1. **类型优先**: 充分利用 TypeScript 的类型系统，避免使用
+   `any`，优先使用明确的类型定义
+2. **装饰器支持**:
+   装饰器驱动适用于框架使用方，在框架设计上需要考虑装饰器支持，但框架内部实现不强制要求使用装饰器
+3. **性能优先**: 充分利用 Bun 的性能优势，避免不必要的开销
+4. **可扩展性**: 设计灵活的架构，支持插件和扩展
+5. **开发体验**: 提供清晰的错误信息和优秀的开发工具支持
+
+## 代码风格
+
+### 引号和分号
+
+- 使用单引号 (`'`) 而不是双引号
+- 必须使用分号
+
+```ts
+// ✅ 正确
+import { Application } from "bun-server";
+
+const app = new Application();
+
+// ❌ 错误
+import { Application } from "bun-server"; // 使用双引号
+const app = new Application(); // 缺少分号
+```
+
+### 缩进和格式
+
+- 使用 2 个空格缩进
+- 使用 LF 换行符
+- 行尾不留空格
+- 文件末尾保留一个空行
+- 保留行尾空行（空行本身保留）
+
+### 导入顺序
+
+1. 外部依赖（第三方库）
+2. 内部模块（项目内其他模块）
+3. 类型导入（使用 `import type`）
+
+```ts
+// ✅ 正确
+import { expect, test } from "bun:test";
+import type { Request, Response } from "bun";
+
+import { Application } from "../core/application";
+import type { RouteConfig } from "../router/types";
+```
+
+## 命名规范
+
+### 类和接口
+
+- 使用 **PascalCase**
+- 类名应该是名词，接口名可以是名词或形容词
+
+```ts
+// ✅ 正确
+class Application {}
+class RouteRegistry {}
+interface Middleware {}
+interface Injectable {}
+
+// ❌ 错误
+class application {}
+interface IMiddleware {}
+```
+
+### 变量和函数
+
+- 使用 **camelCase**
+- 函数名应该是动词或动词短语
+
+```ts
+// ✅ 正确
+const container = new Container();
+function createRoute() {}
+async function handleRequest() {}
+
+// ❌ 错误
+const Container = new Container();
+function CreateRoute() {}
+```
+
+### 常量和枚举
+
+- 常量使用 **UPPER_SNAKE_CASE**
+- 枚举成员使用 **UPPER_CASE** 或 **snake_case**
+
+```ts
+// ✅ 正确
+const MAX_ROUTES = 1000;
+const DEFAULT_PORT = 3000;
+
+enum HttpMethod {
+  GET = "GET",
+  POST = "POST",
+}
+
+// ❌ 错误
+const maxRoutes = 1000;
+enum HttpMethod {
+  Get = "GET",
+}
+```
+
+### 类成员修饰符
+
+- 所有类成员必须明确指定访问修饰符（`public`、`private`、`protected`）
+- 私有属性/方法使用 `private` 关键字，不需要下划线前缀
+- `public` 成员必须添加 JSDoc 注释
+- `private` 成员不强制要求注释
+
+```ts
+// ✅ 正确
+class Router {
+  /**
+   * 路由列表
+   */
+  public routes: Route[] = [];
+
+  /**
+   * 注册新路由
+   * @param route - 路由配置
+   */
+  public registerRoute(route: Route): void {
+    this.routes.push(route);
+  }
+
+  private findRoute(path: string): Route | undefined {
+    return this.routes.find((r) => r.path === path);
+  }
+}
+
+// ❌ 错误
+class Router {
+  routes: Route[] = []; // 缺少修饰符
+  registerRoute() {} // 缺少修饰符和注释
+  private _routes: Route[] = []; // 使用下划线前缀
+}
+```
+
+## 类型定义
+
+### 避免使用 `any`
+
+- 优先使用明确的类型定义
+- 使用 `unknown` 代替 `any` 当类型未知时
+- 使用泛型提供类型安全
+
+```ts
+// ✅ 正确
+function parseBody<T>(body: string): T {
+  return JSON.parse(body) as T;
+}
+
+// ❌ 错误
+function parseBody(body: string): any {
+  return JSON.parse(body);
+}
+```
+
+### 使用类型别名和接口
+
+- 接口用于对象形状定义
+- 类型别名用于联合类型、交叉类型等复杂类型
+
+```ts
+// ✅ 正确
+interface RouteConfig {
+  path: string;
+  method: HttpMethod;
+}
+
+type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
+
+// ❌ 错误
+type RouteConfig = {
+  path: string;
+  method: HttpMethod;
+};
+```
+
+### 函数返回类型
+
+- 异步函数必须明确返回类型
+- 使用 `Promise<T>` 而不是隐式返回
+
+```ts
+// ✅ 正确
+async function findUser(id: string): Promise<User> {
+  return await userService.find(id);
+}
+
+// ❌ 错误
+async function findUser(id: string) {
+  return await userService.find(id);
+}
+```
+
+## 装饰器使用
+
+### 装饰器命名
+
+- HTTP 方法装饰器使用大写：`@GET()`, `@POST()`, `@PUT()`, `@DELETE()`,
+  `@PATCH()`
+- 其他装饰器使用 PascalCase：`@Controller()`, `@Injectable()`, `@Inject()`
+
+```ts
+// ✅ 正确
+@Controller("/api/users")
+class UserController {
+  @GET("/:id")
+  public async getUser(@Param("id") id: string) {}
+
+  @POST()
+  public async createUser(@Body() user: CreateUserDto) {}
+}
+
+// ❌ 错误
+@controller("/api/users")
+class UserController {
+  @get("/:id")
+  async getUser(@param("id") id: string) {}
+}
+```
+
+### 装饰器参数
+
+- 路径参数使用单引号字符串
+- 参数装饰器参数使用单引号字符串
+
+```ts
+// ✅ 正确
+@Controller('/api/users')
+@GET('/:id')
+@Param('id')
+@Body()
+
+// ❌ 错误
+@Controller("/api/users")  // 使用双引号
+@GET("/:id")
+@Param("id")
+```
+
+### 装饰器顺序
+
+1. 类装饰器（`@Controller()`, `@Injectable()`）
+2. 方法装饰器（`@GET()`, `@POST()`）
+3. 参数装饰器（`@Body()`, `@Query()`, `@Param()`）
+
+```ts
+// ✅ 正确
+@Controller("/api/users")
+class UserController {
+  @GET("/:id")
+  public async getUser(@Param("id") id: string) {}
+}
+
+// ❌ 错误
+class UserController {
+  @GET("/:id")
+  @Controller("/api/users")
+  async getUser(@Param("id") id: string) {}
+}
+```
+
+## 文件组织
+
+### 文件命名
+
+- 使用 **kebab-case** 命名文件
+- 类文件：`application.ts`, `router.ts`
+- 类型文件：`types.ts` 或 `interfaces.ts`
+- 测试文件：`application.test.ts`
+
+```ts
+// ✅ 正确
+src / core / application.ts;
+src / router / route - registry.ts;
+src / di / types.ts;
+
+// ❌ 错误
+src / core / Application.ts;
+src / router / RouteRegistry.ts;
+src / di / Types.ts;
+```
+
+### 导出规范
+
+- 优先使用命名导出
+- 每个文件只导出一个默认导出（如果有）
+- 类型导出使用 `export type`
+
+```ts
+// ✅ 正确
+export class Application {}
+export interface RouteConfig {}
+export type HttpMethod = "GET" | "POST";
+
+// ❌ 错误
+export default class Application {}
+```
+
+### 模块结构
+
+- 每个模块应该有清晰的职责
+- 相关功能组织在同一目录下
+- 使用 `index.ts` 作为模块入口
+
+```
+src/
+├── core/
+│   ├── application.ts
+│   ├── server.ts
+│   └── index.ts          # 导出核心模块
+├── router/
+│   ├── router.ts
+│   ├── route.ts
+│   └── index.ts
+```
+
+## 错误处理
+
+### 异常类
+
+- 继承 `HttpException` 基类
+- 使用明确的错误消息
+- 提供适当的 HTTP 状态码
+
+```ts
+// ✅ 正确
+export class NotFoundException extends HttpException {
+  public constructor(message: string = "Resource not found") {
+    super(404, message);
+  }
+}
+
+// ❌ 错误
+throw new Error("Not found");
+```
+
+### 错误处理
+
+- 使用 `try-catch` 处理异步错误
+- 在控制器中抛出异常，由全局错误处理器处理
+
+```ts
+// ✅ 正确
+@GET('/:id')
+public async getUser(@Param('id') id: string) {
+  const user = await this.userService.find(id);
+  if (!user) {
+    throw new NotFoundException(`User ${id} not found`);
+  }
+  return user;
+}
+
+// ❌ 错误
+@GET('/:id')
+async getUser(@Param('id') id: string) {
+  try {
+    const user = await this.userService.find(id);
+    return user;
+  } catch (error) {
+    return { error: 'Not found' };
+  }
+}
+```
+
+## 依赖注入
+
+### 服务定义
+
+- 使用 `@Injectable()` 装饰器标记可注入类
+- 使用构造函数注入
+
+```ts
+// ✅ 正确
+@Injectable()
+class UserService {
+  /**
+   * 查找用户
+   * @param id - 用户 ID
+   * @returns 用户信息
+   */
+  public async findUser(id: string): Promise<User> {
+    // ...
+  }
+}
+
+@Controller("/api/users")
+class UserController {
+  public constructor(private userService: UserService) {}
+}
+
+// ❌ 错误
+class UserService {
+  // ...
+}
+
+class UserController {
+  private userService = new UserService();
+}
+```
+
+### 生命周期
+
+- 明确指定生命周期（Singleton, Transient, Scoped）
+- 默认使用 Singleton
+
+```ts
+// ✅ 正确
+@Injectable({ scope: "singleton" })
+class ConfigService {}
+
+@Injectable({ scope: "transient" })
+class LoggerService {}
+```
+
+## 测试规范
+
+### 测试文件
+
+- 测试文件使用 `.test.ts` 后缀
+- 测试文件放在 `tests/` 目录或与源文件同级
+
+```ts
+// ✅ 正确
+src / core / application.ts;
+tests / core / application.test.ts;
+
+// 或
+src / core / application.ts;
+src / core / application.test.ts;
+```
+
+### 测试结构
+
+- 使用 `bun:test` 进行测试
+- 使用描述性的测试名称
+- 使用 `describe` 和 `test` 组织测试
+
+```ts
+// ✅ 正确
+import { describe, expect, test } from "bun:test";
+import { Application } from "../core/application";
+
+describe("Application", () => {
+  test("should create application instance", () => {
+    const app = new Application();
+    expect(app).toBeInstanceOf(Application);
+  });
+
+  test("should register controller", async () => {
+    const app = new Application();
+    // ...
+  });
+});
+```
+
+## 注释规范
+
+### 文档注释
+
+- 使用 JSDoc 格式注释公共 API
+- 说明参数、返回值和异常
+
+```ts
+// ✅ 正确
+/**
+ * 创建新的路由
+ * @param path - 路由路径
+ * @param method - HTTP 方法
+ * @param handler - 请求处理函数
+ * @returns 路由实例
+ * @throws {InvalidRouteException} 当路由路径无效时
+ */
+function createRoute(
+  path: string,
+  method: HttpMethod,
+  handler: RouteHandler,
+): Route {
+  // ...
+}
+```
+
+### 代码注释
+
+- 解释"为什么"而不是"是什么"
+- 避免显而易见的注释
+
+```ts
+// ✅ 正确
+// 使用快速路径匹配算法以提高性能
+const route = this.findRoute(path);
+
+// ❌ 错误
+// 查找路由
+const route = this.findRoute(path);
+```
+
+## 性能优化
+
+### 避免不必要的操作
+
+- 缓存重复计算的结果
+- 使用 `Map` 而不是对象进行快速查找
+- 避免在循环中创建对象
+
+```ts
+// ✅ 正确
+const routeMap = new Map<string, Route>();
+for (const route of routes) {
+  routeMap.set(route.path, route);
+}
+
+// ❌ 错误
+const routeMap: Record<string, Route> = {};
+for (const route of routes) {
+  routeMap[route.path] = route;
+}
+```
+
+### 异步处理
+
+- 使用 `Promise.all()` 并行处理独立的异步操作
+- 避免不必要的 `await`
+
+```ts
+// ✅ 正确
+const [user, profile] = await Promise.all([
+  userService.find(id),
+  profileService.find(id),
+]);
+
+// ❌ 错误
+const user = await userService.find(id);
+const profile = await profileService.find(id);
+```
+
+## Bun 特定规范
+
+### 使用 Bun API
+
+- 优先使用 Bun 原生 API
+- 使用 `Bun.serve()` 而不是其他 HTTP 服务器
+- 使用 `Bun.file()` 处理文件
+
+```ts
+// ✅ 正确
+import { serve } from "bun";
+
+const server = serve({
+  port: 3000,
+  fetch: handleRequest,
+});
+
+// ❌ 错误
+import express from "express";
+const app = express();
+```
+
+### 测试
+
+- 使用 `bun test` 运行测试
+- 使用 `bun:test` 导入测试工具
+
+```ts
+// ✅ 正确
+import { expect, test } from "bun:test";
+
+// ❌ 错误
+import { expect, test } from "vitest";
+```
+
+## 代码审查清单
+
+在提交代码前，确保：
+
+- [ ] 所有类型都有明确定义，没有使用 `any`
+- [ ] 所有 `public` 成员都有文档注释
+- [ ] 所有类成员都有明确的访问修饰符
+- [ ] 所有测试都通过
+- [ ] 代码遵循命名规范
+- [ ] 使用单引号而不是双引号
+- [ ] 所有语句都以分号结尾
+- [ ] 错误处理适当
+- [ ] 没有未使用的导入
+- [ ] 代码格式符合规范
+
+## 参考资源
+
+- [Bun 官方文档](https://bun.sh/docs)
+- [TypeScript 官方文档](https://www.typescriptlang.org/docs/)
+- [项目 README](./readme.md)

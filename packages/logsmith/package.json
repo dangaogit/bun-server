@@ -1,0 +1,28 @@
+{
+  "name": "@dangao/logsmith",
+  "description": "A simple logger implementation.",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "author": "dangaogit",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dangaogit/bun-server-project.git"
+  },
+  "keywords": [
+    "logger",
+    "bun"
+  ],
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  }
+}

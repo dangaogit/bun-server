@@ -1,0 +1,16 @@
+{
+  "name": "benchmark",
+  "private": true,
+  "scripts": {
+    "bench:router": "bun router.bench.ts",
+    "bench:di": "bun di.bench.ts"
+  },
+  "dependencies": {
+    "@dangao/bun-server": "workspace:^",
+    "@dangao/logsmith": "workspace:^",
+    "reflect-metadata": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  }
+}
