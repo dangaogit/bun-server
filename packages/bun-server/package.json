@@ -1,6 +1,6 @@
 {
   "name": "@dangao/bun-server",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -25,8 +25,8 @@
   ],
   "files": [
     "dist",
-    "../../readme.md",
-    "../../LICENSE"
+    "readme.md",
+    "LICENSE"
   ],
   "author": "dangaogit",
   "license": "MIT",
@@ -45,7 +45,8 @@
     "bundle": "bun build src/index.ts --target=bun --format=esm --outfile=dist/index.js --external reflect-metadata --external @dangao/logsmith",
     "dts": "tsc -p tsconfig.build.json",
     "build": "bun run clean && bun run bundle && bun run dts",
-    "prepare": "bun run build"
+    "prepare": "bun run build",
+    "publish": "cp ../../readme.md ../../LICENSE . && bun publish --access public && rm -f ./readme.md ./LICENSE"
   },
   "devDependencies": {
     "typescript": "catalog:",
