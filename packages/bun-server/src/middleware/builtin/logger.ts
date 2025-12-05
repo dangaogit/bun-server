@@ -1,5 +1,5 @@
-import type { Middleware } from '../middleware';
-import { LoggerManager } from '@dangao/logsmith';
+import type { Middleware } from "../middleware";
+import { LoggerManager } from "logsmith";
 
 export interface LoggerMiddlewareOptions {
   /**
@@ -16,9 +16,10 @@ export interface LoggerMiddlewareOptions {
 /**
  * 简单日志中间件：记录请求方法与路径
  */
-export function createLoggerMiddleware(options: LoggerMiddlewareOptions = {}): Middleware {
-  const log =
-    options.logger ??
+export function createLoggerMiddleware(
+  options: LoggerMiddlewareOptions = {},
+): Middleware {
+  const log = options.logger ??
     ((message: string, details?: Record<string, unknown>) => {
       const logger = LoggerManager.getLogger();
       if (details) {
@@ -27,7 +28,7 @@ export function createLoggerMiddleware(options: LoggerMiddlewareOptions = {}): M
         logger.info(message);
       }
     });
-  const prefix = options.prefix ?? '[Logger]';
+  const prefix = options.prefix ?? "[Logger]";
 
   return async (context, next) => {
     let response: Response | undefined;
@@ -54,13 +55,12 @@ export interface RequestLoggingOptions extends LoggerMiddlewareOptions {
 export function createRequestLoggingMiddleware(
   options: RequestLoggingOptions = {},
 ): Middleware {
-  const log =
-    options.logger ??
+  const log = options.logger ??
     ((message: string, details?: Record<string, unknown>) => {
       const logger = LoggerManager.getLogger();
       logger.info(message, details);
     });
-  const prefix = options.prefix ?? '[Request]';
+  const prefix = options.prefix ?? "[Request]";
   const setHeader = options.setHeader ?? true;
 
   return async (context, next) => {
@@ -68,20 +68,24 @@ export function createRequestLoggingMiddleware(
     try {
       const response = await next();
       const duration = performance.now() - start;
-      log(`${prefix} ${context.method} ${context.path} ${response.status} ${duration.toFixed(2)}ms`);
+      log(
+        `${prefix} ${context.method} ${context.path} ${response.status} ${
+          duration.toFixed(2)
+        }ms`,
+      );
       if (setHeader) {
-        context.setHeader('x-request-duration', duration.toFixed(2));
+        context.setHeader("x-request-duration", duration.toFixed(2));
       }
       return response;
     } catch (error) {
       const duration = performance.now() - start;
       log(
-        `${prefix} ${context.method} ${context.path} error ${duration.toFixed(2)}ms`,
+        `${prefix} ${context.method} ${context.path} error ${
+          duration.toFixed(2)
+        }ms`,
         error instanceof Error ? { error: error.message } : undefined,
       );
       throw error;
     }
   };
 }
-
-

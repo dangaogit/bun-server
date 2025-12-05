@@ -6,8 +6,8 @@
     "start:full-app": "bun full-app.ts"
   },
   "dependencies": {
-    "@dangao/bun-server": "workspace:^",
-    "@dangao/logsmith": "workspace:^",
+    "bun-server": "workspace:^",
+    "logsmith": "workspace:^",
     "reflect-metadata": "catalog:"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
-import { PerformanceHarness, StressTester } from '@dangao/bun-server';
-import { Router } from '@dangao/bun-server';
-import { Context } from '@dangao/bun-server';
+import { PerformanceHarness, StressTester } from 'bun-server';
+import { Router } from 'bun-server';
+import { Context } from 'bun-server';
 
 interface BenchmarkSummary {
   name: string;

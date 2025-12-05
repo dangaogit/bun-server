@@ -1,8 +1,8 @@
-import type { Middleware } from '../middleware';
-import { ValidationError } from '../../validation';
-import { LoggerManager } from '@dangao/logsmith';
-import { HttpException } from '../../error';
-import { handleError } from '../../error/handler';
+import type { Middleware } from "../middleware";
+import { ValidationError } from "../../validation";
+import { LoggerManager } from "logsmith";
+import { HttpException } from "../../error";
+import { handleError } from "../../error/handler";
 
 export interface ErrorHandlerOptions {
   /**
@@ -27,10 +27,9 @@ export interface ErrorHandlerOptions {
 export function createErrorHandlingMiddleware(
   options: ErrorHandlerOptions = {},
 ): Middleware {
-  const log =
-    options.logger ??
+  const log = options.logger ??
     ((error: unknown, context: { method: string; path: string }) => {
-      LoggerManager.getLogger().error('[Error]', { ...context, error });
+      LoggerManager.getLogger().error("[Error]", { ...context, error });
     });
   const expose = options.exposeError ?? false;
   const defaultStatus = options.statusCode ?? 500;
@@ -42,7 +41,11 @@ export function createErrorHandlingMiddleware(
       return await next();
     } catch (error) {
       log(error, { method: context.method, path: context.path });
-      logger.error('Unhandled error', { method: context.method, path: context.path, error });
+      logger.error("Unhandled error", {
+        method: context.method,
+        path: context.path,
+        error,
+      });
 
       if (error instanceof Response) {
         return error as Response;
@@ -92,5 +95,3 @@ export function createErrorHandlingMiddleware(
     }
   };
 }
-
-

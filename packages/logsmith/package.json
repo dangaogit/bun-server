@@ -1,5 +1,5 @@
 {
-  "name": "@dangao/logsmith",
+  "name": "logsmith",
   "description": "A simple logger implementation.",
   "version": "0.1.0",
   "type": "module",

@@ -1,8 +1,8 @@
-import type { Server } from 'bun';
-import { Context } from './context';
-import { LoggerManager } from '@dangao/logsmith';
-import type { WebSocketGatewayRegistry } from '../websocket/registry';
-import type { WebSocketConnectionData } from '../websocket/registry';
+import type { Server } from "bun";
+import { Context } from "./context";
+import { LoggerManager } from "logsmith";
+import type { WebSocketGatewayRegistry } from "../websocket/registry";
+import type { WebSocketConnectionData } from "../websocket/registry";
 
 /**
  * 服务器配置选项
@@ -46,7 +46,7 @@ export class BunServer {
    */
   public start(): void {
     if (this.server) {
-      throw new Error('Server is already running');
+      throw new Error("Server is already running");
     }
 
     const logger = LoggerManager.getLogger();
@@ -54,16 +54,19 @@ export class BunServer {
     this.server = Bun.serve({
       port: this.options.port ?? 3000,
       hostname: this.options.hostname,
-      fetch: (request: Request, server: Server<WebSocketConnectionData>): Response | Promise<Response> | undefined => {
-        const upgradeHeader = request.headers.get('upgrade');
+      fetch: (
+        request: Request,
+        server: Server<WebSocketConnectionData>,
+      ): Response | Promise<Response> | undefined => {
+        const upgradeHeader = request.headers.get("upgrade");
         if (
           this.options.websocketRegistry &&
           upgradeHeader &&
-          upgradeHeader.toLowerCase() === 'websocket'
+          upgradeHeader.toLowerCase() === "websocket"
         ) {
           const url = new URL(request.url);
           if (!this.options.websocketRegistry.hasGateway(url.pathname)) {
-            return new Response('WebSocket gateway not found', { status: 404 });
+            return new Response("WebSocket gateway not found", { status: 404 });
           }
           const upgraded = server.upgrade(request, {
             data: { path: url.pathname },
@@ -71,7 +74,7 @@ export class BunServer {
           if (upgraded) {
             return undefined;
           }
-          return new Response('WebSocket upgrade failed', { status: 400 });
+          return new Response("WebSocket upgrade failed", { status: 400 });
         }
 
         const context = new Context(request);
@@ -90,7 +93,7 @@ export class BunServer {
       },
     });
 
-    const hostname = this.options.hostname ?? 'localhost';
+    const hostname = this.options.hostname ?? "localhost";
     const port = this.options.port ?? 3000;
     logger.info(`Server started at http://${hostname}:${port}`);
   }
@@ -103,7 +106,7 @@ export class BunServer {
       const logger = LoggerManager.getLogger();
       this.server.stop();
       this.server = undefined;
-      logger.info('Server stopped');
+      logger.info("Server stopped");
     }
   }
 
@@ -123,4 +126,3 @@ export class BunServer {
     return this.server !== undefined;
   }
 }
-

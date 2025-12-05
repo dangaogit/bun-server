@@ -1,9 +1,9 @@
 /**
  * 基础路由使用示例
  */
-import { Application } from '@dangao/bun-server';
-import { RouteRegistry } from '@dangao/bun-server';
-import type { Context } from '@dangao/bun-server';
+import { Application } from 'bun-server';
+import { RouteRegistry } from 'bun-server';
+import type { Context } from 'bun-server';
 
 // 获取路由注册表
 const registry = RouteRegistry.getInstance();

@@ -1,8 +1,16 @@
-import 'reflect-metadata';
-import { Lifecycle, type DependencyMetadata, type ProviderConfig } from './types';
-import { getDependencyMetadata, getLifecycle, getTypeReference } from './decorators';
-import { LoggerManager } from '@dangao/logsmith';
-import type { Constructor } from '@/core/types'
+import "reflect-metadata";
+import {
+  type DependencyMetadata,
+  Lifecycle,
+  type ProviderConfig,
+} from "./types";
+import {
+  getDependencyMetadata,
+  getLifecycle,
+  getTypeReference,
+} from "./decorators";
+import { LoggerManager } from "logsmith";
+import type { Constructor } from "@/core/types";
 
 /**
  * 依赖注入容器
@@ -31,12 +39,18 @@ export class Container {
   /**
    * 类型到 token 的映射（用于接口注入）
    */
-  private readonly typeToToken = new Map<Constructor<unknown>, string | symbol>();
+  private readonly typeToToken = new Map<
+    Constructor<unknown>,
+    string | symbol
+  >();
 
   /**
    * 依赖计划缓存，避免重复解析反射元数据
    */
-  private readonly dependencyPlans = new Map<Constructor<unknown>, DependencyPlan>();
+  private readonly dependencyPlans = new Map<
+    Constructor<unknown>,
+    DependencyPlan
+  >();
 
   /**
    * 注册提供者
@@ -48,10 +62,10 @@ export class Container {
     config?: ProviderConfig,
   ): void {
     const tokenKey = this.getTokenKey(token);
-    
+
     // 如果配置中没有指定生命周期，尝试从装饰器元数据获取
     let lifecycle = config?.lifecycle;
-    if (!lifecycle && typeof token === 'function') {
+    if (!lifecycle && typeof token === "function") {
       lifecycle = getLifecycle(token);
     }
 
@@ -60,14 +74,17 @@ export class Container {
       ...config,
     };
 
-    if (typeof token === 'function' && !providerConfig.factory && !providerConfig.implementation) {
+    if (
+      typeof token === "function" && !providerConfig.factory &&
+      !providerConfig.implementation
+    ) {
       providerConfig.implementation = token;
     }
 
     this.providers.set(tokenKey, providerConfig);
 
     // 如果是类构造函数，建立类型到 token 的映射
-    if (typeof token === 'function') {
+    if (typeof token === "function") {
       this.typeToToken.set(token, tokenKey);
     }
   }
@@ -77,7 +94,10 @@ export class Container {
    * @param token - 提供者标识符
    * @param instance - 实例对象
    */
-  public registerInstance<T>(token: Constructor<T> | string | symbol, instance: T): void {
+  public registerInstance<T>(
+    token: Constructor<T> | string | symbol,
+    instance: T,
+  ): void {
     const tokenKey = this.getTokenKey(token);
     this.singletons.set(tokenKey, instance);
     this.providers.set(tokenKey, {
@@ -100,9 +120,12 @@ export class Container {
       }
       // 如果没有注册，尝试直接实例化（用于未注册的类）
       // 但只有在是构造函数时才允许
-      if (typeof token === 'function') {
+      if (typeof token === "function") {
         // 检查是否有参数，如果有参数则需要注册
-        const paramTypes = Reflect.getMetadata('design:paramtypes', token) as unknown[];
+        const paramTypes = Reflect.getMetadata(
+          "design:paramtypes",
+          token,
+        ) as unknown[];
         if (paramTypes && paramTypes.length > 0) {
           // 有依赖，必须先注册
           throw new Error(`Provider not found for token: ${String(tokenKey)}`);
@@ -125,12 +148,18 @@ export class Container {
     let instance: T;
     if (provider.factory) {
       instance = provider.factory() as T;
-    } else if (typeof token === 'function') {
+    } else if (typeof token === "function") {
       instance = this.instantiate(token as Constructor<T>);
-    } else if (provider.implementation && typeof provider.implementation === 'function') {
+    } else if (
+      provider.implementation && typeof provider.implementation === "function"
+    ) {
       instance = this.instantiate(provider.implementation as Constructor<T>);
     } else {
-      throw new Error(`Cannot instantiate token: ${String(tokenKey)}. Factory function required.`);
+      throw new Error(
+        `Cannot instantiate token: ${
+          String(tokenKey)
+        }. Factory function required.`,
+      );
     }
 
     // 缓存单例
@@ -153,15 +182,20 @@ export class Container {
     const tokenType = typeof token;
     const tokenString = String(token);
     const logger = LoggerManager.getLogger();
-    
+
     // 调试：记录 token 信息
-    if (tokenString.includes('Level2') || tokenString.includes('Dependency') || tokenString.includes('Service')) {
-      logger.debug(`[DI Debug] resolveInternal: token=${tokenString}, tokenType=${tokenType}`);
+    if (
+      tokenString.includes("Level2") || tokenString.includes("Dependency") ||
+      tokenString.includes("Service")
+    ) {
+      logger.debug(
+        `[DI Debug] resolveInternal: token=${tokenString}, tokenType=${tokenType}`,
+      );
     }
-    
+
     // 检查是否是 string 或 symbol
     // 注意：必须先检查 string/symbol，因为函数也是对象
-    if (typeof token === 'string' || typeof token === 'symbol') {
+    if (typeof token === "string" || typeof token === "symbol") {
       // 对于 string | symbol token，直接查找提供者
       const provider = this.providers.get(token);
       if (!provider) {
@@ -188,7 +222,9 @@ export class Container {
         return instance;
       }
 
-      if (provider.implementation && typeof provider.implementation === 'function') {
+      if (
+        provider.implementation && typeof provider.implementation === "function"
+      ) {
         const instance = this.instantiate(provider.implementation);
         if (provider.lifecycle === Lifecycle.Singleton) {
           this.singletons.set(token, instance);
@@ -196,16 +232,22 @@ export class Container {
         return instance;
       }
 
-      throw new Error(`Cannot instantiate token: ${String(token)}. Factory function required.`);
+      throw new Error(
+        `Cannot instantiate token: ${
+          String(token)
+        }. Factory function required.`,
+      );
     }
 
     // 对于构造函数类型，使用公共 resolve 方法
     // 确保 token 是函数类型
-    if (typeof token === 'function') {
+    if (typeof token === "function") {
       return this.resolve(token as new (...args: unknown[]) => unknown);
     }
 
-    throw new Error(`Invalid token type: ${tokenType}. Token: ${String(token)}`);
+    throw new Error(
+      `Invalid token type: ${tokenType}. Token: ${String(token)}`,
+    );
   }
 
   /**
@@ -233,8 +275,10 @@ export class Container {
    * @param token - 提供者标识符
    * @returns token 键
    */
-  private getTokenKey(token: (new (...args: unknown[]) => unknown) | string | symbol): string | symbol {
-    if (typeof token === 'function') {
+  private getTokenKey(
+    token: (new (...args: unknown[]) => unknown) | string | symbol,
+  ): string | symbol {
+    if (typeof token === "function") {
       return token.name || Symbol(token.toString());
     }
     return token;
@@ -267,13 +311,16 @@ export class Container {
     }
 
     const paramTypes =
-      (Reflect.getMetadata('design:paramtypes', constructor) as (Constructor<unknown> | undefined)[]) ?? [];
+      (Reflect.getMetadata(
+        "design:paramtypes",
+        constructor,
+      ) as (Constructor<unknown> | undefined)[]) ?? [];
     const dependencyMetadata = getDependencyMetadata(constructor);
     const metadataMap = new Map<number, DependencyMetadata>();
     let paramLength = paramTypes.length;
 
     for (const meta of dependencyMetadata) {
-      if (meta && typeof meta.index === 'number') {
+      if (meta && typeof meta.index === "number") {
         metadataMap.set(meta.index, meta);
         if (meta.index + 1 > paramLength) {
           paramLength = meta.index + 1;
@@ -285,18 +332,18 @@ export class Container {
 
     for (let i = 0; i < paramLength; i++) {
       const typeRef = getTypeReference(constructor, i);
-      if (typeRef && typeof typeRef === 'function') {
+      if (typeRef && typeof typeRef === "function") {
         resolvedTypes.set(i, typeRef as Constructor<unknown>);
       }
     }
 
     for (const [index, meta] of metadataMap.entries()) {
       const depType = meta?.type;
-      if (typeof depType === 'function') {
+      if (typeof depType === "function") {
         resolvedTypes.set(index, depType as Constructor<unknown>);
-      } else if (typeof depType === 'string') {
+      } else if (typeof depType === "string") {
         const globalType = (globalThis as Record<string, unknown>)[depType];
-        if (typeof globalType === 'function') {
+        if (typeof globalType === "function") {
           resolvedTypes.set(index, globalType as Constructor<unknown>);
         }
       }
@@ -338,7 +385,7 @@ export class Container {
 
     throw new Error(
       `Cannot resolve dependency at index ${index} of ${constructor.name}. ` +
-        'Parameter type is undefined. Use @Inject() decorator to specify the dependency type.',
+        "Parameter type is undefined. Use @Inject() decorator to specify the dependency type.",
     );
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@dangao/bun-server",
+  "name": "bun-server",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -40,7 +40,7 @@
     "test": "bun test",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "bundle": "bun build src/index.ts --target=bun --format=esm --outfile=dist/index.js --external reflect-metadata --external @dangao/logsmith",
+    "bundle": "bun build src/index.ts --target=bun --format=esm --outfile=dist/index.js --external reflect-metadata --external logsmith",
     "dts": "tsc -p tsconfig.build.json",
     "build": "bun run clean && bun run bundle && bun run dts",
     "prepare": "bun run build"
@@ -51,6 +51,6 @@
   },
   "dependencies": {
     "reflect-metadata": "catalog:",
-    "@dangao/logsmith": "workspace:*"
+    "logsmith": "workspace:*"
   }
 }

@@ -1,13 +1,13 @@
-import type { Container } from '../di/container';
-import type { ApplicationExtension } from './types';
+import type { Container } from "../di/container";
+import type { ApplicationExtension } from "./types";
 import {
   LoggerManager,
+  type LoggerOptions,
   LogLevel,
   SimpleLogger,
-  type LoggerOptions,
-} from '@dangao/logsmith';
+} from "logsmith";
 
-export const LOGGER_TOKEN = Symbol('bun-server:logger');
+export const LOGGER_TOKEN = Symbol("bun-server:logger");
 
 /**
  * Bun Server Logger Provider
@@ -29,4 +29,3 @@ export class LoggerExtension implements ApplicationExtension {
     container.registerInstance(LOGGER_TOKEN, logger);
   }
 }
-

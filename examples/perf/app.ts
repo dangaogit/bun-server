@@ -7,7 +7,7 @@ import {
   createLoggerMiddleware,
   LoggerExtension,
   LogLevel,
-} from '@dangao/bun-server';
+} from 'bun-server';
 
 @Controller('/api')
 class PerfController {

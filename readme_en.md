@@ -21,19 +21,27 @@
 
 ## Why Bun Server
 
-- **Native Bun**: built on top of `Bun.serve`, embracing native TS, fast I/O and the Bun package manager.
-- **Modern DX**: decorators, metadata and DI everywhere — controllers, services, middleware, validation.
-- **Lightweight yet extensible**: modular DI + extension layer + logging provider that scales from MVP to enterprise.
-- **Well-tested**: unit, integration, stress and benchmark suites ship with the repo.
+- **Native Bun**: built on top of `Bun.serve`, embracing native TS, fast I/O and
+  the Bun package manager.
+- **Modern DX**: decorators, metadata and DI everywhere — controllers, services,
+  middleware, validation.
+- **Lightweight yet extensible**: modular DI + extension layer + logging
+  provider that scales from MVP to enterprise.
+- **Well-tested**: unit, integration, stress and benchmark suites ship with the
+  repo.
 
 ## Features
 
-- 🚀 **Fast HTTP stack** powered by Bun with `Application`, `Router`, `Context` and `ResponseBuilder` helpers.
-- 🧩 **Dependency injection container** with `@Injectable`, `@Inject`, module metadata, lifecycle management and cached dependency plans.
-- 🧵 **Middleware pipeline** with global/class/method scopes plus built-ins (logging, error, CORS, upload, static, ...).
+- 🚀 **Fast HTTP stack** powered by Bun with `Application`, `Router`, `Context`
+  and `ResponseBuilder` helpers.
+- 🧩 **Dependency injection container** with `@Injectable`, `@Inject`, module
+  metadata, lifecycle management and cached dependency plans.
+- 🧵 **Middleware pipeline** with global/class/method scopes plus built-ins
+  (logging, error, CORS, upload, static, ...).
 - ✅ **Input validation** via decorators and `ValidationError` integration.
 - 📡 **WebSocket gateways** with `@WebSocketGateway`, `@OnMessage`, etc.
-- 📚 **Docs & samples** including multi-language docs, benchmark scripts and best practices.
+- 📚 **Docs & samples** including multi-language docs, benchmark scripts and
+  best practices.
 
 ## Architecture
 
@@ -50,30 +58,33 @@ Application (Controllers / Modules / DI)
 ## Getting Started
 
 ### Requirements
+
 - Bun ≥ `1.3.3`
 
 ### Install
+
 ```bash
 bun install
 ```
 
 ### Hello World
+
 ```ts
-import 'reflect-metadata';
-import { Application, Controller, GET, Injectable } from '@dangao/bun-server';
+import "reflect-metadata";
+import { Application, Controller, GET, Injectable } from "bun-server";
 
 @Injectable()
 class HealthService {
   public ping() {
-    return { status: 'ok' };
+    return { status: "ok" };
   }
 }
 
-@Controller('/api')
+@Controller("/api")
 class HealthController {
   public constructor(private readonly service: HealthService) {}
 
-  @GET('/health')
+  @GET("/health")
   public check() {
     return this.service.ping();
   }
@@ -101,28 +112,34 @@ bun --cwd=packages/bun-server run bench:di
 
 - `examples/basic-app.ts`: minimal DI + Logger + Middleware showcase.
 - `examples/full-app.ts`: advanced controllers, validation, uploads, WebSocket.
-- `packages/bun-server/src/extensions/`: official extensions (e.g. `LoggerExtension`) for plugging in external capabilities.
+- `packages/bun-server/src/extensions/`: official extensions (e.g.
+  `LoggerExtension`) for plugging in external capabilities.
 
 ## Benchmark Suite
 
-Benchmarks live in `benchmark/` and rely on `PerformanceHarness` & `StressTester`.
+Benchmarks live in `benchmark/` and rely on `PerformanceHarness` &
+`StressTester`.
 
-| Script | Description |
-| ------ | ----------- |
-| `router.bench.ts` | static/dynamic route hits, `router.handle` and stress runs |
-| `di.bench.ts` | singleton vs factory resolves, nested dependencies, concurrent stress |
+| Script            | Description                                                           |
+| ----------------- | --------------------------------------------------------------------- |
+| `router.bench.ts` | static/dynamic route hits, `router.handle` and stress runs            |
+| `di.bench.ts`     | singleton vs factory resolves, nested dependencies, concurrent stress |
 
 Run directly:
+
 ```bash
 bun benchmark/router.bench.ts
 bun benchmark/di.bench.ts
 ```
+
 Or use `bun run bench*` scripts for convenience.
 
 ## Docs & Localization
 
-- **Chinese** (default): `docs/api.md`, `docs/guide.md`, `docs/best-practices.md`, `docs/migration.md`.
-- **English drafts**: mirrored under `docs/en/`. If something is missing, please fall back to the Chinese source.
+- **Chinese** (default): `docs/api.md`, `docs/guide.md`,
+  `docs/best-practices.md`, `docs/migration.md`.
+- **English drafts**: mirrored under `docs/en/`. If something is missing, please
+  fall back to the Chinese source.
 
 ## Roadmap
 
@@ -130,7 +147,8 @@ Detailed milestones and history are tracked in [`.roadmap.md`](./.roadmap.md).
 
 ## Engineering Guidelines
 
-- Comments & log messages **must be in English** to keep the codebase international-friendly.
+- Comments & log messages **must be in English** to keep the codebase
+  international-friendly.
 - Documentation defaults to Chinese; English copies live in `docs/en/`.
 - Benchmarks belong to `benchmark/` and should run inside Bun environments.
 

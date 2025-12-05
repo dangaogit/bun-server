@@ -84,7 +84,7 @@ bun install
 
 ```ts
 import "reflect-metadata";
-import { Application, Controller, GET, Injectable } from "@dangao/bun-server";
+import { Application, Controller, GET, Injectable } from "bun-server";
 
 @Injectable()
 class HealthService {

@@ -1,27 +1,29 @@
-import 'reflect-metadata';
 
 import {
   Application,
   Body,
   Controller,
-  GET,
-  POST,
-  Param,
-  Injectable,
-  Inject,
-  Validate,
-  IsString,
   createLoggerMiddleware,
+  GET,
+  Inject,
+  Injectable,
+  IsString,
+  LOGGER_TOKEN,
   LoggerExtension,
   LogLevel,
-  LOGGER_TOKEN,
   Module,
-} from '@dangao/bun-server';
-import type { Logger } from '@dangao/logsmith';
+  Param,
+  POST,
+  Validate,
+} from "bun-server";
+import type { Logger } from "logsmith";
 
 @Injectable()
 class UserService {
-  private readonly users = new Map<string, { id: string; name: string }>([['1', { id: '1', name: 'Alice' }]]);
+  private readonly users = new Map<string, { id: string; name: string }>([[
+    "1",
+    { id: "1", name: "Alice" },
+  ]]);
 
   public find(id: string) {
     return this.users.get(id);
@@ -35,26 +37,26 @@ class UserService {
   }
 }
 
-@Controller('/api/users')
+@Controller("/api/users")
 class UserController {
   public constructor(
     @Inject(UserService) private readonly service: UserService,
     @Inject(LOGGER_TOKEN) private readonly logger: Logger,
   ) {}
 
-  @GET('/:id')
-  public getUser(@Param('id') id: string) {
-    this.logger.info('Fetch user', { id });
+  @GET("/:id")
+  public getUser(@Param("id") id: string) {
+    this.logger.info("Fetch user", { id });
     const user = this.service.find(id);
     if (!user) {
-      return { error: 'Not Found' };
+      return { error: "Not Found" };
     }
     return user;
   }
 
-  @POST('/')
-  public createUser(@Body('name') @Validate(IsString()) name: string) {
-    this.logger.info('Create user', { name });
+  @POST("/")
+  public createUser(@Body("name") @Validate(IsString()) name: string) {
+    this.logger.info("Create user", { name });
     return this.service.create(name);
   }
 }
@@ -70,11 +72,10 @@ const port = Number(process.env.PORT ?? 3100);
 const app = new Application({ port });
 app.registerExtension(
   new LoggerExtension({
-    prefix: 'BasicExample',
+    prefix: "BasicExample",
     level: LogLevel.DEBUG,
   }),
 );
-app.use(createLoggerMiddleware({ prefix: '[BasicExample]' }));
+app.use(createLoggerMiddleware({ prefix: "[BasicExample]" }));
 app.registerModule(UserModule);
 app.listen(port);
-
