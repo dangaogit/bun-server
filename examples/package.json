@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "start:basic-app": "bun basic-app.ts",
-    "start:full-app": "bun full-app.ts"
+    "start:full-app": "bun full-app.ts",
+    "start:multi-module": "bun multi-module-app.ts"
   },
   "dependencies": {
     "bun-server": "workspace:^",
