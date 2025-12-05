@@ -1,5 +1,5 @@
 import type { Middleware } from "../middleware";
-import { LoggerManager } from "logsmith";
+import { LoggerManager } from "@dangao/logsmith";
 
 export interface LoggerMiddlewareOptions {
   /**

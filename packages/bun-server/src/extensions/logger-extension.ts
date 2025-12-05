@@ -5,9 +5,9 @@ import {
   type LoggerOptions,
   LogLevel,
   SimpleLogger,
-} from "logsmith";
+} from "@dangao/logsmith";
 
-export const LOGGER_TOKEN = Symbol("bun-server:logger");
+export const LOGGER_TOKEN = Symbol("@dangao/bun-server:logger");
 
 /**
  * Bun Server Logger Provider

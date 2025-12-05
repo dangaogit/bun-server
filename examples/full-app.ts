@@ -23,12 +23,12 @@ import {
   UseMiddleware,
   Validate,
   WebSocketGateway,
-} from "bun-server";
-import type { Logger } from "logsmith";
-import type { Context } from "bun-server";
-import type { NextFunction } from "bun-server";
+} from "@dangao/bun-server";
+import type { Logger } from "@dangao/logsmith";
+import type { Context } from "@dangao/bun-server";
+import type { NextFunction } from "@dangao/bun-server";
 import type { ServerWebSocket } from "bun";
-import type { WebSocketConnectionData } from "bun-server";
+import type { WebSocketConnectionData } from "@dangao/bun-server";
 
 const authMiddleware = async (ctx: Context, next: NextFunction) => {
   if (ctx.getHeader("authorization") !== "demo-token") {

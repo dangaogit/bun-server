@@ -9,7 +9,7 @@ import {
   getLifecycle,
   getTypeReference,
 } from "./decorators";
-import { LoggerManager } from "logsmith";
+import { LoggerManager } from "@dangao/logsmith";
 import type { Constructor } from "@/core/types";
 
 /**

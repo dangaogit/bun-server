@@ -7,8 +7,8 @@
 > Bun Server 是一个运行在 Bun Runtime 上的高性能、装饰器驱动的 DI Web
 > 框架，目标是为企业级应用提供即开即用的现代体验。
 
-- [Bun Server](#bun-server)
-  - [为什么选择 Bun Server](#为什么选择-bun-server)
+- [Bun Server](#@dangao/bun-server)
+  - [为什么选择 Bun Server](#为什么选择-@dangao/bun-server)
   - [核心特性](#核心特性)
   - [架构总览](#架构总览)
   - [快速上手](#快速上手)
@@ -84,7 +84,7 @@ bun install
 
 ```ts
 import "reflect-metadata";
-import { Application, Controller, GET, Injectable } from "bun-server";
+import { Application, Controller, GET, Injectable } from "@dangao/bun-server";
 
 @Injectable()
 class HealthService {
@@ -111,10 +111,10 @@ app.listen();
 
 ### 常用脚本
 
-> 代码位于 `packages/bun-server/`，以下命令请在该目录执行。
+> 代码位于 `packages/@dangao/bun-server/`，以下命令请在该目录执行。
 
 ```bash
-bun --cwd=packages/bun-server test             # 运行测试
+bun --cwd=packages/@dangao/bun-server test             # 运行测试
 bun --cwd=benchmark run bench        # 执行所有基准测试
 bun --cwd=benchmark run bench:router # 仅运行路由基准
 bun --cwd=benchmark run bench:di     # 仅运行 DI 基准
@@ -122,14 +122,14 @@ bun --cwd=benchmark run bench:di     # 仅运行 DI 基准
 
 > 直接在仓库根目录运行 `bun test`
 > 会因为工作区结构导致无法找到源文件，请使用上面的命令或先进入
-> `packages/bun-server/`。
+> `packages/@dangao/bun-server/`。
 
 ## 示例与扩展
 
 - `examples/basic-app.ts`：最小可运行示例，覆盖 DI + Logger + Middleware。
 - `examples/full-app.ts`：包含验证、文件上传、WebSocket、复杂控制器。
 - `examples/multi-module-app.ts`：多模块示例，展示模块间的依赖关系和服务共享。
-- `packages/bun-server/src/extensions/`：官方扩展（如
+- `packages/@dangao/bun-server/src/extensions/`：官方扩展（如
   LoggerExtension），可用于注册第三方能力。
 
 ## 性能与 Benchmark

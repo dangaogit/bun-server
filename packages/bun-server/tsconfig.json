@@ -34,8 +34,8 @@
       "@/*": [
         "src/*"
       ],
-      // "logsmith": [
-      //   "../../logsmith/src"
+      // "@dangao/logsmith": [
+      //   "../../@dangao/logsmith/src"
       // ]
     }
   },

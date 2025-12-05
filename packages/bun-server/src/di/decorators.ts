@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { type DependencyMetadata, Lifecycle } from "./types";
-import { LoggerManager } from "logsmith";
+import { LoggerManager } from "@dangao/logsmith";
 import type { Constructor } from "@/core/types";
 
 /**

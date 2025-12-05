@@ -6,8 +6,8 @@
     "bench:di": "bun di.bench.ts"
   },
   "dependencies": {
-    "bun-server": "workspace:^",
-    "logsmith": "workspace:^",
+    "@dangao/bun-server": "workspace:^",
+    "@dangao/logsmith": "workspace:^",
     "reflect-metadata": "catalog:"
   },
   "devDependencies": {

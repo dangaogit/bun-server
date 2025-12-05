@@ -33,7 +33,7 @@ export interface ModuleMetadata {
   exports?: ProviderToken[];
 }
 
-const MODULE_METADATA_KEY = Symbol('bun-server:module');
+const MODULE_METADATA_KEY = Symbol('@dangao/bun-server:module');
 
 export function Module(metadata: ModuleMetadata): ClassDecorator {
   return (target) => {

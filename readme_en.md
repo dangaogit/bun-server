@@ -6,7 +6,7 @@
 
 > A high-performance, decorator-driven DI web framework running on Bun Runtime.
 
-- [Why Bun Server](#why-bun-server)
+- [Why Bun Server](#why-@dangao/bun-server)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Getting Started](#getting-started)
@@ -71,7 +71,7 @@ bun install
 
 ```ts
 import "reflect-metadata";
-import { Application, Controller, GET, Injectable } from "bun-server";
+import { Application, Controller, GET, Injectable } from "@dangao/bun-server";
 
 @Injectable()
 class HealthService {
@@ -99,20 +99,20 @@ app.listen();
 ### Useful scripts
 
 ```bash
-bun --cwd=packages/bun-server test
-bun --cwd=packages/bun-server run bench
-bun --cwd=packages/bun-server run bench:router
-bun --cwd=packages/bun-server run bench:di
+bun --cwd=packages/@dangao/bun-server test
+bun --cwd=packages/@dangao/bun-server run bench
+bun --cwd=packages/@dangao/bun-server run bench:router
+bun --cwd=packages/@dangao/bun-server run bench:di
 ```
 
 > Running `bun test` from the repo root fails because Bun only scans the current
-> workspace. Use the commands above or `cd packages/bun-server` first.
+> workspace. Use the commands above or `cd packages/@dangao/bun-server` first.
 
 ## Examples & Extensions
 
 - `examples/basic-app.ts`: minimal DI + Logger + Middleware showcase.
 - `examples/full-app.ts`: advanced controllers, validation, uploads, WebSocket.
-- `packages/bun-server/src/extensions/`: official extensions (e.g.
+- `packages/@dangao/bun-server/src/extensions/`: official extensions (e.g.
   `LoggerExtension`) for plugging in external capabilities.
 
 ## Benchmark Suite

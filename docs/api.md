@@ -79,7 +79,7 @@ import {
   UseMiddleware,
   Validate,
   WebSocketGateway,
-} from "bun-server";
+} from "@dangao/bun-server";
 ```
 
 即可在应用中使用。

@@ -1,6 +1,6 @@
-import { PerformanceHarness, StressTester } from 'bun-server';
-import { Container } from 'bun-server';
-import { Injectable, Inject } from 'bun-server';
+import { PerformanceHarness, StressTester } from '@dangao/bun-server';
+import { Container } from '@dangao/bun-server';
+import { Injectable, Inject } from '@dangao/bun-server';
 
 interface BenchmarkSummary {
   name: string;

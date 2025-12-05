@@ -1,4 +1,4 @@
 #!/bin/sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-bun --cwd=packages/bun-server test
+bun --cwd=packages/@dangao/bun-server test

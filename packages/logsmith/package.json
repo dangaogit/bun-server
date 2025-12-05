@@ -1,5 +1,5 @@
 {
-  "name": "logsmith",
+  "name": "@dangao/logsmith",
   "description": "A simple logger implementation.",
   "version": "0.1.0",
   "type": "module",
@@ -9,7 +9,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dangaogit/bun-server.git"
+    "url": "https://github.com/dangaogit/@dangao/bun-server.git"
   },
   "keywords": [
     "logger",

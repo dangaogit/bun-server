@@ -27,12 +27,12 @@ alwaysApply: true
 
 ```ts
 // ✅ 正确
-import { Application } from "bun-server";
+import { Application } from "@dangao/bun-server";
 
 const app = new Application();
 
 // ❌ 错误
-import { Application } from "bun-server"; // 使用双引号
+import { Application } from "@dangao/bun-server"; // 使用双引号
 const app = new Application(); // 缺少分号
 ```
 

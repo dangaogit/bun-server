@@ -165,7 +165,7 @@ export class LoggerManager {
 
   public static getLogger(): Logger {
     if (!this.current) {
-      this.current = new SimpleLogger({ prefix: 'Logsmith' });
+      this.current = new SimpleLogger({ prefix: '@dangao/logsmith' });
     }
     return this.current;
   }

@@ -1,6 +1,6 @@
 import type { Middleware } from "../middleware";
 import { ValidationError } from "../../validation";
-import { LoggerManager } from "logsmith";
+import { LoggerManager } from "@dangao/logsmith";
 import { HttpException } from "../../error";
 import { handleError } from "../../error/handler";
 

@@ -16,8 +16,8 @@ import {
   Param,
   POST,
   Validate,
-} from "bun-server";
-import type { Logger } from "logsmith";
+} from "@dangao/bun-server";
+import type { Logger } from "@dangao/logsmith";
 
 // ==================== User Module ====================
 

@@ -1,6 +1,6 @@
 import type { Server } from "bun";
 import { Context } from "./context";
-import { LoggerManager } from "logsmith";
+import { LoggerManager } from "@dangao/logsmith";
 import type { WebSocketGatewayRegistry } from "../websocket/registry";
 import type { WebSocketConnectionData } from "../websocket/registry";
 

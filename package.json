@@ -1,5 +1,5 @@
 {
-  "name": "bun-server-project",
+  "name": "@dangao/bun-server-project",
   "version": "0.0.1",
   "description": "bun server project",
   "private": true,
