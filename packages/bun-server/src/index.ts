@@ -83,6 +83,26 @@ export {
   type ApiBodyMetadata,
   type ApiResponseMetadata,
 } from './swagger';
+// Security 模块（推荐使用）
+export {
+  SecurityModule,
+  SecurityContextHolder,
+  AuthenticationManager,
+  RoleBasedAccessDecisionManager,
+  JwtAuthenticationProvider,
+  OAuth2AuthenticationProvider,
+  createSecurityFilter,
+  type SecurityModuleConfig,
+  type SecurityConfig,
+  type SecurityContext,
+  type Authentication,
+  type AuthenticationProvider,
+  type AuthenticationRequest,
+  type Principal,
+  type Credentials,
+  type AccessDecisionManager,
+} from './security';
+// Auth 模块（保留向后兼容）
 export {
   AuthModule,
   AuthExtension,

@@ -251,6 +251,64 @@ SwaggerModule.forRoot({
 class AppModule {}
 ```
 
+#### SecurityModule（推荐）
+
+SecurityModule 是统一的安全模块，参考 Spring Security 架构设计，支持多种认证方式：
+
+```typescript
+import { SecurityModule, Module, Auth } from '@dangao/bun-server';
+
+// 配置安全模块
+SecurityModule.forRoot({
+  jwt: {
+    secret: 'your-secret-key',
+    accessTokenExpiresIn: 3600,
+    refreshTokenExpiresIn: 86400 * 7,
+  },
+  oauth2Clients: [
+    {
+      clientId: 'my-client',
+      clientSecret: 'my-secret',
+      redirectUris: ['http://localhost:3000/callback'],
+      grantTypes: ['authorization_code', 'refresh_token'],
+    },
+  ],
+  enableOAuth2Endpoints: true,
+  excludePaths: ['/api/public'],
+  defaultAuthRequired: false, // 默认不要求认证，通过 @Auth() 装饰器控制
+});
+
+@Module({
+  imports: [SecurityModule], // 导入安全模块
+  controllers: [UserController],
+  providers: [UserService],
+})
+class AppModule {}
+
+// 使用 @Auth() 装饰器控制访问
+@Controller('/api/users')
+class UserController {
+  @GET('/me')
+  @Auth() // 需要认证
+  public getMe() {
+    return { user: 'current user' };
+  }
+
+  @GET('/admin')
+  @Auth({ roles: ['admin'] }) // 需要管理员角色
+  public getAdmin() {
+    return { message: 'admin only' };
+  }
+}
+```
+
+**SecurityModule 架构特点**：
+- **核心抽象**：`AuthenticationManager` 管理认证流程
+- **认证提供者**：支持多种认证方式（JWT、OAuth2 等）
+- **访问决策**：`AccessDecisionManager` 处理授权决策
+- **安全上下文**：`SecurityContext` 管理当前认证状态
+- **可扩展**：可以自定义认证提供者和访问决策器
+
 ### 完整示例
 
 ```typescript

@@ -7,7 +7,7 @@ import {
   POST,
   Body,
   Module,
-  AuthModule,
+  SecurityModule,
   Auth,
   Inject,
   Injectable,
@@ -166,14 +166,14 @@ class UserController {
  */
 @Module({
   imports: [
-    // 配置认证模块
-    AuthModule.forRoot({
+    // 配置安全模块（推荐方式）
+    SecurityModule.forRoot({
       jwt: {
         secret: 'your-secret-key-change-in-production',
         accessTokenExpiresIn: 3600, // 1 hour
         refreshTokenExpiresIn: 86400 * 7, // 7 days
       },
-      clients: [
+      oauth2Clients: [
         {
           clientId: 'my-client',
           clientSecret: 'my-secret',
@@ -182,8 +182,8 @@ class UserController {
         },
       ],
       enableOAuth2Endpoints: true,
-      enableAuthMiddleware: true,
       excludePaths: ['/api/users/login', '/api/users/public'],
+      defaultAuthRequired: false, // 默认不要求认证，通过 @Auth() 装饰器控制
       userProvider: {
         findById: async (userId: string) => {
           return await new UserService().findById(userId);
