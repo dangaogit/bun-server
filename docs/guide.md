@@ -148,7 +148,66 @@ ExceptionFilterRegistry.getInstance().register({
 
 默认的 `createErrorHandlingMiddleware` 已自动添加到应用，确保异常均被捕获。
 
-## 8. 测试建议
+## 8. 扩展系统
+
+Bun Server 提供了多种扩展方式，包括中间件、应用扩展、模块系统等。详细说明请参考 [扩展系统文档](./extensions.md)。
+
+### 快速示例
+
+#### 使用模块方式（推荐）
+
+```typescript
+import { Module, LoggerModule, SwaggerModule, LogLevel } from '@dangao/bun-server';
+
+// 配置模块
+LoggerModule.forRoot({
+  logger: { prefix: 'App', level: LogLevel.INFO },
+  enableRequestLogging: true,
+});
+
+SwaggerModule.forRoot({
+  info: { title: 'API', version: '1.0.0' },
+  uiPath: '/swagger',
+});
+
+@Module({
+  imports: [LoggerModule, SwaggerModule],
+  controllers: [UserController],
+  providers: [UserService],
+})
+class AppModule {}
+
+const app = new Application({ port: 3000 });
+app.registerModule(AppModule);
+```
+
+#### 使用扩展方式
+
+```typescript
+import { LoggerExtension, SwaggerExtension } from '@dangao/bun-server';
+
+const app = new Application({ port: 3000 });
+
+app.registerExtension(new LoggerExtension({ prefix: 'App' }));
+app.registerExtension(new SwaggerExtension({
+  info: { title: 'API', version: '1.0.0' },
+}));
+```
+
+#### 使用中间件
+
+```typescript
+import { createLoggerMiddleware, createCorsMiddleware } from '@dangao/bun-server';
+
+const app = new Application({ port: 3000 });
+
+app.use(createLoggerMiddleware({ prefix: '[App]' }));
+app.use(createCorsMiddleware({ origin: '*' }));
+```
+
+更多扩展方式和使用场景，请参考 [扩展系统文档](./extensions.md)。
+
+## 9. 测试建议
 
 - 使用 `tests/utils/test-port.ts` 获取自增端口，避免本地冲突。
 - 在 `afterEach` 钩子中调用 `RouteRegistry.getInstance().clear()` 和 `ControllerRegistry.getInstance().clear()`，保持全局状态干净。

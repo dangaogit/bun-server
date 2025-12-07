@@ -51,6 +51,30 @@
 - `ExceptionFilter` 接口与 `ExceptionFilterRegistry`：可注册自定义过滤器。
 - `handleError(error, context)`：全局错误处理核心逻辑；默认错误中间件已自动调用。
 
+## 扩展系统
+
+### 中间件
+
+- `Middleware` 类型：`(context: Context, next: NextFunction) => Response | Promise<Response>`
+- `app.use(middleware)`：注册全局中间件
+- `@UseMiddleware(...middlewares)`：控制器或方法级中间件
+- 内置中间件工厂函数：`createLoggerMiddleware`, `createCorsMiddleware`, `createErrorHandlingMiddleware`, `createFileUploadMiddleware`, `createStaticFileMiddleware`
+
+### 应用扩展
+
+- `ApplicationExtension` 接口：`register(container: Container): void`
+- `app.registerExtension(extension)`：注册应用扩展
+- 官方扩展：`LoggerExtension`, `SwaggerExtension`
+
+### 模块系统
+
+- `@Module(metadata)`：模块装饰器
+- `ModuleMetadata`：支持 `imports`, `controllers`, `providers`, `exports`, `extensions`, `middlewares`
+- `app.registerModule(moduleClass)`：注册模块
+- 官方模块：`LoggerModule.forRoot(options)`, `SwaggerModule.forRoot(options)`
+
+详细说明请参考 [扩展系统文档](./extensions.md)。
+
 ## WebSocket
 
 - 装饰器：`@WebSocketGateway(path)` + `@OnOpen`, `@OnMessage`, `@OnClose`。

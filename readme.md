@@ -154,10 +154,11 @@ bun benchmark/di.bench.ts
 ## 文档与多语言支持
 
 - 中文默认文档位于 `docs/`
-  - `docs/api.md`
-  - `docs/guide.md`
-  - `docs/best-practices.md`
-  - `docs/migration.md`
+  - `docs/api.md` - API 参考文档
+  - `docs/guide.md` - 使用指南
+  - `docs/extensions.md` - 扩展系统说明（中间件、扩展、模块等）
+  - `docs/best-practices.md` - 最佳实践
+  - `docs/migration.md` - 迁移指南
 - 英文草稿位于
   `docs/en/`，与中文文件结构一致；如果缺失内容，请优先参考中文版本。
 
