@@ -48,6 +48,7 @@ export class Application {
     ControllerRegistry.getInstance().clear();
     ModuleRegistry.getInstance().clear();
 
+    // 默认注册 Logger（如果通过模块注册，会被覆盖）
     this.registerExtension(new LoggerExtension());
   }
 
@@ -128,6 +129,17 @@ export class Application {
   public registerModule(moduleClass: ModuleClass): void {
     const registry = ModuleRegistry.getInstance();
     registry.register(moduleClass, this.getContainer());
+    
+    // 注册模块的扩展和中间件
+    const extensions = registry.getModuleExtensions(moduleClass);
+    for (const extension of extensions) {
+      this.registerExtension(extension);
+    }
+    
+    const middlewares = registry.getModuleMiddlewares(moduleClass);
+    for (const middleware of middlewares) {
+      this.use(middleware);
+    }
   }
 
   /**

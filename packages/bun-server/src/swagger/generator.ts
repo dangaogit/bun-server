@@ -1,7 +1,6 @@
 import type { SwaggerDocument, SwaggerOptions, SwaggerPathItem } from './types';
 import { ControllerRegistry } from '../controller/controller';
 import { getControllerMetadata, getRouteMetadata } from '../controller/metadata';
-import { RouteRegistry } from '../router/registry';
 import {
   getApiTags,
   getApiOperation,

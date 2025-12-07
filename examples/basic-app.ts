@@ -3,24 +3,21 @@ import {
   Application,
   ApiBody,
   ApiOperation,
-  ApiParam,
   ApiResponse,
   ApiTags,
   Body,
   Controller,
-  createLoggerMiddleware,
-  createSwaggerUIMiddleware,
   GET,
   Inject,
   Injectable,
   IsString,
   LOGGER_TOKEN,
-  LoggerExtension,
+  LoggerModule,
   LogLevel,
   Module,
   Param,
   POST,
-  SwaggerExtension,
+  SwaggerModule,
   Validate,
 } from "@dangao/bun-server";
 import type { Logger } from "@dangao/logsmith";
@@ -130,18 +127,19 @@ class UserController {
 class UserModule {}
 
 const port = Number(process.env.PORT ?? 3100);
-const app = new Application({ port });
 
-// 注册日志扩展
-app.registerExtension(
-  new LoggerExtension({
+// 配置 Logger 模块
+LoggerModule.forRoot({
+  logger: {
     prefix: "BasicExample",
     level: LogLevel.DEBUG,
-  }),
-);
+  },
+  enableRequestLogging: true,
+  requestLoggingPrefix: "[BasicExample]",
+});
 
-// 注册 Swagger 扩展
-const swaggerExtension = new SwaggerExtension({
+// 配置 Swagger 模块
+SwaggerModule.forRoot({
   info: {
     title: "Basic App API",
     version: "1.0.0",
@@ -153,20 +151,23 @@ const swaggerExtension = new SwaggerExtension({
       description: "Local development server",
     },
   ],
+  uiPath: "/swagger",
+  jsonPath: "/swagger.json",
+  uiTitle: "Basic App API Documentation",
+  enableUI: true,
 });
-app.registerExtension(swaggerExtension);
 
-// 注册 Swagger UI 中间件
-app.use(
-  createSwaggerUIMiddleware(swaggerExtension, {
-    uiPath: "/swagger",
-    jsonPath: "/swagger.json",
-    title: "Basic App API Documentation",
-  }),
-);
+// 应用模块，导入 Logger 和 Swagger 模块
+@Module({
+  imports: [LoggerModule, SwaggerModule],
+  controllers: [UserController],
+  providers: [UserService],
+  exports: [UserService],
+})
+class AppModule {}
 
-app.use(createLoggerMiddleware({ prefix: "[BasicExample]" }));
-app.registerModule(UserModule);
+const app = new Application({ port });
+app.registerModule(AppModule);
 app.listen(port);
 
 console.log(`🚀 Server running on http://localhost:${port}`);

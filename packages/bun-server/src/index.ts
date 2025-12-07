@@ -57,14 +57,17 @@ export {
 } from './websocket';
 export {
   LoggerExtension,
+  LoggerModule,
   LogLevel,
   LOGGER_TOKEN,
   type Logger,
   type LoggerOptions,
+  type LoggerModuleOptions,
   type LogEntry,
 } from './extensions';
 export {
   SwaggerExtension,
+  SwaggerModule,
   SwaggerGenerator,
   createSwaggerUIMiddleware,
   ApiTags,
@@ -73,6 +76,7 @@ export {
   ApiBody,
   ApiResponse,
   type SwaggerOptions,
+  type SwaggerModuleOptions,
   type SwaggerDocument,
   type ApiOperationMetadata,
   type ApiParamMetadata,

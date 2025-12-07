@@ -1,15 +1,19 @@
 import { ControllerRegistry } from '../controller/controller';
 import { Container } from './container';
 import { Lifecycle } from './types';
-import { getModuleMetadata, type ModuleClass, type ModuleMetadata, type ModuleProvider, type ProviderToken } from './module';
-import type { Constructor } from '@/core/types'
+import { getModuleMetadata, type ModuleClass, type ModuleProvider, type ProviderToken } from './module';
+import type { Constructor } from '@/core/types';
+import type { ApplicationExtension } from '../extensions/types';
+import type { Middleware } from '../middleware';
 
 interface ModuleRef {
   moduleClass: ModuleClass;
-  metadata: Required<ModuleMetadata>;
+  metadata: ReturnType<typeof getModuleMetadata>;
   container: Container;
   controllersRegistered: boolean;
   attachedParents: Set<Container>;
+  extensions: ApplicationExtension[];
+  middlewares: Middleware[];
 }
 
 export class ModuleRegistry {
@@ -73,6 +77,8 @@ export class ModuleRegistry {
       container,
       controllersRegistered: false,
       attachedParents: new Set<Container>(),
+      extensions: metadata.extensions ?? [],
+      middlewares: metadata.middlewares ?? [],
     };
     this.registerControllers(ref);
     this.moduleRefs.set(moduleClass, ref);
@@ -130,6 +136,36 @@ export class ModuleRegistry {
     for (const exportedToken of moduleRef.metadata.exports) {
       this.registerExport(parentContainer, moduleRef, exportedToken);
     }
+    // 收集导入模块的扩展和中间件
+    for (const imported of moduleRef.metadata.imports) {
+      const importedRef = this.moduleRefs.get(imported);
+      if (importedRef) {
+        moduleRef.extensions.push(...importedRef.extensions);
+        moduleRef.middlewares.push(...importedRef.middlewares);
+      }
+    }
+  }
+
+  /**
+   * 获取模块的所有扩展（包括导入模块的扩展）
+   */
+  public getModuleExtensions(moduleClass: ModuleClass): ApplicationExtension[] {
+    const moduleRef = this.moduleRefs.get(moduleClass);
+    if (!moduleRef) {
+      return [];
+    }
+    return moduleRef.extensions;
+  }
+
+  /**
+   * 获取模块的所有中间件（包括导入模块的中间件）
+   */
+  public getModuleMiddlewares(moduleClass: ModuleClass): Middleware[] {
+    const moduleRef = this.moduleRefs.get(moduleClass);
+    if (!moduleRef) {
+      return [];
+    }
+    return moduleRef.middlewares;
   }
 
   private registerExport(parentContainer: Container, moduleRef: ModuleRef, token: ProviderToken): void {
