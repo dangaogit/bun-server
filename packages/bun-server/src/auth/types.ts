@@ -178,7 +178,8 @@ export interface OAuth2TokenResponse {
 }
 
 /**
- * 认证模块配置
+ * 认证模块配置（已废弃，请使用 SecurityModuleConfig）
+ * @deprecated 使用 SecurityModule.forRoot() 替代
  */
 export interface AuthModuleOptions {
   /**
