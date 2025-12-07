@@ -87,7 +87,11 @@ export function createSecurityFilter(config: SecurityFilterConfig): Middleware {
               requiredRoles,
             );
             if (!hasAccess) {
-              throw new ForbiddenException('Insufficient permissions');
+              // 调试信息：输出权限检查详情
+              const userRoles = authentication.authorities || [];
+              throw new ForbiddenException(
+                `Insufficient permissions. Required roles: ${requiredRoles.join(', ')}, User roles: ${userRoles.join(', ')}`,
+              );
             }
           }
         }
