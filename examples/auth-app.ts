@@ -442,7 +442,7 @@ class FrontendController {
       }
 
       try {
-        const response = await fetch('/api/users/', {
+        const response = await fetch('/api/users', {
           headers: { 'Authorization': \`Bearer \${accessToken}\` },
         });
 
@@ -452,7 +452,10 @@ class FrontendController {
           resultDiv.innerHTML = \`<strong>所有用户：</strong><br>\${JSON.stringify(data, null, 2)}\`;
         } else {
           resultDiv.className = 'result show error';
-          resultDiv.innerHTML = \`<strong>获取失败：</strong>\${data.error || response.status === 403 ? '权限不足（需要管理员角色）' : '未知错误'}\`;
+          const errorMsg = response.status === 403 
+            ? '权限不足（需要管理员角色）' 
+            : data.error || \`HTTP \${response.status}\`;
+          resultDiv.innerHTML = \`<strong>获取失败：</strong>\${errorMsg}\`;
         }
       } catch (error) {
         resultDiv.className = 'result show error';

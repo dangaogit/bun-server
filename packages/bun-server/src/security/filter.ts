@@ -5,7 +5,7 @@ import { AuthenticationManager } from './authentication-manager';
 import { RoleBasedAccessDecisionManager } from './access-decision-manager';
 import type { SecurityConfig, AuthenticationRequest } from './types';
 import { UnauthorizedException, ForbiddenException } from '../error/http-exception';
-import { requiresAuth } from '../auth/decorators';
+import { requiresAuth, getAuthMetadata } from '../auth/decorators';
 
 /**
  * 安全过滤器配置
@@ -132,7 +132,6 @@ function extractTokenFromHeader(ctx: Context): string | null {
  * 获取需要的角色
  */
 function getRequiredRoles(target: any, propertyKey: string | symbol): string[] {
-  const { getAuthMetadata } = require('../auth/decorators');
   const metadata = getAuthMetadata(target, propertyKey);
   return metadata?.roles || [];
 }
