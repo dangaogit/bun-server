@@ -43,6 +43,8 @@
   **中间件管道**：支持全局/控制器/方法级中间件，内置日志、错误处理、CORS、文件上传、静态资源等。
 - ✅ **输入校验**：声明式验证装饰器，直连 `ValidationError` 与异常过滤器。
 - 📡 **WebSocket**：`@WebSocketGateway`、`@OnMessage` 等装饰器级开发体验。
+- 📖 **Swagger/OpenAPI**：内置 Swagger 插件，支持 `@ApiTags`、`@ApiOperation`、`@ApiParam`、`@ApiBody`、`@ApiResponse` 等装饰器，自动生成 API 文档和 Swagger UI。
+- 🔐 **安全认证**：内置 SecurityModule，支持 JWT 和 OAuth2 认证，提供 `@Auth()` 装饰器进行角色权限控制。
 - 📚 **示例与文档**：多语言文档、基础/完整示例、基准脚本与最佳实践。
 
 ## 架构总览
@@ -126,11 +128,12 @@ bun --cwd=benchmark run bench:di     # 仅运行 DI 基准
 
 ## 示例与扩展
 
-- `examples/basic-app.ts`：最小可运行示例，覆盖 DI + Logger + Middleware。
+- `examples/basic-app.ts`：最小可运行示例，覆盖 DI + Logger + Middleware + Swagger。
 - `examples/full-app.ts`：包含验证、文件上传、WebSocket、复杂控制器。
 - `examples/multi-module-app.ts`：多模块示例，展示模块间的依赖关系和服务共享。
-- `packages/@dangao/bun-server/src/extensions/`：官方扩展（如
-  LoggerExtension），可用于注册第三方能力。
+- `examples/auth-app.ts`：完整的认证演示，包含 JWT + OAuth2 认证流程，前端页面演示。
+- `packages/bun-server/src/extensions/`：官方扩展（如
+  LoggerExtension、SwaggerExtension），可用于注册第三方能力。
 
 ## 性能与 Benchmark
 
@@ -153,10 +156,11 @@ bun benchmark/di.bench.ts
 ## 文档与多语言支持
 
 - 中文默认文档位于 `docs/`
-  - `docs/api.md`
-  - `docs/guide.md`
-  - `docs/best-practices.md`
-  - `docs/migration.md`
+  - `docs/api.md` - API 参考文档
+  - `docs/guide.md` - 使用指南
+  - `docs/extensions.md` - 扩展系统说明（中间件、扩展、模块等）
+  - `docs/best-practices.md` - 最佳实践
+  - `docs/migration.md` - 迁移指南
 - 英文草稿位于
   `docs/en/`，与中文文件结构一致；如果缺失内容，请优先参考中文版本。
 
