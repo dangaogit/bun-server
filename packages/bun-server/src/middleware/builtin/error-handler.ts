@@ -66,7 +66,7 @@ export function createErrorHandlingMiddleware(
 
       if (error instanceof HttpException) {
         // 统一使用 handleError 处理，它已经包含了错误码和国际化逻辑
-        return await handleError(error, context);
+          return await handleError(error, context);
       }
 
       if (error instanceof Error && !expose) {
