@@ -143,7 +143,7 @@ Or use `bun run bench*` scripts for convenience.
 
 ## Roadmap
 
-Detailed milestones and history are tracked in [`.roadmap.md`](./.roadmap.md).
+Detailed milestones and history are tracked in [`.roadmap/.roadmap.md`](./.roadmap/.roadmap.md).
 
 ## Engineering Guidelines
 
