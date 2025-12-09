@@ -46,7 +46,7 @@
     "dts": "tsc -p tsconfig.build.json",
     "build": "bun run clean && bun run bundle && bun run dts",
     "prepare": "bun run build",
-    "publish": "cp ../../readme.md ../../LICENSE . && bun publish --access public && rm -f ./readme.md ./LICENSE"
+    "publish:package": "cp ../../readme.md ../../LICENSE . && bun publish --access public && rm -f ./readme.md ./LICENSE"
   },
   "devDependencies": {
     "typescript": "catalog:",
