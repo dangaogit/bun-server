@@ -175,7 +175,7 @@ bun benchmark/di.bench.ts
 ## 路线图
 
 详细路线图、阶段目标与完成情况请查阅
-[`../../.roadmap/v0.2.0.md`](../../.roadmap/v0.2.0.md)。
+[`../../.roadmap/v0.3.0.md`](../../.roadmap/v0.3.0.md)。
 
 ## 工程规范
 

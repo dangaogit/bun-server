@@ -269,7 +269,7 @@ tests/
 - `src/index.ts` - 主导出文件，所有公共 API
 - `src/core/application.ts` - 应用主类
 - `src/di/module-registry.ts` - 模块注册表
-- `.roadmap/v0.2.0-review.md` - 项目审查和路线图
+- `.roadmap/v0.3.0.md` - 项目审查和路线图
 
 ## MDC 规则维护
 
