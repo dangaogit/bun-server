@@ -2,6 +2,9 @@ import 'reflect-metadata';
 
 import {
   Application,
+  CONFIG_SERVICE_TOKEN,
+  ConfigModule,
+  ConfigService,
   Controller,
   GET,
   POST,
@@ -14,6 +17,8 @@ import {
   Injectable,
   JWT_UTIL_TOKEN,
   ResponseBuilder,
+  UnauthorizedException,
+  SecurityContextHolder,
   type JWTUtil,
   type UserInfo,
 } from '@dangao/bun-server';
@@ -98,9 +103,7 @@ class UserController {
     );
 
     if (!user) {
-      return {
-        error: 'Invalid credentials',
-      };
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     // 生成访问令牌
@@ -127,14 +130,24 @@ class UserController {
 
   /**
    * 获取当前用户信息（需要认证）
-   * 注意：用户信息通过认证中间件注入到 Context，这里简化处理
    */
   @GET('/me')
   @Auth()
   public getMe() {
-    // 在实际使用中，应该通过 Context 参数装饰器获取用户信息
+    const securityContext = SecurityContextHolder.getContext();
+    const principal = securityContext.getPrincipal();
+    const authorities = securityContext.getAuthorities();
+    const authentication = securityContext.authentication;
+
+    if (!principal) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
     return {
-      message: 'User information (requires authentication)',
+      id: principal.id,
+      username: principal.username,
+      roles: authorities,
+      authenticated: authentication?.authenticated ?? false,
     };
   }
 
@@ -168,18 +181,26 @@ class UserController {
  */
 @Controller('/')
 class FrontendController {
+  public constructor(
+    @Inject(CONFIG_SERVICE_TOKEN)
+    private readonly config: ConfigService,
+  ) {}
   /**
    * 首页 - 认证演示页面
    */
   @GET('/')
   public index() {
+    const appTitle = this.config.get<string>(
+      'app.title',
+      'Bun Server 认证演示',
+    );
     return ResponseBuilder.html(`
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bun Server 认证演示</title>
+  <title>${appTitle}</title>
   <style>
     * {
       margin: 0;
@@ -386,7 +407,7 @@ class FrontendController {
         });
 
         const data = await response.json();
-        if (response.ok) {
+        if (response.ok && data.accessToken) {
           accessToken = data.accessToken;
           resultDiv.className = 'result show success';
           resultDiv.innerHTML = \`
@@ -396,7 +417,8 @@ class FrontendController {
           \`;
         } else {
           resultDiv.className = 'result show error';
-          resultDiv.innerHTML = \`<strong>登录失败：</strong>\${data.error || '未知错误'}\`;
+          const errorMessage = data.error || \`HTTP \${response.status}: \${response.statusText}\`;
+          resultDiv.innerHTML = \`<strong>登录失败：</strong>\${errorMessage}\`;
         }
       } catch (error) {
         resultDiv.className = 'result show error';
@@ -636,7 +658,8 @@ class FrontendController {
         },
       ],
       enableOAuth2Endpoints: true,
-      excludePaths: ['/api/users/login', '/api/users/public', '/', '/callback'],
+      // 注意：excludePaths 使用前缀匹配，这里不要使用 '/'（否则会排除所有路径）
+      excludePaths: ['/api/users/login', '/api/users/public', '/callback'],
       defaultAuthRequired: false, // 默认不要求认证，通过 @Auth() 装饰器控制
       userProvider: {
         findById: async (userId: string) => {
@@ -644,17 +667,33 @@ class FrontendController {
         },
       },
     }),
+    // 配置 ConfigModule
+    ConfigModule.forRoot({
+      defaultConfig: {
+        app: {
+          port: Number(process.env.PORT ?? 3000),
+          title: 'Bun Server 认证演示',
+        },
+      },
+    }),
   ],
   controllers: [UserController, FrontendController],
   providers: [UserService],
+  exports: [CONFIG_SERVICE_TOKEN], // 重新导出到根容器，以便在模块外部使用
 })
 class AppModule {}
 
-const port = Number(process.env.PORT ?? 3000);
-const app = new Application({ port });
-
+const app = new Application();
 app.registerModule(AppModule);
-app.listen();
+
+const config = app
+  .getContainer()
+  .resolve<ConfigService>(CONFIG_SERVICE_TOKEN);
+
+const port =
+  config.get<number>('app.port', Number(process.env.PORT ?? 3000)) ?? 3000;
+
+app.listen(port);
 
 console.log(`🚀 Server running on http://localhost:${port}`);
 console.log(`\n📱 前端演示页面:`);
