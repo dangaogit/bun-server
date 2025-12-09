@@ -540,7 +540,7 @@
 
 ## 🔗 相关资源
 
-- [当前 Roadmap](./.roadmap.md)
+- [当前 Roadmap](./ROADMAP_v0.2.0.md)
 - [API 文档](./docs/api.md)
 - [使用指南](./docs/guide.md)
 - [扩展系统文档](./docs/extensions.md)

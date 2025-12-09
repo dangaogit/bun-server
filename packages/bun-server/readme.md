@@ -31,7 +31,8 @@
   可扩展**：松耦合的模块系统、扩展系统与日志框架，既可以快速起步，也能按需裁剪。
 - **Monorepo 友好**：原生支持 Bun workspaces，使用 `workspace:*`
   协议管理内部依赖，配合 catalog 统一版本，完美适配多包协作场景。
-- **完整测试矩阵**：内置单元/集成测试、压力与基准测试用例，Security 和 Swagger 模块测试覆盖完整，便于持续优化。
+- **完整测试矩阵**：内置单元/集成测试、压力与基准测试用例，Security 和 Swagger
+  模块测试覆盖完整，便于持续优化。
 
 ## 核心特性
 
@@ -43,8 +44,11 @@
   **中间件管道**：支持全局/控制器/方法级中间件，内置日志、错误处理、CORS、文件上传、静态资源等。
 - ✅ **输入校验**：声明式验证装饰器，直连 `ValidationError` 与异常过滤器。
 - 📡 **WebSocket**：`@WebSocketGateway`、`@OnMessage` 等装饰器级开发体验。
-- 📖 **Swagger/OpenAPI**：内置 Swagger 插件，支持 `@ApiTags`、`@ApiOperation`、`@ApiParam`、`@ApiBody`、`@ApiResponse` 等装饰器，自动生成 API 文档和 Swagger UI。
-- 🔐 **安全认证**：内置 SecurityModule，支持 JWT 和 OAuth2 认证，提供 `@Auth()` 装饰器进行角色权限控制。
+- 📖 **Swagger/OpenAPI**：内置 Swagger 插件，支持
+  `@ApiTags`、`@ApiOperation`、`@ApiParam`、`@ApiBody`、`@ApiResponse`
+  等装饰器，自动生成 API 文档和 Swagger UI。
+- 🔐 **安全认证**：内置 SecurityModule，支持 JWT 和 OAuth2 认证，提供 `@Auth()`
+  装饰器进行角色权限控制。
 - 📚 **示例与文档**：多语言文档、基础/完整示例、基准脚本与最佳实践。
 
 ## 架构总览
@@ -128,10 +132,14 @@ bun --cwd=benchmark run bench:di     # 仅运行 DI 基准
 
 ## 示例与扩展
 
-- `examples/basic-app.ts`：最小可运行示例，覆盖 DI + Logger + Middleware + Swagger + ConfigModule。
-- `examples/full-app.ts`：包含验证、文件上传、WebSocket、复杂控制器，使用 ConfigModule 管理端口与中间件配置。
-- `examples/multi-module-app.ts`：多模块示例，展示模块间的依赖关系和服务共享，使用 ConfigModule 统一管理应用配置。
-- `examples/auth-app.ts`：完整的认证演示，包含 JWT + OAuth2 认证流程、前端演示页面，并通过 ConfigModule 管理应用标题和端口。
+- `examples/basic-app.ts`：最小可运行示例，覆盖 DI + Logger + Middleware +
+  Swagger + ConfigModule。
+- `examples/full-app.ts`：包含验证、文件上传、WebSocket、复杂控制器，使用
+  ConfigModule 管理端口与中间件配置。
+- `examples/multi-module-app.ts`：多模块示例，展示模块间的依赖关系和服务共享，使用
+  ConfigModule 统一管理应用配置。
+- `examples/auth-app.ts`：完整的认证演示，包含 JWT + OAuth2
+  认证流程、前端演示页面，并通过 ConfigModule 管理应用标题和端口。
 - `packages/bun-server/src/extensions/`：官方扩展（如
   LoggerExtension、SwaggerExtension），可用于注册第三方能力。
 
@@ -166,7 +174,8 @@ bun benchmark/di.bench.ts
 
 ## 路线图
 
-详细路线图、阶段目标与完成情况请查阅 [`../../.roadmap/.roadmap.md`](../../.roadmap/.roadmap.md)。
+详细路线图、阶段目标与完成情况请查阅
+[`../../.roadmap/ROADMAP_v0.2.0.md`](../../.roadmap/ROADMAP_v0.2.0.md)。
 
 ## 工程规范
 
