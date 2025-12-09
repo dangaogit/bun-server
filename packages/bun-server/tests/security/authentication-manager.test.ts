@@ -1,8 +1,7 @@
-import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
+import { describe, expect, test, beforeEach } from 'bun:test';
 import { AuthenticationManager } from '../../src/security/authentication-manager';
 import { JwtAuthenticationProvider } from '../../src/security/providers/jwt-provider';
 import { JWTUtil } from '../../src/auth/jwt';
-import { SecurityContextHolder } from '../../src/security/context';
 
 describe('AuthenticationManager', () => {
   let manager: AuthenticationManager;
@@ -16,10 +15,6 @@ describe('AuthenticationManager', () => {
       accessTokenExpiresIn: 3600,
     });
     jwtProvider = new JwtAuthenticationProvider(jwtUtil);
-  });
-
-  afterEach(() => {
-    SecurityContextHolder.clearContext();
   });
 
   test('should register provider', () => {
