@@ -1,0 +1,161 @@
+# 版本发布和 Tag 管理规则
+
+本文档定义了 Bun Server Framework 项目的版本发布流程和 Tag 管理规范。
+
+## 版本号规则
+
+遵循 [Semantic Versioning](https://semver.org/)：
+- **MAJOR** (x.0.0): 不兼容的 API 变更
+- **MINOR** (0.x.0): 向后兼容的功能新增
+- **PATCH** (0.0.x): 向后兼容的问题修复
+
+## 发布流程
+
+### 1. 更新版本号
+
+更新 `packages/bun-server/package.json` 中的 `version` 字段：
+
+```bash
+# 例如：从 0.1.5 更新到 0.2.0
+```
+
+### 2. 构建制品
+
+```bash
+cd packages/bun-server
+bun run build
+```
+
+确保构建成功，检查 `dist/` 目录。
+
+### 3. 创建 Changelog
+
+创建 `CHANGELOG_v{VERSION}.md` 文件，包含：
+
+- 🎉 新功能（使用 ✨）
+- 🐛 修复（使用 🔧）
+- 📝 改进（使用 ⚡）
+- 📊 测试（使用 ✅）
+- 📦 依赖变更
+
+格式示例：
+
+```markdown
+# Changelog - v0.2.0
+
+## 🎉 新功能
+- ✨ 添加错误码系统
+- ✨ 添加错误消息国际化支持
+
+## 🐛 修复
+- 🔧 修复 Bearer token 提取问题
+
+## 📊 测试
+- ✅ 253 个测试全部通过
+```
+
+### 4. 提交版本变更
+
+```bash
+git add packages/bun-server/package.json packages/bun-server/dist/ CHANGELOG_v{VERSION}.md
+git commit -m "chore: bump version to {VERSION}"
+```
+
+### 5. 打 Tag
+
+使用 `-F` 参数将 changelog 作为 tag 描述：
+
+```bash
+git tag -a v{VERSION} -F CHANGELOG_v{VERSION}.md
+```
+
+Tag 命名规则：
+- 格式：`v{MAJOR}.{MINOR}.{PATCH}`
+- 例如：`v0.2.0`, `v1.0.0`
+
+### 6. 推送代码和 Tag
+
+```bash
+# 推送代码
+git push origin main
+
+# 推送 tag
+git push origin v{VERSION}
+
+# 或者一次性推送所有 tag
+git push origin --tags
+```
+
+## Changelog 编写规范
+
+### 分类
+
+1. **🎉 新功能**：新增的功能特性
+2. **🐛 修复**：Bug 修复
+3. **📝 改进**：性能优化、代码重构等
+4. **📊 测试**：测试相关变更
+5. **📦 依赖**：依赖更新
+
+### 格式要求
+
+- 使用 emoji 标记分类
+- 使用 ✨ 标记新功能项
+- 使用 🔧 标记修复项
+- 使用 ⚡ 标记改进项
+- 使用 ✅ 标记测试项
+- 每个变更项一行，简洁明了
+
+### 完整变更列表
+
+在 changelog 末尾添加：
+
+```markdown
+---
+
+**完整变更列表：**
+- feat(error): add error code system and i18n support
+- feat(security): add concurrent tests for SecurityContext thread safety
+```
+
+## 示例
+
+### 完整发布流程示例
+
+```bash
+# 1. 更新版本号
+# 编辑 packages/bun-server/package.json: "version": "0.2.0"
+
+# 2. 构建
+cd packages/bun-server && bun run build
+
+# 3. 创建 changelog
+cat > CHANGELOG_v0.2.0.md << 'EOF'
+# Changelog - v0.2.0
+...
+EOF
+
+# 4. 提交版本变更
+git add packages/bun-server/package.json packages/bun-server/dist/ CHANGELOG_v0.2.0.md
+git commit -m "chore: bump version to 0.2.0"
+
+# 5. 打 tag
+git tag -a v0.2.0 -F CHANGELOG_v0.2.0.md
+
+# 6. 推送
+git push origin main
+git push origin v0.2.0
+```
+
+## 注意事项
+
+1. **版本号递增**：确保版本号正确递增
+2. **构建验证**：发布前确保构建成功
+3. **测试通过**：确保所有测试通过
+4. **Changelog 完整**：包含所有重要变更
+5. **Tag 描述**：使用 changelog 作为 tag 描述，便于查看
+
+## 参考
+
+- [Semantic Versioning](https://semver.org/)
+- [Keep a Changelog](https://keepachangelog.com/)
+- 项目 Git Commit Guidelines
