@@ -31,7 +31,7 @@ bun run build
 
 ### 3. 创建 Changelog
 
-创建 `CHANGELOG_v{VERSION}.md` 文件，包含：
+在 `.changelog/` 目录下创建 `CHANGELOG_v{VERSION}.md` 文件，包含：
 
 - 🎉 新功能（使用 ✨）
 - 🐛 修复（使用 🔧）
@@ -61,7 +61,7 @@ bun run build
 ### 4. 提交版本变更
 
 ```bash
-git add packages/bun-server/package.json packages/bun-server/dist/ CHANGELOG_v{VERSION}.md
+git add packages/bun-server/package.json packages/bun-server/dist/ .changelog/CHANGELOG_v{VERSION}.md
 git commit -m "chore: bump version to {VERSION}"
 ```
 
@@ -70,7 +70,7 @@ git commit -m "chore: bump version to {VERSION}"
 使用 `-F` 参数将 changelog 作为 tag 描述：
 
 ```bash
-git tag -a v{VERSION} -F CHANGELOG_v{VERSION}.md
+git tag -a v{VERSION} -F .changelog/CHANGELOG_v{VERSION}.md
 ```
 
 Tag 命名规则：
@@ -135,17 +135,17 @@ git push origin --tags
 cd packages/bun-server && bun run build
 
 # 3. 创建 changelog
-cat > CHANGELOG_v0.2.0.md << 'EOF'
+cat > .changelog/CHANGELOG_v0.2.0.md << 'EOF'
 # Changelog - v0.2.0
 ...
 EOF
 
 # 4. 提交版本变更
-git add packages/bun-server/package.json packages/bun-server/dist/ CHANGELOG_v0.2.0.md
+git add packages/bun-server/package.json packages/bun-server/dist/ .changelog/CHANGELOG_v0.2.0.md
 git commit -m "chore: bump version to 0.2.0"
 
 # 5. 打 tag
-git tag -a v0.2.0 -F CHANGELOG_v0.2.0.md
+git tag -a v0.2.0 -F .changelog/CHANGELOG_v0.2.0.md
 
 # 6. 推送
 git push origin main
