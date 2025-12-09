@@ -102,6 +102,21 @@ export {
   type Credentials,
   type AccessDecisionManager,
 } from './security';
+export {
+  ConfigModule,
+  ConfigService,
+  CONFIG_SERVICE_TOKEN,
+  type ConfigModuleOptions,
+} from './config';
+export {
+  HealthModule,
+  type HealthIndicator,
+  type HealthIndicatorResult,
+  type HealthStatus,
+  type HealthModuleOptions,
+  HEALTH_INDICATORS_TOKEN,
+  HEALTH_OPTIONS_TOKEN,
+} from './health';
 // Auth 模块（底层实现，供 Security 模块使用）
 export {
   JWTUtil,
