@@ -1,1 +1,0 @@
-{"version":3,"file":"prometheus.d.ts","sourceRoot":"","sources":["../../src/metrics/prometheus.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,SAAS,CAAC;AAE/C;;GAEG;AACH,qBAAa,mBAAmB;IAC9B;;OAEG;IACI,MAAM,CAAC,UAAU,EAAE,eAAe,EAAE,GAAG,MAAM;IAgCpD;;OAEG;IACH,OAAO,CAAC,iBAAiB;IAazB;;OAEG;IACH,OAAO,CAAC,YAAY;IAYpB;;OAEG;IACH,OAAO,CAAC,gBAAgB;CAGzB"}

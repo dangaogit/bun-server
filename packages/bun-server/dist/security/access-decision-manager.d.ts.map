@@ -1,1 +1,0 @@
-{"version":3,"file":"access-decision-manager.d.ts","sourceRoot":"","sources":["../../src/security/access-decision-manager.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,cAAc,EAAE,qBAAqB,EAAE,MAAM,SAAS,CAAC;AAErE;;GAEG;AACH,qBAAa,8BAA+B,YAAW,qBAAqB;IAC1E;;;;;OAKG;IACI,MAAM,CACX,cAAc,EAAE,cAAc,EAC9B,mBAAmB,EAAE,MAAM,EAAE,GAC5B,OAAO;CAiBX"}

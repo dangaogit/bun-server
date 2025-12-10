@@ -1,1 +1,0 @@
-{"version":3,"file":"generator.d.ts","sourceRoot":"","sources":["../../src/swagger/generator.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,eAAe,EAAE,cAAc,EAAmB,MAAM,SAAS,CAAC;AAWhF;;GAEG;AACH,qBAAa,gBAAgB;IAC3B,OAAO,CAAC,QAAQ,CAAC,OAAO,CAAiB;gBAEtB,OAAO,EAAE,cAAc;IAI1C;;OAEG;IACI,QAAQ,IAAI,eAAe;IAgMlC;;OAEG;IACH,OAAO,CAAC,aAAa;CAatB"}
