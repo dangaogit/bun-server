@@ -68,6 +68,7 @@ class ApiController {
   public constructor(
     @Inject(ApiService) private readonly apiService: ApiService,
     @Inject(CONFIG_SERVICE_TOKEN) private readonly config: ConfigService,
+    @Inject(METRICS_SERVICE_TOKEN) private readonly metricsCollector: MetricsCollector,
   ) {}
 
   /**
@@ -131,10 +132,8 @@ class ApiController {
    * 指标信息端点
    */
   @GET('/metrics-info')
-  public async metricsInfo(
-    @Inject(METRICS_SERVICE_TOKEN) collector: MetricsCollector,
-  ) {
-    const dataPoints = await collector.getAllDataPoints();
+  public async metricsInfo() {
+    const dataPoints = await this.metricsCollector.getAllDataPoints();
     return {
       message: 'Metrics are available at /metrics endpoint',
       totalMetrics: dataPoints.length,
