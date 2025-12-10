@@ -1,78 +1,222 @@
 /**
  * 错误码定义
- * 格式：模块_错误类型_具体错误
- * 例如：AUTH_INVALID_TOKEN, VALIDATION_REQUIRED_FIELD
+ *
+ * 错误码命名规范：
+ * - 格式：模块_错误类型_具体错误
+ * - 使用大写字母和下划线
+ * - 模块前缀：AUTH（认证）、VALIDATION（验证）、DATABASE（数据库）、FILE（文件）、MIDDLEWARE（中间件）、OAUTH2（OAuth2）
+ * - 示例：AUTH_INVALID_TOKEN, VALIDATION_REQUIRED_FIELD, DATABASE_CONNECTION_FAILED
+ *
+ * 错误码分类：
+ * - 1000-1999: 通用错误
+ * - 2000-2999: 认证和授权错误
+ * - 3000-3999: 验证错误
+ * - 4000-4999: OAuth2 错误
+ * - 5000-5999: 数据库错误
+ * - 6000-6999: 文件操作错误
+ * - 7000-7999: 中间件错误
+ * - 8000-8999: 配置错误
  */
 export enum ErrorCode {
-  // 通用错误 (1000-1999)
+  // ========== 通用错误 (1000-1999) ==========
   INTERNAL_ERROR = 'INTERNAL_ERROR',
   INVALID_REQUEST = 'INVALID_REQUEST',
   RESOURCE_NOT_FOUND = 'RESOURCE_NOT_FOUND',
   METHOD_NOT_ALLOWED = 'METHOD_NOT_ALLOWED',
+  RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
+  SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE',
+  TIMEOUT = 'TIMEOUT',
 
-  // 认证错误 (2000-2999)
+  // ========== 认证和授权错误 (2000-2999) ==========
   AUTH_REQUIRED = 'AUTH_REQUIRED',
   AUTH_INVALID_TOKEN = 'AUTH_INVALID_TOKEN',
   AUTH_TOKEN_EXPIRED = 'AUTH_TOKEN_EXPIRED',
   AUTH_INSUFFICIENT_PERMISSIONS = 'AUTH_INSUFFICIENT_PERMISSIONS',
+  AUTH_INVALID_CREDENTIALS = 'AUTH_INVALID_CREDENTIALS',
+  AUTH_ACCOUNT_LOCKED = 'AUTH_ACCOUNT_LOCKED',
+  AUTH_ACCOUNT_DISABLED = 'AUTH_ACCOUNT_DISABLED',
 
-  // 验证错误 (3000-3999)
+  // ========== 验证错误 (3000-3999) ==========
   VALIDATION_FAILED = 'VALIDATION_FAILED',
   VALIDATION_REQUIRED_FIELD = 'VALIDATION_REQUIRED_FIELD',
   VALIDATION_INVALID_FORMAT = 'VALIDATION_INVALID_FORMAT',
   VALIDATION_OUT_OF_RANGE = 'VALIDATION_OUT_OF_RANGE',
+  VALIDATION_TYPE_MISMATCH = 'VALIDATION_TYPE_MISMATCH',
+  VALIDATION_CONSTRAINT_VIOLATION = 'VALIDATION_CONSTRAINT_VIOLATION',
 
-  // OAuth2 错误 (4000-4999)
+  // ========== OAuth2 错误 (4000-4999) ==========
   OAUTH2_INVALID_CLIENT = 'OAUTH2_INVALID_CLIENT',
   OAUTH2_INVALID_GRANT = 'OAUTH2_INVALID_GRANT',
   OAUTH2_INVALID_SCOPE = 'OAUTH2_INVALID_SCOPE',
   OAUTH2_INVALID_REDIRECT_URI = 'OAUTH2_INVALID_REDIRECT_URI',
   OAUTH2_UNSUPPORTED_GRANT_TYPE = 'OAUTH2_UNSUPPORTED_GRANT_TYPE',
+  OAUTH2_ACCESS_DENIED = 'OAUTH2_ACCESS_DENIED',
+  OAUTH2_SERVER_ERROR = 'OAUTH2_SERVER_ERROR',
+
+  // ========== 数据库错误 (5000-5999) ==========
+  DATABASE_CONNECTION_FAILED = 'DATABASE_CONNECTION_FAILED',
+  DATABASE_QUERY_FAILED = 'DATABASE_QUERY_FAILED',
+  DATABASE_TRANSACTION_FAILED = 'DATABASE_TRANSACTION_FAILED',
+  DATABASE_CONSTRAINT_VIOLATION = 'DATABASE_CONSTRAINT_VIOLATION',
+  DATABASE_TIMEOUT = 'DATABASE_TIMEOUT',
+  DATABASE_POOL_EXHAUSTED = 'DATABASE_POOL_EXHAUSTED',
+  DATABASE_MIGRATION_FAILED = 'DATABASE_MIGRATION_FAILED',
+
+  // ========== 文件操作错误 (6000-6999) ==========
+  FILE_NOT_FOUND = 'FILE_NOT_FOUND',
+  FILE_UPLOAD_FAILED = 'FILE_UPLOAD_FAILED',
+  FILE_DOWNLOAD_FAILED = 'FILE_DOWNLOAD_FAILED',
+  FILE_SIZE_EXCEEDED = 'FILE_SIZE_EXCEEDED',
+  FILE_TYPE_NOT_ALLOWED = 'FILE_TYPE_NOT_ALLOWED',
+  FILE_ACCESS_DENIED = 'FILE_ACCESS_DENIED',
+  FILE_PATH_TRAVERSAL = 'FILE_PATH_TRAVERSAL',
+
+  // ========== 中间件错误 (7000-7999) ==========
+  MIDDLEWARE_EXECUTION_FAILED = 'MIDDLEWARE_EXECUTION_FAILED',
+  MIDDLEWARE_TIMEOUT = 'MIDDLEWARE_TIMEOUT',
+  CORS_NOT_ALLOWED = 'CORS_NOT_ALLOWED',
+
+  // ========== 配置错误 (8000-8999) ==========
+  CONFIG_INVALID = 'CONFIG_INVALID',
+  CONFIG_MISSING = 'CONFIG_MISSING',
+  CONFIG_VALIDATION_FAILED = 'CONFIG_VALIDATION_FAILED',
 }
 
 /**
  * 错误码到 HTTP 状态码的映射
  */
 export const ERROR_CODE_TO_STATUS: Record<ErrorCode, number> = {
+  // 通用错误
   [ErrorCode.INTERNAL_ERROR]: 500,
   [ErrorCode.INVALID_REQUEST]: 400,
   [ErrorCode.RESOURCE_NOT_FOUND]: 404,
   [ErrorCode.METHOD_NOT_ALLOWED]: 405,
+  [ErrorCode.RATE_LIMIT_EXCEEDED]: 429,
+  [ErrorCode.SERVICE_UNAVAILABLE]: 503,
+  [ErrorCode.TIMEOUT]: 408,
+
+  // 认证和授权错误
   [ErrorCode.AUTH_REQUIRED]: 401,
   [ErrorCode.AUTH_INVALID_TOKEN]: 401,
   [ErrorCode.AUTH_TOKEN_EXPIRED]: 401,
   [ErrorCode.AUTH_INSUFFICIENT_PERMISSIONS]: 403,
+  [ErrorCode.AUTH_INVALID_CREDENTIALS]: 401,
+  [ErrorCode.AUTH_ACCOUNT_LOCKED]: 423,
+  [ErrorCode.AUTH_ACCOUNT_DISABLED]: 403,
+
+  // 验证错误
   [ErrorCode.VALIDATION_FAILED]: 400,
   [ErrorCode.VALIDATION_REQUIRED_FIELD]: 400,
   [ErrorCode.VALIDATION_INVALID_FORMAT]: 400,
   [ErrorCode.VALIDATION_OUT_OF_RANGE]: 400,
+  [ErrorCode.VALIDATION_TYPE_MISMATCH]: 400,
+  [ErrorCode.VALIDATION_CONSTRAINT_VIOLATION]: 400,
+
+  // OAuth2 错误
   [ErrorCode.OAUTH2_INVALID_CLIENT]: 400,
   [ErrorCode.OAUTH2_INVALID_GRANT]: 400,
   [ErrorCode.OAUTH2_INVALID_SCOPE]: 400,
   [ErrorCode.OAUTH2_INVALID_REDIRECT_URI]: 400,
   [ErrorCode.OAUTH2_UNSUPPORTED_GRANT_TYPE]: 400,
+  [ErrorCode.OAUTH2_ACCESS_DENIED]: 403,
+  [ErrorCode.OAUTH2_SERVER_ERROR]: 500,
+
+  // 数据库错误
+  [ErrorCode.DATABASE_CONNECTION_FAILED]: 503,
+  [ErrorCode.DATABASE_QUERY_FAILED]: 500,
+  [ErrorCode.DATABASE_TRANSACTION_FAILED]: 500,
+  [ErrorCode.DATABASE_CONSTRAINT_VIOLATION]: 409,
+  [ErrorCode.DATABASE_TIMEOUT]: 504,
+  [ErrorCode.DATABASE_POOL_EXHAUSTED]: 503,
+  [ErrorCode.DATABASE_MIGRATION_FAILED]: 500,
+
+  // 文件操作错误
+  [ErrorCode.FILE_NOT_FOUND]: 404,
+  [ErrorCode.FILE_UPLOAD_FAILED]: 500,
+  [ErrorCode.FILE_DOWNLOAD_FAILED]: 500,
+  [ErrorCode.FILE_SIZE_EXCEEDED]: 413,
+  [ErrorCode.FILE_TYPE_NOT_ALLOWED]: 415,
+  [ErrorCode.FILE_ACCESS_DENIED]: 403,
+  [ErrorCode.FILE_PATH_TRAVERSAL]: 400,
+
+  // 中间件错误
+  [ErrorCode.MIDDLEWARE_EXECUTION_FAILED]: 500,
+  [ErrorCode.MIDDLEWARE_TIMEOUT]: 504,
+  [ErrorCode.CORS_NOT_ALLOWED]: 403,
+
+  // 配置错误
+  [ErrorCode.CONFIG_INVALID]: 500,
+  [ErrorCode.CONFIG_MISSING]: 500,
+  [ErrorCode.CONFIG_VALIDATION_FAILED]: 500,
 };
 
 /**
  * 错误码的默认消息（英文）
+ * 支持消息模板，使用 {key} 作为占位符
+ * 例如：'Resource {resource} not found'，可以通过参数替换 {resource}
  */
 export const ERROR_CODE_MESSAGES: Record<ErrorCode, string> = {
+  // 通用错误
   [ErrorCode.INTERNAL_ERROR]: 'Internal Server Error',
   [ErrorCode.INVALID_REQUEST]: 'Invalid Request',
   [ErrorCode.RESOURCE_NOT_FOUND]: 'Resource Not Found',
   [ErrorCode.METHOD_NOT_ALLOWED]: 'Method Not Allowed',
+  [ErrorCode.RATE_LIMIT_EXCEEDED]: 'Rate Limit Exceeded',
+  [ErrorCode.SERVICE_UNAVAILABLE]: 'Service Unavailable',
+  [ErrorCode.TIMEOUT]: 'Request Timeout',
+
+  // 认证和授权错误
   [ErrorCode.AUTH_REQUIRED]: 'Authentication Required',
   [ErrorCode.AUTH_INVALID_TOKEN]: 'Invalid Authentication Token',
   [ErrorCode.AUTH_TOKEN_EXPIRED]: 'Authentication Token Expired',
   [ErrorCode.AUTH_INSUFFICIENT_PERMISSIONS]: 'Insufficient Permissions',
+  [ErrorCode.AUTH_INVALID_CREDENTIALS]: 'Invalid Credentials',
+  [ErrorCode.AUTH_ACCOUNT_LOCKED]: 'Account Locked',
+  [ErrorCode.AUTH_ACCOUNT_DISABLED]: 'Account Disabled',
+
+  // 验证错误
   [ErrorCode.VALIDATION_FAILED]: 'Validation Failed',
   [ErrorCode.VALIDATION_REQUIRED_FIELD]: 'Required Field Missing',
   [ErrorCode.VALIDATION_INVALID_FORMAT]: 'Invalid Format',
   [ErrorCode.VALIDATION_OUT_OF_RANGE]: 'Value Out of Range',
+  [ErrorCode.VALIDATION_TYPE_MISMATCH]: 'Type Mismatch',
+  [ErrorCode.VALIDATION_CONSTRAINT_VIOLATION]: 'Constraint Violation',
+
+  // OAuth2 错误
   [ErrorCode.OAUTH2_INVALID_CLIENT]: 'Invalid Client',
   [ErrorCode.OAUTH2_INVALID_GRANT]: 'Invalid Grant',
   [ErrorCode.OAUTH2_INVALID_SCOPE]: 'Invalid Scope',
   [ErrorCode.OAUTH2_INVALID_REDIRECT_URI]: 'Invalid Redirect URI',
   [ErrorCode.OAUTH2_UNSUPPORTED_GRANT_TYPE]: 'Unsupported Grant Type',
+  [ErrorCode.OAUTH2_ACCESS_DENIED]: 'Access Denied',
+  [ErrorCode.OAUTH2_SERVER_ERROR]: 'OAuth2 Server Error',
+
+  // 数据库错误
+  [ErrorCode.DATABASE_CONNECTION_FAILED]: 'Database Connection Failed',
+  [ErrorCode.DATABASE_QUERY_FAILED]: 'Database Query Failed',
+  [ErrorCode.DATABASE_TRANSACTION_FAILED]: 'Database Transaction Failed',
+  [ErrorCode.DATABASE_CONSTRAINT_VIOLATION]: 'Database Constraint Violation',
+  [ErrorCode.DATABASE_TIMEOUT]: 'Database Timeout',
+  [ErrorCode.DATABASE_POOL_EXHAUSTED]: 'Database Connection Pool Exhausted',
+  [ErrorCode.DATABASE_MIGRATION_FAILED]: 'Database Migration Failed',
+
+  // 文件操作错误
+  [ErrorCode.FILE_NOT_FOUND]: 'File Not Found',
+  [ErrorCode.FILE_UPLOAD_FAILED]: 'File Upload Failed',
+  [ErrorCode.FILE_DOWNLOAD_FAILED]: 'File Download Failed',
+  [ErrorCode.FILE_SIZE_EXCEEDED]: 'File Size Exceeded',
+  [ErrorCode.FILE_TYPE_NOT_ALLOWED]: 'File Type Not Allowed',
+  [ErrorCode.FILE_ACCESS_DENIED]: 'File Access Denied',
+  [ErrorCode.FILE_PATH_TRAVERSAL]: 'Path Traversal Detected',
+
+  // 中间件错误
+  [ErrorCode.MIDDLEWARE_EXECUTION_FAILED]: 'Middleware Execution Failed',
+  [ErrorCode.MIDDLEWARE_TIMEOUT]: 'Middleware Timeout',
+  [ErrorCode.CORS_NOT_ALLOWED]: 'CORS Not Allowed',
+
+  // 配置错误
+  [ErrorCode.CONFIG_INVALID]: 'Invalid Configuration',
+  [ErrorCode.CONFIG_MISSING]: 'Missing Configuration',
+  [ErrorCode.CONFIG_VALIDATION_FAILED]: 'Configuration Validation Failed',
 };
 

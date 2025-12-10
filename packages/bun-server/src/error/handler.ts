@@ -22,7 +22,12 @@ export async function handleError(error: unknown, context: Context): Promise<Res
     if (error.code) {
       const acceptLanguage = context.getHeader('accept-language');
       const language = ErrorMessageI18n.parseLanguageFromHeader(acceptLanguage);
-      errorMessage = ErrorMessageI18n.getMessage(error.code, language);
+      // 如果提供了消息模板参数，使用参数替换占位符
+      errorMessage = ErrorMessageI18n.getMessage(
+        error.code,
+        language,
+        error.messageParams,
+      );
     }
 
     const responseBody: Record<string, unknown> = {
