@@ -49,7 +49,8 @@
 **完整变更列表：**
 
 - feat(error): enhance error handling system
-  - extend error code system with 30+ new codes (database, file, middleware, config)
+  - extend error code system with 30+ new codes (database, file, middleware,
+    config)
   - improve i18n support with message template system (parameterized messages)
   - add support for more languages (ja, ko) and improve language detection
   - update HttpException to support message template parameters
