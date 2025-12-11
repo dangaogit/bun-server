@@ -1,6 +1,6 @@
 import type { Context } from '../core/context';
 import { Route } from './route';
-import type { HttpMethod, RouteHandler } from './types';
+import type { HttpMethod, RouteHandler, RouteMatch } from './types';
 import type { Middleware } from '../middleware';
 
 /**
