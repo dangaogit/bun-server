@@ -1,35 +1,59 @@
-# API 概览
+# API Overview
 
-本文档概述 Bun Server Framework 目前提供的主要 API，方便快速查阅。
+This document provides an overview of the main APIs provided by Bun Server Framework for quick reference.
 
-## 核心
+## Core
 
-| API                        | 描述                                                                                                                         |
+| API                        | Description                                                                                                                         |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `Application(options?)`    | 应用主类，支持 `use` 注册全局中间件、`registerController`/`registerWebSocketGateway` 注册组件以及 `listen/stop` 管理生命周期 |
-| `Context`                  | 统一的请求上下文，封装 `Request` 并提供 `getQuery/getParam/getBody/setHeader/setStatus/createResponse` 等方法                |
-| `ResponseBuilder`          | 提供 `json/text/html/empty/redirect/error/file` 便捷响应构建器                                                               |
-| `RouteRegistry` / `Router` | 可直接注册函数式路由或获取底层 `Router` 进行手动控制                                                                         |
+| `Application(options?)`    | Main application class, supports `use` for global middleware, `registerController`/`registerWebSocketGateway` for components, and `listen/stop` for lifecycle management |
+| `Context`                  | Unified request context, wraps `Request` and provides methods like `getQuery/getParam/getBody/setHeader/setStatus/createResponse`                |
+| `ResponseBuilder`          | Provides convenient response builders: `json/text/html/empty/redirect/error/file`                                                               |
+| `RouteRegistry` / `Router` | Can directly register functional routes or get the underlying `Router` for manual control                                                                         |
 
-## 控制器与路由装饰器
+## Controllers and Route Decorators
 
-- `@Controller(path)`：声明控制器前缀。
-- `@GET/@POST/@PUT/@PATCH/@DELETE(path)`：声明 HTTP 方法。
-- 参数装饰器：`@Body() / @Query(key) / @Param(key) / @Header(key)`。
-- `ControllerRegistry` 会自动解析装饰器并注册路由。
+- `@Controller(path)`: Declare controller prefix.
+- `@GET/@POST/@PUT/@PATCH/@DELETE(path)`: Declare HTTP methods.
+- Parameter decorators: `@Body() / @Query(key) / @Param(key) / @Header(key)`.
+- `ControllerRegistry` automatically parses decorators and registers routes.
 
-## 依赖注入
+## Dependency Injection
 
-- `Container`：`register`、`registerInstance`、`resolve`、`clear`、`isRegistered`。
-- 装饰器：`@Injectable(config?)` 设置生命周期、`@Inject(token?)` 指定依赖。
-- `Lifecycle` 枚举：`Singleton`、`Transient`、`Scoped`（预留）。
+- `Container`: `register`, `registerInstance`, `resolve`, `clear`, `isRegistered`.
+- Decorators: `@Injectable(config?)` sets lifecycle, `@Inject(token?)` specifies dependencies.
+- `Lifecycle` enum: `Singleton`, `Transient`, `Scoped` (reserved).
 
-## 中间件体系
+## Extension System
 
-- `Middleware` 类型：`(context, next) => Response`。
-- `MiddlewarePipeline`：`use`, `run`, `hasMiddlewares`, `clear`。
-- `@UseMiddleware(...middlewares)`：作用于控制器类或方法。
-- 内置中间件：
+### Middleware
+
+- `Middleware` type: `(context: Context, next: NextFunction) => Response | Promise<Response>`
+- `app.use(middleware)`: Register global middleware
+- `@UseMiddleware(...middlewares)`: Controller or method-level middleware
+- Built-in middleware factories: `createLoggerMiddleware`, `createCorsMiddleware`, `createErrorHandlingMiddleware`, `createFileUploadMiddleware`, `createStaticFileMiddleware`
+
+### Application Extensions
+
+- `ApplicationExtension` interface: `register(container: Container): void`
+- `app.registerExtension(extension)`: Register application extension
+- Official extensions: `LoggerExtension`, `SwaggerExtension`
+
+### Module System
+
+- `@Module(metadata)`: Module decorator
+- `ModuleMetadata`: Supports `imports`, `controllers`, `providers`, `exports`, `extensions`, `middlewares`
+- `app.registerModule(moduleClass)`: Register module
+- Official modules: `LoggerModule.forRoot(options)`, `SwaggerModule.forRoot(options)`
+
+For detailed information, please refer to [Extension System Documentation](./extensions.md).
+
+## Middleware System
+
+- `Middleware` type: `(context, next) => Response`.
+- `MiddlewarePipeline`: `use`, `run`, `hasMiddlewares`, `clear`.
+- `@UseMiddleware(...middlewares)`: Applied to controller classes or methods.
+- Built-in middleware:
   - `createLoggerMiddleware`
   - `createRequestLoggingMiddleware`
   - `createCorsMiddleware`
@@ -37,60 +61,36 @@
   - `createFileUploadMiddleware`
   - `createStaticFileMiddleware`
 
-## 验证
+## Validation
 
-- 装饰器：`@Validate(rule...)`, `IsString`, `IsNumber`, `IsEmail`, `IsOptional`,
-  `MinLength`。
-- `ValidationError`：`issues` 数组包含 `index / rule / message`。
-- `validateParameters(params, metadata)` 可在自定义场景复用。
+- Decorators: `@Validate(rule...)`, `IsString`, `IsNumber`, `IsEmail`, `IsOptional`,
+  `MinLength`.
+- `ValidationError`: `issues` array contains `index / rule / message`.
+- `validateParameters(params, metadata)` can be reused in custom scenarios.
 
-## 错误与异常
+## Errors and Exceptions
 
-- `HttpException` 及子类：`BadRequestException`, `UnauthorizedException`,
-  `ForbiddenException`, `NotFoundException`, `InternalServerErrorException`。
-- `ExceptionFilter` 接口与 `ExceptionFilterRegistry`：可注册自定义过滤器。
-- `handleError(error, context)`：全局错误处理核心逻辑；默认错误中间件已自动调用。
-
-## 扩展系统
-
-### 中间件
-
-- `Middleware` 类型：`(context: Context, next: NextFunction) => Response | Promise<Response>`
-- `app.use(middleware)`：注册全局中间件
-- `@UseMiddleware(...middlewares)`：控制器或方法级中间件
-- 内置中间件工厂函数：`createLoggerMiddleware`, `createCorsMiddleware`, `createErrorHandlingMiddleware`, `createFileUploadMiddleware`, `createStaticFileMiddleware`
-
-### 应用扩展
-
-- `ApplicationExtension` 接口：`register(container: Container): void`
-- `app.registerExtension(extension)`：注册应用扩展
-- 官方扩展：`LoggerExtension`, `SwaggerExtension`
-
-### 模块系统
-
-- `@Module(metadata)`：模块装饰器
-- `ModuleMetadata`：支持 `imports`, `controllers`, `providers`, `exports`, `extensions`, `middlewares`
-- `app.registerModule(moduleClass)`：注册模块
-- 官方模块：`LoggerModule.forRoot(options)`, `SwaggerModule.forRoot(options)`
-
-详细说明请参考 [扩展系统文档](./extensions.md)。
+- `HttpException` and subclasses: `BadRequestException`, `UnauthorizedException`,
+  `ForbiddenException`, `NotFoundException`, `InternalServerErrorException`.
+- `ExceptionFilter` interface and `ExceptionFilterRegistry`: Can register custom filters.
+- `handleError(error, context)`: Core global error handling logic; default error middleware is automatically called.
 
 ## WebSocket
 
-- 装饰器：`@WebSocketGateway(path)` + `@OnOpen`, `@OnMessage`, `@OnClose`。
-- `WebSocketGatewayRegistry`：自动管理依赖注入、在
-  `Application.registerWebSocketGateway` 时登记。
-- 服务器会自动处理握手并将事件委托给网关实例。
+- Decorators: `@WebSocketGateway(path)` + `@OnOpen`, `@OnMessage`, `@OnClose`.
+- `WebSocketGatewayRegistry`: Automatically manages dependency injection, registers when
+  `Application.registerWebSocketGateway` is called.
+- Server automatically handles handshakes and delegates events to gateway instances.
 
-## 请求工具
+## Request Utilities
 
-- `BodyParser`：`parse(request)`，自动缓存解析结果。
-- `FileHandler`：解析 `multipart/form-data`，返回结构化文件对象。
-- `RequestWrapper`：用于兼容场景的轻量封装。
+- `BodyParser`: `parse(request)`, automatically caches parsed results.
+- `FileHandler`: Parses `multipart/form-data`, returns structured file objects.
+- `RequestWrapper`: Lightweight wrapper for compatibility scenarios.
 
-## 导出入口
+## Export Entry
 
-所有上述 API 均可从 `src/index.ts` 导出，通过
+All above APIs can be exported from `src/index.ts`, via
 
 ```ts
 import {
@@ -106,4 +106,4 @@ import {
 } from "@dangao/bun-server";
 ```
 
-即可在应用中使用。
+for use in applications.
