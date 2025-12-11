@@ -5,31 +5,32 @@
 ## 1. 初始化应用
 
 ```ts
-import 'reflect-metadata';
-import { Application } from '../src';
+import "reflect-metadata";
+import { Application } from "../src";
 
 const app = new Application({ port: 3000 });
 app.listen();
 ```
 
-> Tip: 默认端口为 3000，可通过 `app.listen(customPort)` 或 `new Application({ port })` 调整。
+> Tip: 默认端口为 3000，可通过 `app.listen(customPort)` 或
+> `new Application({ port })` 调整。
 
 ## 2. 注册控制器与依赖
 
 ```ts
 import {
+  Application,
+  Body,
   Controller,
   GET,
-  POST,
-  Body,
-  Param,
   Injectable,
-  Application,
-} from '../src';
+  Param,
+  POST,
+} from "../src";
 
 @Injectable()
 class UserService {
-  private readonly users = new Map<string, string>([['1', 'Alice']]);
+  private readonly users = new Map<string, string>([["1", "Alice"]]);
   public get(id: string) {
     return this.users.get(id);
   }
@@ -40,16 +41,16 @@ class UserService {
   }
 }
 
-@Controller('/api/users')
+@Controller("/api/users")
 class UserController {
   public constructor(private readonly service: UserService) {}
 
-  @GET('/:id')
-  public getUser(@Param('id') id: string) {
-    return this.service.get(id) ?? { error: 'Not Found' };
+  @GET("/:id")
+  public getUser(@Param("id") id: string) {
+    return this.service.get(id) ?? { error: "Not Found" };
   }
 
-  @POST('/')
+  @POST("/")
   public createUser(@Body() payload: { name: string }) {
     return this.service.create(payload.name);
   }
@@ -63,11 +64,11 @@ app.listen();
 ## 3. 使用中间件
 
 ```ts
-import { createLoggerMiddleware, createCorsMiddleware } from '../src';
+import { createCorsMiddleware, createLoggerMiddleware } from "../src";
 
 const app = new Application();
-app.use(createLoggerMiddleware({ prefix: '[Example]' }));
-app.use(createCorsMiddleware({ origin: '*' }));
+app.use(createLoggerMiddleware({ prefix: "[Example]" }));
+app.use(createCorsMiddleware({ origin: "*" }));
 ```
 
 `@UseMiddleware()` 可作用于单个控制器或方法：
@@ -107,9 +108,9 @@ public register(
 ## 5. WebSocket 网关
 
 ```ts
-import { WebSocketGateway, OnMessage } from '../src';
+import { OnMessage, WebSocketGateway } from "../src";
 
-@WebSocketGateway('/ws/chat')
+@WebSocketGateway("/ws/chat")
 class ChatGateway {
   @OnMessage
   public onMessage(ws, message: string) {
@@ -123,23 +124,32 @@ app.registerWebSocketGateway(ChatGateway);
 ## 6. 文件上传与静态资源
 
 ```ts
-import { createFileUploadMiddleware, createStaticFileMiddleware } from '../src';
+import { createFileUploadMiddleware, createStaticFileMiddleware } from "../src";
 
 app.use(createFileUploadMiddleware({ maxSize: 5 * 1024 * 1024 }));
-app.use(createStaticFileMiddleware({ root: './public', prefix: '/assets', enableCache: true }));
+app.use(
+  createStaticFileMiddleware({
+    root: "./public",
+    prefix: "/assets",
+    enableCache: true,
+  }),
+);
 ```
 
-上传后的文件可在 `context.body.files` 中读取；静态资源请求会自动设置 Content-Type 与缓存头。
+上传后的文件可在 `context.body.files` 中读取；静态资源请求会自动设置
+Content-Type 与缓存头。
 
 ## 7. 错误处理与自定义过滤器
 
 ```ts
-import { ExceptionFilterRegistry, HttpException } from '../src';
+import { ExceptionFilterRegistry, HttpException } from "../src";
 
 ExceptionFilterRegistry.getInstance().register({
   catch(error, context) {
     if (error instanceof HttpException && error.status === 403) {
-      return context.createResponse({ error: 'No permission' }, { status: 403 });
+      return context.createResponse({ error: "No permission" }, {
+        status: 403,
+      });
     }
     return undefined;
   },
@@ -150,24 +160,30 @@ ExceptionFilterRegistry.getInstance().register({
 
 ## 8. 扩展系统
 
-Bun Server 提供了多种扩展方式，包括中间件、应用扩展、模块系统等。详细说明请参考 [扩展系统文档](./extensions.md)。
+Bun Server 提供了多种扩展方式，包括中间件、应用扩展、模块系统等。详细说明请参考
+[扩展系统文档](./extensions.md)。
 
 ### 快速示例
 
 #### 使用模块方式（推荐）
 
 ```typescript
-import { Module, LoggerModule, SwaggerModule, LogLevel } from '@dangao/bun-server';
+import {
+  LoggerModule,
+  LogLevel,
+  Module,
+  SwaggerModule,
+} from "@dangao/bun-server";
 
 // 配置模块
 LoggerModule.forRoot({
-  logger: { prefix: 'App', level: LogLevel.INFO },
+  logger: { prefix: "App", level: LogLevel.INFO },
   enableRequestLogging: true,
 });
 
 SwaggerModule.forRoot({
-  info: { title: 'API', version: '1.0.0' },
-  uiPath: '/swagger',
+  info: { title: "API", version: "1.0.0" },
+  uiPath: "/swagger",
 });
 
 @Module({
@@ -184,32 +200,162 @@ app.registerModule(AppModule);
 #### 使用扩展方式
 
 ```typescript
-import { LoggerExtension, SwaggerExtension } from '@dangao/bun-server';
+import { LoggerExtension, SwaggerExtension } from "@dangao/bun-server";
 
 const app = new Application({ port: 3000 });
 
-app.registerExtension(new LoggerExtension({ prefix: 'App' }));
-app.registerExtension(new SwaggerExtension({
-  info: { title: 'API', version: '1.0.0' },
-}));
+app.registerExtension(new LoggerExtension({ prefix: "App" }));
+app.registerExtension(
+  new SwaggerExtension({
+    info: { title: "API", version: "1.0.0" },
+  }),
+);
 ```
 
 #### 使用中间件
 
 ```typescript
-import { createLoggerMiddleware, createCorsMiddleware } from '@dangao/bun-server';
+import {
+  createCorsMiddleware,
+  createLoggerMiddleware,
+} from "@dangao/bun-server";
 
 const app = new Application({ port: 3000 });
 
-app.use(createLoggerMiddleware({ prefix: '[App]' }));
-app.use(createCorsMiddleware({ origin: '*' }));
+app.use(createLoggerMiddleware({ prefix: "[App]" }));
+app.use(createCorsMiddleware({ origin: "*" }));
 ```
 
 更多扩展方式和使用场景，请参考 [扩展系统文档](./extensions.md)。
 
+### 进阶示例：接口 + Symbol + 模块
+
+此示例演示如何使用接口配合 Symbol token
+和基于模块的依赖注入，实现更灵活的解耦设计：
+
+```typescript
+import {
+  Application,
+  Body,
+  CONFIG_SERVICE_TOKEN,
+  ConfigModule,
+  ConfigService,
+  Controller,
+  GET,
+  Inject,
+  Injectable,
+  Module,
+  Param,
+  POST,
+} from "@dangao/bun-server";
+
+// 定义服务接口
+interface UserService {
+  find(id: string): Promise<{ id: string; name: string } | undefined>;
+  create(name: string): { id: string; name: string };
+}
+
+// 创建 Symbol token 用于依赖注入
+const UserService = Symbol("UserService");
+
+// 实现接口
+@Injectable()
+class UserServiceImpl implements UserService {
+  private readonly users = new Map<string, { id: string; name: string }>([
+    ["1", { id: "1", name: "Alice" }],
+  ]);
+
+  public async find(id: string) {
+    return this.users.get(id);
+  }
+
+  public create(name: string) {
+    const id = String(this.users.size + 1);
+    const user = { id, name };
+    this.users.set(id, user);
+    return user;
+  }
+}
+
+@Controller("/api/users")
+class UserController {
+  public constructor(
+    private readonly service: UserService,
+    @Inject(CONFIG_SERVICE_TOKEN) private readonly config: ConfigService,
+  ) {}
+
+  @GET("/:id")
+  public async getUser(@Param("id") id: string) {
+    const user = await this.service.find(id);
+    if (!user) {
+      return { error: "Not Found" };
+    }
+    return user;
+  }
+
+  @POST("/")
+  public createUser(@Body("name") name: string) {
+    return this.service.create(name);
+  }
+}
+
+// 使用 Symbol-based provider 定义模块
+@Module({
+  controllers: [UserController],
+  providers: [
+    {
+      provide: UserService,
+      useClass: UserServiceImpl,
+    },
+  ],
+  exports: [UserService],
+})
+class UserModule {}
+
+// 配置模块
+ConfigModule.forRoot({
+  defaultConfig: {
+    app: {
+      name: "Advanced App",
+      port: 3100,
+    },
+  },
+});
+
+// 注册模块并启动应用
+@Module({
+  imports: [ConfigModule],
+  controllers: [UserController],
+  providers: [
+    {
+      provide: UserService,
+      useClass: UserServiceImpl,
+    },
+  ],
+})
+class AppModule {}
+
+const app = new Application({ port: 3100 });
+app.registerModule(AppModule);
+app.listen();
+```
+
+**关键要点：**
+
+- **基于接口的设计**：使用 TypeScript 接口定义服务契约，便于解耦和测试
+- **Symbol token**：使用 `Symbol()` 创建类型安全的依赖注入 token，避免字符串
+  token 的命名冲突
+- **模块提供者**：使用 `provide: Symbol, useClass: Implementation`
+  注册提供者，支持接口与实现分离
+- **类型安全注入**：在构造函数中直接使用接口类型，框架会自动通过 Symbol token
+  解析对应的实现
+
+这种模式特别适合大型项目，可以轻松替换实现而不影响使用方代码。
+
 ## 9. 测试建议
 
 - 使用 `tests/utils/test-port.ts` 获取自增端口，避免本地冲突。
-- 在 `afterEach` 钩子中调用 `RouteRegistry.getInstance().clear()` 和 `ControllerRegistry.getInstance().clear()`，保持全局状态干净。
-- 端到端测试中可直接实例化 `Context` 并调用 `router.handle(context)`，无需真正启动服务器。
-
+- 在 `afterEach` 钩子中调用 `RouteRegistry.getInstance().clear()` 和
+  `ControllerRegistry.getInstance().clear()`，保持全局状态干净。
+- 端到端测试中可直接实例化 `Context` 并调用
+  `router.handle(context)`，无需真正启动服务器。

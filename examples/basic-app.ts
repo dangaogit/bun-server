@@ -25,14 +25,21 @@ import {
 } from "@dangao/bun-server";
 import type { Logger } from "@dangao/logsmith";
 
+interface UserService {
+  find(id: string): Promise<{ id: string; name: string } | undefined>;
+  create(name: string): { id: string; name: string };
+}
+
+const UserService = Symbol("UserService");
+
 @Injectable()
-class UserService {
+class UserServiceImpl implements UserService {
   private readonly users = new Map<string, { id: string; name: string }>([[
     "1",
     { id: "1", name: "Alice" },
   ]]);
 
-  public find(id: string) {
+  public async find(id: string) {
     return this.users.get(id);
   }
 
@@ -48,7 +55,7 @@ class UserService {
 @ApiTags("Users")
 class UserController {
   public constructor(
-    @Inject(UserService) private readonly service: UserService,
+    private readonly service: UserService,
     @Inject(LOGGER_TOKEN) private readonly logger: Logger,
     @Inject(CONFIG_SERVICE_TOKEN)
     private readonly config: ConfigService,
@@ -128,8 +135,11 @@ class UserController {
 
 @Module({
   controllers: [UserController],
-  providers: [UserService],
-  exports: [UserService],
+  providers: [{
+    provide: UserService,
+    useClass: UserServiceImpl,
+  }],
+  exports: [UserServiceImpl],
 })
 class UserModule {}
 
@@ -178,7 +188,10 @@ SwaggerModule.forRoot({
 @Module({
   imports: [ConfigModule, LoggerModule, SwaggerModule],
   controllers: [UserController],
-  providers: [UserService],
+  providers: [{
+    provide: UserService,
+    useClass: UserServiceImpl,
+  }],
   exports: [UserService],
 })
 class AppModule {}

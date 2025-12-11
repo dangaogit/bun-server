@@ -130,6 +130,124 @@ bun --cwd=benchmark run bench:di     # 仅运行 DI 基准
 > 会因为工作区结构导致无法找到源文件，请使用上面的命令或先进入
 > `packages/@dangao/bun-server/`。
 
+### 进阶示例：接口 + Symbol + 模块
+
+此示例演示如何使用接口配合 Symbol token 和基于模块的依赖注入：
+
+```ts
+import {
+  Application,
+  Body,
+  CONFIG_SERVICE_TOKEN,
+  ConfigModule,
+  ConfigService,
+  Controller,
+  GET,
+  Inject,
+  Injectable,
+  Module,
+  Param,
+  POST,
+} from "@dangao/bun-server";
+
+// 定义服务接口
+interface UserService {
+  find(id: string): Promise<{ id: string; name: string } | undefined>;
+  create(name: string): { id: string; name: string };
+}
+
+// 创建 Symbol token 用于依赖注入
+const UserService = Symbol("UserService");
+
+// 实现接口
+@Injectable()
+class UserServiceImpl implements UserService {
+  private readonly users = new Map<string, { id: string; name: string }>([
+    ["1", { id: "1", name: "Alice" }],
+  ]);
+
+  public async find(id: string) {
+    return this.users.get(id);
+  }
+
+  public create(name: string) {
+    const id = String(this.users.size + 1);
+    const user = { id, name };
+    this.users.set(id, user);
+    return user;
+  }
+}
+
+@Controller("/api/users")
+class UserController {
+  public constructor(
+    private readonly service: UserService,
+    @Inject(CONFIG_SERVICE_TOKEN) private readonly config: ConfigService,
+  ) {}
+
+  @GET("/:id")
+  public async getUser(@Param("id") id: string) {
+    const user = await this.service.find(id);
+    if (!user) {
+      return { error: "Not Found" };
+    }
+    return user;
+  }
+
+  @POST("/")
+  public createUser(@Body("name") name: string) {
+    return this.service.create(name);
+  }
+}
+
+// 使用 Symbol-based provider 定义模块
+@Module({
+  controllers: [UserController],
+  providers: [
+    {
+      provide: UserService,
+      useClass: UserServiceImpl,
+    },
+  ],
+  exports: [UserService],
+})
+class UserModule {}
+
+// 配置模块
+ConfigModule.forRoot({
+  defaultConfig: {
+    app: {
+      name: "Advanced App",
+      port: 3100,
+    },
+  },
+});
+
+// 注册模块并启动应用
+@Module({
+  imports: [ConfigModule],
+  controllers: [UserController],
+  providers: [
+    {
+      provide: UserService,
+      useClass: UserServiceImpl,
+    },
+  ],
+})
+class AppModule {}
+
+const app = new Application({ port: 3100 });
+app.registerModule(AppModule);
+app.listen();
+```
+
+**关键要点：**
+
+- **基于接口的设计**：使用 TypeScript 接口定义服务契约
+- **Symbol token**：使用 `Symbol()` 创建类型安全的依赖注入 token
+- **模块提供者**：使用 `provide: Symbol, useClass: Implementation` 注册提供者
+- **类型安全注入**：使用 `@Inject(Symbol)` 配合接口类型进行依赖注入
+
 ## 示例与扩展
 
 - `examples/basic-app.ts`：最小可运行示例，覆盖 DI + Logger + Middleware +

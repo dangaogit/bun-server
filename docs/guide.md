@@ -217,6 +217,133 @@ app.use(createCorsMiddleware({ origin: "*" }));
 For more extension methods and use cases, please refer to
 [Extension System Documentation](./extensions.md).
 
+### Advanced Example: Interface + Symbol + Module
+
+This example demonstrates using interfaces with Symbol tokens and module-based
+dependency injection for more flexible decoupled design:
+
+```typescript
+import {
+  Application,
+  Body,
+  CONFIG_SERVICE_TOKEN,
+  ConfigModule,
+  ConfigService,
+  Controller,
+  GET,
+  Inject,
+  Injectable,
+  Module,
+  Param,
+  POST,
+} from "@dangao/bun-server";
+
+// Define service interface
+interface UserService {
+  find(id: string): Promise<{ id: string; name: string } | undefined>;
+  create(name: string): { id: string; name: string };
+}
+
+// Create Symbol token for DI
+const UserService = Symbol("UserService");
+
+// Implement the interface
+@Injectable()
+class UserServiceImpl implements UserService {
+  private readonly users = new Map<string, { id: string; name: string }>([
+    ["1", { id: "1", name: "Alice" }],
+  ]);
+
+  public async find(id: string) {
+    return this.users.get(id);
+  }
+
+  public create(name: string) {
+    const id = String(this.users.size + 1);
+    const user = { id, name };
+    this.users.set(id, user);
+    return user;
+  }
+}
+
+@Controller("/api/users")
+class UserController {
+  public constructor(
+    private readonly service: UserService,
+    @Inject(CONFIG_SERVICE_TOKEN) private readonly config: ConfigService,
+  ) {}
+
+  @GET("/:id")
+  public async getUser(@Param("id") id: string) {
+    const user = await this.service.find(id);
+    if (!user) {
+      return { error: "Not Found" };
+    }
+    return user;
+  }
+
+  @POST("/")
+  public createUser(@Body("name") name: string) {
+    return this.service.create(name);
+  }
+}
+
+// Define module with Symbol-based provider
+@Module({
+  controllers: [UserController],
+  providers: [
+    {
+      provide: UserService,
+      useClass: UserServiceImpl,
+    },
+  ],
+  exports: [UserService],
+})
+class UserModule {}
+
+// Configure modules
+ConfigModule.forRoot({
+  defaultConfig: {
+    app: {
+      name: "Advanced App",
+      port: 3100,
+    },
+  },
+});
+
+// Register module and start application
+@Module({
+  imports: [ConfigModule],
+  controllers: [UserController],
+  providers: [
+    {
+      provide: UserService,
+      useClass: UserServiceImpl,
+    },
+  ],
+})
+class AppModule {}
+
+const app = new Application({ port: 3100 });
+app.registerModule(AppModule);
+app.listen();
+```
+
+**Key points:**
+
+- **Interface-based design**: Define contracts with TypeScript interfaces for
+  better decoupling and testing
+- **Symbol tokens**: Use `Symbol()` for type-safe dependency injection tokens,
+  avoiding naming conflicts with string tokens
+- **Module providers**: Register providers using
+  `provide: Symbol, useClass: Implementation` to separate interface from
+  implementation
+- **Type-safe injection**: Use interface types directly in constructors, the
+  framework will automatically resolve the implementation via Symbol token
+
+This pattern is especially suitable for large projects, allowing easy
+implementation replacement without affecting consumer code.
+
 ## 9. Database Integration
 
 ### Basic Database Connection
