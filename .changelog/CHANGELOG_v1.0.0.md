@@ -83,12 +83,15 @@
 
 ## 🎯 v1.0.0 里程碑
 
-v1.0.0 是 Bun Server Framework 的第一个稳定版本（Stable Release），标志着框架已经具备企业级应用所需的核心能力：
+v1.0.0 是 Bun Server Framework 的第一个稳定版本（Stable
+Release），标志着框架已经具备企业级应用所需的核心能力：
 
-- ✅ **完整的数据库集成**：支持 PostgreSQL、MySQL、SQLite，提供 ORM 集成和事务支持
+- ✅ **完整的数据库集成**：支持 PostgreSQL、MySQL、SQLite，提供 ORM
+  集成和事务支持
 - ✅ **生产就绪**：完善的测试覆盖（434 个测试用例）、完整的文档、性能优化
 - ✅ **API 稳定性**：确保 API 向后兼容，为后续版本奠定基础
-- ✅ **丰富的功能模块**：Cache、Queue、Session、Health、Metrics、Security 等官方模块
+- ✅ **丰富的功能模块**：Cache、Queue、Session、Health、Metrics、Security
+  等官方模块
 
 ---
 

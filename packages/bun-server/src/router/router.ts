@@ -126,7 +126,9 @@ export class Router {
    * @returns 匹配结果，包含路由和参数，如果没有找到则返回 undefined
    */
   public findRouteWithMatch(method: HttpMethod, path: string): { route: Route; match: RouteMatch } | undefined {
-    const cacheKey = `${method}:${path}`;
+    // 规范化路径，确保与注册时的路径格式一致
+    const normalizedPath = this.normalizePath(path);
+    const cacheKey = `${method}:${normalizedPath}`;
     
     // 检查缓存（只缓存匹配成功的结果）
     const cached = this.matchCache.get(cacheKey);
@@ -143,9 +145,9 @@ export class Router {
       return result;
     }
 
-    // 遍历动态路由
+    // 遍历动态路由（使用规范化后的路径进行匹配）
     for (const route of this.dynamicRoutes) {
-      const match = route.match(method, path);
+      const match = route.match(method, normalizedPath);
       if (match.matched) {
         const result = { route, match };
         // 缓存匹配结果
