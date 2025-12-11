@@ -14,6 +14,12 @@ export class Router {
   private readonly routes: Route[] = [];
   private readonly staticRoutes = new Map<string, Route>();
   private readonly dynamicRoutes: Route[] = [];
+  
+  /**
+   * 路由匹配结果缓存（method:path -> { route, match }）
+   * 用于避免重复匹配，提升性能
+   */
+  private readonly matchCache = new Map<string, { route: Route; match: RouteMatch }>();
 
   /**
    * 规范化路径（移除尾部斜杠，除非是根路径）
@@ -52,6 +58,9 @@ export class Router {
     } else {
       this.dynamicRoutes.push(route);
     }
+    
+    // 清除匹配缓存，因为路由已更新
+    this.matchCache.clear();
   }
 
   /**
@@ -106,17 +115,46 @@ export class Router {
    * @returns 匹配的路由，如果没有找到则返回 undefined
    */
   public findRoute(method: HttpMethod, path: string): Route | undefined {
-    const staticRoute = this.staticRoutes.get(`${method}:${path}`);
-    if (staticRoute) {
-      return staticRoute;
+    const result = this.findRouteWithMatch(method, path);
+    return result?.route;
+  }
+
+  /**
+   * 查找匹配的路由并返回匹配结果（包含参数）
+   * @param method - HTTP 方法
+   * @param path - 请求路径
+   * @returns 匹配结果，包含路由和参数，如果没有找到则返回 undefined
+   */
+  public findRouteWithMatch(method: HttpMethod, path: string): { route: Route; match: RouteMatch } | undefined {
+    const cacheKey = `${method}:${path}`;
+    
+    // 检查缓存（只缓存匹配成功的结果）
+    const cached = this.matchCache.get(cacheKey);
+    if (cached && cached.match.matched) {
+      return cached;
     }
 
+    // 先检查静态路由
+    const staticRoute = this.staticRoutes.get(cacheKey);
+    if (staticRoute) {
+      const match = { matched: true, params: {} };
+      const result = { route: staticRoute, match };
+      this.matchCache.set(cacheKey, result);
+      return result;
+    }
+
+    // 遍历动态路由
     for (const route of this.dynamicRoutes) {
       const match = route.match(method, path);
       if (match.matched) {
-        return route;
+        const result = { route, match };
+        // 缓存匹配结果
+        this.matchCache.set(cacheKey, result);
+        return result;
       }
     }
+    
+    // 不缓存未匹配结果，因为路由可能会动态添加
     return undefined;
   }
 
@@ -128,12 +166,13 @@ export class Router {
     const method = context.method as HttpMethod;
     const path = this.normalizePath(context.path);
 
-    const route = this.findRoute(method, path);
-    if (!route) {
+    // 使用 findRouteWithMatch 避免重复匹配
+    const result = this.findRouteWithMatch(method, path);
+    if (!result) {
       return;
     }
 
-    const match = route.match(method, path);
+    const { route, match } = result;
     if (match.matched) {
       context.params = match.params;
     }
@@ -152,15 +191,28 @@ export class Router {
    * @returns 响应对象，如果没有匹配的路由则返回 undefined
    */
   public async handle(context: Context): Promise<Response | undefined> {
-    // 先预处理路由（设置参数和 routeHandler）
-    await this.preHandle(context);
-
     const method = context.method as HttpMethod;
     const path = this.normalizePath(context.path);
-    const route = this.findRoute(method, path);
 
-    if (!route) {
+    // 使用 findRouteWithMatch 获取路由和匹配结果
+    const result = this.findRouteWithMatch(method, path);
+    if (!result) {
       return undefined;
+    }
+
+    const { route, match } = result;
+    
+    // 设置路径参数
+    if (match.matched) {
+      context.params = match.params;
+    }
+
+    // 设置 routeHandler
+    if (route.controllerClass && route.methodName) {
+      (context as any).routeHandler = {
+        controller: route.controllerClass,
+        method: route.methodName,
+      };
     }
 
     return await route.execute(context);
@@ -181,6 +233,7 @@ export class Router {
     this.routes.length = 0;
     this.dynamicRoutes.length = 0;
     this.staticRoutes.clear();
+    this.matchCache.clear();
   }
 }
 

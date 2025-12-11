@@ -45,23 +45,28 @@ export class MiddlewarePipeline {
       return await finalHandler();
     }
 
+    // 优化：使用索引而不是数组来跟踪调用状态，减少内存分配
+    let currentIndex = 0;
     const called = new Array<boolean>(length).fill(false);
-    const chain = new Array<NextFunction>(length + 1);
-    chain[length] = finalHandler;
 
-    for (let i = length - 1; i >= 0; i--) {
-      const middleware = this.middlewares[i];
-      const downstream = chain[i + 1];
-      chain[i] = async () => {
-        if (called[i]) {
+    // 创建链式调用函数（从后往前构建）
+    const createNext = (index: number): NextFunction => {
+      if (index >= length) {
+        return finalHandler;
+      }
+
+      return async () => {
+        if (called[index]) {
           throw new Error('next() called multiple times');
         }
-        called[i] = true;
-        return await middleware(context, downstream);
+        called[index] = true;
+        currentIndex = index + 1;
+        const middleware = this.middlewares[index];
+        return await middleware(context, createNext(index + 1));
       };
-    }
+    };
 
-    return await chain[0]();
+    return await createNext(0)();
   }
 }
 
