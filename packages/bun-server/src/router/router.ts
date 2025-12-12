@@ -130,28 +130,15 @@ export class Router {
     const normalizedPath = this.normalizePath(path);
     const cacheKey = `${method}:${normalizedPath}`;
     
-    // Debug: 检查路由匹配
-    if (process.env.DEBUG_ROUTES) {
-      console.log(`[DEBUG] Finding route for: ${method} ${normalizedPath}`);
-      console.log(`[DEBUG] Static routes:`, Array.from(this.staticRoutes.keys()));
-      console.log(`[DEBUG] Dynamic routes:`, this.dynamicRoutes.map(r => `${r.method} ${r.path}`));
-    }
-    
     // 检查缓存（只缓存匹配成功的结果）
     const cached = this.matchCache.get(cacheKey);
     if (cached && cached.match.matched) {
-      if (process.env.DEBUG_ROUTES) {
-        console.log(`[DEBUG] Cache hit: ${cacheKey}`);
-      }
       return cached;
     }
 
     // 先检查静态路由
     const staticRoute = this.staticRoutes.get(cacheKey);
     if (staticRoute) {
-      if (process.env.DEBUG_ROUTES) {
-        console.log(`[DEBUG] Static route matched: ${cacheKey}`);
-      }
       const match = { matched: true, params: {} };
       const result = { route: staticRoute, match };
       this.matchCache.set(cacheKey, result);
@@ -162,9 +149,6 @@ export class Router {
     for (const route of this.dynamicRoutes) {
       const match = route.match(method, normalizedPath);
       if (match.matched) {
-        if (process.env.DEBUG_ROUTES) {
-          console.log(`[DEBUG] Dynamic route matched: ${route.method} ${route.path} for ${normalizedPath}`);
-        }
         const result = { route, match };
         // 缓存匹配结果
         this.matchCache.set(cacheKey, result);
@@ -173,9 +157,6 @@ export class Router {
     }
     
     // 不缓存未匹配结果，因为路由可能会动态添加
-    if (process.env.DEBUG_ROUTES) {
-      console.log(`[DEBUG] No route matched for: ${cacheKey}`);
-    }
     return undefined;
   }
 
