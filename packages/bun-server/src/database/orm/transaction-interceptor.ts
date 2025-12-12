@@ -1,23 +1,28 @@
-import { Container } from '../../di/container';
+import type { Container } from '../../di/container';
+import type { Context } from '../../core/context';
+import type { Interceptor } from '../../interceptor';
 import { TRANSACTION_SERVICE_TOKEN } from './transaction-types';
 import { TransactionManager } from './transaction-manager';
-import { getTransactionMetadata } from './transaction-decorator';
+import { getTransactionMetadata, TRANSACTION_METADATA_KEY } from './transaction-decorator';
 import { Propagation, TransactionStatus } from './transaction-types';
 
 /**
  * 事务拦截器
  * 在方法调用时检查 @Transactional() 装饰器并执行事务逻辑
+ * 实现 Interceptor 接口，通过拦截器机制注册和执行
  */
-export class TransactionInterceptor {
+export class TransactionInterceptor implements Interceptor {
   /**
-   * 执行带事务的方法
+   * 执行拦截器逻辑
+   * 实现 Interceptor 接口
    */
-  public static async executeWithTransaction<T>(
+  public async execute<T>(
     target: unknown,
     propertyKey: string | symbol,
     originalMethod: (...args: unknown[]) => T | Promise<T>,
     args: unknown[],
     container: Container,
+    context?: Context,
   ): Promise<T> {
     const transactionMetadata = getTransactionMetadata(target, propertyKey);
 
@@ -46,7 +51,7 @@ export class TransactionInterceptor {
       case Propagation.REQUIRED:
         if (currentTransaction) {
           // 加入现有事务
-          return await this.executeInExistingTransaction(
+          return await TransactionInterceptor.executeInExistingTransaction(
             originalMethod,
             target,
             args,
@@ -55,7 +60,7 @@ export class TransactionInterceptor {
           );
         } else {
           // 创建新事务
-          return await this.executeInNewTransaction(
+          return await TransactionInterceptor.executeInNewTransaction(
             originalMethod,
             target,
             args,
@@ -66,7 +71,7 @@ export class TransactionInterceptor {
 
       case Propagation.REQUIRES_NEW:
         // 总是创建新事务
-        return await this.executeInNewTransaction(
+        return await TransactionInterceptor.executeInNewTransaction(
           originalMethod,
           target,
           args,
@@ -77,7 +82,7 @@ export class TransactionInterceptor {
       case Propagation.SUPPORTS:
         if (currentTransaction) {
           // 加入现有事务
-          return await this.executeInExistingTransaction(
+          return await TransactionInterceptor.executeInExistingTransaction(
             originalMethod,
             target,
             args,
@@ -104,7 +109,7 @@ export class TransactionInterceptor {
       case Propagation.NESTED:
         if (currentTransaction) {
           // 创建嵌套事务（保存点）
-          return await this.executeInNestedTransaction(
+          return await TransactionInterceptor.executeInNestedTransaction(
             originalMethod,
             target,
             args,
@@ -114,7 +119,7 @@ export class TransactionInterceptor {
           );
         } else {
           // 创建新事务
-          return await this.executeInNewTransaction(
+          return await TransactionInterceptor.executeInNewTransaction(
             originalMethod,
             target,
             args,
@@ -126,6 +131,21 @@ export class TransactionInterceptor {
       default:
         return await Promise.resolve(originalMethod.apply(target, args));
     }
+  }
+
+  /**
+   * 执行带事务的方法（静态方法，保持向后兼容）
+   * @deprecated 使用拦截器机制，此方法保留用于向后兼容
+   */
+  public static async executeWithTransaction<T>(
+    target: unknown,
+    propertyKey: string | symbol,
+    originalMethod: (...args: unknown[]) => T | Promise<T>,
+    args: unknown[],
+    container: Container,
+  ): Promise<T> {
+    const interceptor = new TransactionInterceptor();
+    return await interceptor.execute(target, propertyKey, originalMethod, args, container);
   }
 
   /**

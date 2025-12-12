@@ -1,6 +1,12 @@
 import type { Container } from '../di/container';
 import type { ApplicationExtension } from '../extensions/types';
+import {
+  InterceptorRegistry,
+  INTERCEPTOR_REGISTRY_TOKEN,
+} from '../interceptor';
 
+import { TransactionInterceptor } from './orm/transaction-interceptor';
+import { TRANSACTION_METADATA_KEY } from './orm/transaction-decorator';
 import { DATABASE_SERVICE_TOKEN } from './types';
 import type { DatabaseService } from './service';
 
@@ -10,8 +16,23 @@ import type { DatabaseService } from './service';
  */
 export class DatabaseExtension implements ApplicationExtension {
   public register(container: Container): void {
-    // 扩展注册时不初始化，等待应用启动时初始化
-    // 这里只是标记需要初始化
+    // 注册事务拦截器到拦截器注册表
+    try {
+      const interceptorRegistry = container.resolve<InterceptorRegistry>(
+        INTERCEPTOR_REGISTRY_TOKEN,
+      );
+      const transactionInterceptor = new TransactionInterceptor();
+      // 使用 TRANSACTION_METADATA_KEY 作为元数据键
+      // 优先级设置为 50，确保事务拦截器在其他业务拦截器之前执行
+      interceptorRegistry.register(
+        TRANSACTION_METADATA_KEY,
+        transactionInterceptor,
+        50,
+      );
+    } catch (error) {
+      // 如果拦截器注册表未注册，忽略错误（向后兼容）
+      // 这意味着拦截器机制可能未启用
+    }
   }
 
   /**

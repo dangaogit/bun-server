@@ -17,6 +17,24 @@ export {
   type ModuleClass,
 } from './di/module';
 export { ModuleRegistry } from './di/module-registry';
+export {
+  InterceptorRegistry,
+  InterceptorChain,
+  scanInterceptorMetadata,
+  BaseInterceptor,
+  Cache,
+  CacheInterceptor,
+  Permission,
+  PermissionInterceptor,
+  INTERCEPTOR_REGISTRY_TOKEN,
+  CACHE_METADATA_KEY,
+  PERMISSION_METADATA_KEY,
+  type Interceptor,
+  type InterceptorMetadata,
+  type CacheOptions,
+  type PermissionOptions,
+  type PermissionService,
+} from './interceptor';
 export { UseMiddleware, RateLimit, MiddlewarePipeline } from './middleware';
 export type { Middleware, NextFunction } from './middleware';
 export {

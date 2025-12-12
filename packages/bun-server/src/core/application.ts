@@ -10,7 +10,8 @@ import type { ApplicationExtension } from '../extensions/types';
 import { LoggerExtension } from '../extensions/logger-extension';
 import { ModuleRegistry } from '../di/module-registry';
 import type { ModuleClass } from '../di/module';
-import type { Constructor } from './types'
+import type { Constructor } from './types';
+import { InterceptorRegistry, INTERCEPTOR_REGISTRY_TOKEN } from '../interceptor';
 
 /**
  * 应用配置选项
@@ -47,6 +48,11 @@ export class Application {
     RouteRegistry.getInstance().clear();
     ControllerRegistry.getInstance().clear();
     ModuleRegistry.getInstance().clear();
+
+    // 注册 InterceptorRegistry 到 DI 容器
+    const container = ControllerRegistry.getInstance().getContainer();
+    const interceptorRegistry = new InterceptorRegistry();
+    container.registerInstance(INTERCEPTOR_REGISTRY_TOKEN, interceptorRegistry);
 
     // 默认注册 Logger（如果通过模块注册，会被覆盖）
     this.registerExtension(new LoggerExtension());

@@ -1,10 +1,16 @@
 import { Module, MODULE_METADATA_KEY, type ModuleProvider } from '../di/module';
 import type { ApplicationExtension } from '../extensions/types';
+import {
+  InterceptorRegistry,
+  INTERCEPTOR_REGISTRY_TOKEN,
+} from '../interceptor';
 
 import { DatabaseExtension } from './database-extension';
 import { DatabaseHealthIndicator } from './health-indicator';
 import { OrmService } from './orm/service';
 import { TransactionManager } from './orm/transaction-manager';
+import { TransactionInterceptor } from './orm/transaction-interceptor';
+import { TRANSACTION_METADATA_KEY } from './orm/transaction-decorator';
 import { DatabaseService } from './service';
 import {
   DATABASE_OPTIONS_TOKEN,

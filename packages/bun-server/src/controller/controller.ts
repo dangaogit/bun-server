@@ -8,7 +8,13 @@ import { getClassMiddlewares, getMethodMiddlewares } from '../middleware';
 import type { Middleware } from '../middleware';
 import { getValidationMetadata, validateParameters, ValidationError } from '../validation';
 import { HttpException } from '../error';
-import type { Constructor } from '@/core/types'
+import type { Constructor } from '@/core/types';
+import {
+  type InterceptorRegistry,
+  INTERCEPTOR_REGISTRY_TOKEN,
+  InterceptorChain,
+  scanInterceptorMetadata,
+} from '../interceptor';
 
 /**
  * 控制器元数据键
@@ -152,25 +158,44 @@ export class ControllerRegistry {
             throw new Error(`Method ${propertyKey} not found on controller ${controllerClass.name}`);
           }
 
-          // 检查是否有事务装饰器
-          let result: unknown;
+          // 获取拦截器注册表
+          let interceptorRegistry: InterceptorRegistry | undefined;
           try {
-            const { TransactionInterceptor } = await import('../database/orm/transaction-interceptor');
-            const { getTransactionMetadata } = await import('../database/orm/transaction-decorator');
-            const hasTransaction = getTransactionMetadata(prototype, propertyKey!);
-            if (hasTransaction) {
-              result = TransactionInterceptor.executeWithTransaction(
-                prototype,
+            interceptorRegistry = controllerContainer.resolve<InterceptorRegistry>(
+              INTERCEPTOR_REGISTRY_TOKEN,
+            );
+          } catch (error) {
+            // 如果拦截器注册表未注册，继续执行（向后兼容）
+            interceptorRegistry = undefined;
+          }
+
+          // 执行拦截器链或直接调用方法
+          let result: unknown;
+          if (interceptorRegistry) {
+            // 扫描方法上的所有拦截器元数据
+            const interceptors = scanInterceptorMetadata(
+              prototype,
+              propertyKey!,
+              interceptorRegistry,
+            );
+
+            if (interceptors.length > 0) {
+              // 执行拦截器链
+              result = await InterceptorChain.execute(
+                interceptors,
+                controllerInstance,
                 propertyKey!,
                 method,
                 params,
                 controllerContainer,
+                context,
               );
             } else {
+              // 没有拦截器，直接执行方法
               result = method.apply(controllerInstance, params);
             }
-          } catch (error) {
-            // 如果导入失败或执行失败，回退到直接调用
+          } else {
+            // 拦截器注册表未注册，直接执行方法（向后兼容）
             result = method.apply(controllerInstance, params);
           }
 
