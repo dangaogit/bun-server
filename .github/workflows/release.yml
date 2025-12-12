@@ -32,7 +32,7 @@ jobs:
             TAG="${GITHUB_REF#refs/tags/}"
             NOTES_FILE="RELEASES/${TAG}.md"
           fi
-          echo "tag=$TAG" > $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
           if [ -f "$NOTES_FILE" ]; then
             echo "body<<EOF" >> $GITHUB_OUTPUT
             cat "$NOTES_FILE" >> $GITHUB_OUTPUT
@@ -42,12 +42,10 @@ jobs:
           fi
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.determine.outputs.tag }}
-          release_name: Release ${{ steps.determine.outputs.tag }}
+          name: Release ${{ steps.determine.outputs.tag }}
           body: ${{ steps.determine.outputs.body }}
           draft: false
           prerelease: false
