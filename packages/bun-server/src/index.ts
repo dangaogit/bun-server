@@ -26,14 +26,18 @@ export {
   CacheInterceptor,
   Permission,
   PermissionInterceptor,
+  Log,
+  LogInterceptor,
   INTERCEPTOR_REGISTRY_TOKEN,
   CACHE_METADATA_KEY,
   PERMISSION_METADATA_KEY,
+  LOG_METADATA_KEY,
   type Interceptor,
   type InterceptorMetadata,
   type CacheOptions,
   type PermissionOptions,
   type PermissionService,
+  type LogOptions,
 } from './interceptor';
 export { UseMiddleware, RateLimit, MiddlewarePipeline } from './middleware';
 export type { Middleware, NextFunction } from './middleware';

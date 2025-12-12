@@ -98,6 +98,65 @@ class UserController {
 - `ModuleMetadata`: Supports `imports`, `controllers`, `providers`, `exports`,
   `extensions`, `middlewares`
 - `app.registerModule(moduleClass)`: Register module
+
+### Interceptor System
+
+- `Interceptor` interface: Core interface for interceptors
+- `InterceptorRegistry`: Central registry for managing interceptors
+- `InterceptorChain`: Executes multiple interceptors in priority order
+- `BaseInterceptor`: Base class for creating custom interceptors
+- `scanInterceptorMetadata`: Scans method metadata for interceptors
+
+**Built-in Interceptors**:
+- `@Cache(options)`: Cache method results
+- `@Permission(options)`: Check permissions before method execution
+- `@Log(options)`: Log method execution with timing
+
+**Example**:
+
+```typescript
+import { BaseInterceptor, INTERCEPTOR_REGISTRY_TOKEN } from '@dangao/bun-server';
+import type { InterceptorRegistry } from '@dangao/bun-server';
+
+// Create custom decorator
+const MY_METADATA_KEY = Symbol('@my-app:my-decorator');
+
+function MyDecorator(): MethodDecorator {
+  return (target, propertyKey) => {
+    Reflect.defineMetadata(MY_METADATA_KEY, true, target, propertyKey);
+  };
+}
+
+// Create interceptor
+class MyInterceptor extends BaseInterceptor {
+  public async execute<T>(...): Promise<T> {
+    // Pre-processing
+    await this.before(...);
+    
+    // Execute original method
+    const result = await Promise.resolve(originalMethod.apply(target, args));
+    
+    // Post-processing
+    return await this.after(...) as T;
+  }
+}
+
+// Register interceptor
+const registry = app.getContainer().resolve<InterceptorRegistry>(INTERCEPTOR_REGISTRY_TOKEN);
+registry.register(MY_METADATA_KEY, new MyInterceptor(), 100);
+
+// Use decorator
+@Controller('/api/users')
+class UserController {
+  @GET('/:id')
+  @MyDecorator()
+  public getUser(@Param('id') id: string) {
+    return { id, name: 'User' };
+  }
+}
+```
+
+See [Custom Decorators Guide](./custom-decorators.md) for detailed documentation.
 - Official modules: `ConfigModule.forRoot(options)`,
   `CacheModule.forRoot(options)`, `QueueModule.forRoot(options)`,
   `SessionModule.forRoot(options)`, `HealthModule.forRoot(options)`,

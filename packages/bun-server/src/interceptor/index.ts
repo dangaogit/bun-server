@@ -17,5 +17,10 @@ export {
   getPermissionMetadata,
   type PermissionOptions,
   type PermissionService,
+  Log,
+  LogInterceptor,
+  LOG_METADATA_KEY,
+  getLogMetadata,
+  type LogOptions,
 } from './builtin';
 

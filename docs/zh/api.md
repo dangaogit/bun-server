@@ -73,6 +73,65 @@
 - `app.registerModule(moduleClass)`：注册模块
 - 官方模块：`LoggerModule.forRoot(options)`, `SwaggerModule.forRoot(options)`
 
+### 拦截器系统
+
+- `Interceptor` 接口：拦截器核心接口
+- `InterceptorRegistry`：拦截器中央注册表
+- `InterceptorChain`：按优先级顺序执行多个拦截器
+- `BaseInterceptor`：创建自定义拦截器的基类
+- `scanInterceptorMetadata`：扫描方法元数据查找拦截器
+
+**内置拦截器**：
+- `@Cache(options)`：缓存方法结果
+- `@Permission(options)`：在执行方法前检查权限
+- `@Log(options)`：记录方法执行日志和耗时
+
+**示例**：
+
+```typescript
+import { BaseInterceptor, INTERCEPTOR_REGISTRY_TOKEN } from '@dangao/bun-server';
+import type { InterceptorRegistry } from '@dangao/bun-server';
+
+// 创建自定义装饰器
+const MY_METADATA_KEY = Symbol('@my-app:my-decorator');
+
+function MyDecorator(): MethodDecorator {
+  return (target, propertyKey) => {
+    Reflect.defineMetadata(MY_METADATA_KEY, true, target, propertyKey);
+  };
+}
+
+// 创建拦截器
+class MyInterceptor extends BaseInterceptor {
+  public async execute<T>(...): Promise<T> {
+    // 前置处理
+    await this.before(...);
+    
+    // 执行原方法
+    const result = await Promise.resolve(originalMethod.apply(target, args));
+    
+    // 后置处理
+    return await this.after(...) as T;
+  }
+}
+
+// 注册拦截器
+const registry = app.getContainer().resolve<InterceptorRegistry>(INTERCEPTOR_REGISTRY_TOKEN);
+registry.register(MY_METADATA_KEY, new MyInterceptor(), 100);
+
+// 使用装饰器
+@Controller('/api/users')
+class UserController {
+  @GET('/:id')
+  @MyDecorator()
+  public getUser(@Param('id') id: string) {
+    return { id, name: 'User' };
+  }
+}
+```
+
+详细说明请参考 [自定义注解开发指南](./custom-decorators.md)。
+
 详细说明请参考 [扩展系统文档](./extensions.md)。
 
 ## WebSocket

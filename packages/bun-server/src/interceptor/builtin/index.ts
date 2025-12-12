@@ -17,3 +17,12 @@ export {
   type PermissionService,
 } from './permission-interceptor';
 
+// Log interceptor
+export {
+  Log,
+  LogInterceptor,
+  LOG_METADATA_KEY,
+  getLogMetadata,
+  type LogOptions,
+} from './log-interceptor';
+
