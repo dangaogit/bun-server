@@ -86,7 +86,8 @@ export abstract class BaseInterceptor implements Interceptor {
   /**
    * 获取元数据
    * 从目标对象的方法上获取指定元数据键的元数据
-   * @param target - 目标对象
+   * 支持从实例或原型上获取元数据（元数据通常存储在原型上）
+   * @param target - 目标对象（可能是实例或原型）
    * @param propertyKey - 方法名
    * @param metadataKey - 元数据键
    * @returns 元数据值，如果不存在则返回 undefined
@@ -96,9 +97,39 @@ export abstract class BaseInterceptor implements Interceptor {
     propertyKey: string | symbol,
     metadataKey: symbol,
   ): T | undefined {
-    if (typeof target === 'object' && target !== null) {
-      return Reflect.getMetadata(metadataKey, target, propertyKey) as T | undefined;
+    if (typeof target !== 'object' || target === null) {
+      return undefined;
     }
+
+    // 首先尝试直接从 target 获取（如果 target 是原型）
+    let metadata = Reflect.getMetadata(metadataKey, target, propertyKey) as T | undefined;
+    if (metadata !== undefined) {
+      return metadata;
+    }
+
+    // 如果 target 是实例，尝试从原型获取
+    // 装饰器元数据通常存储在原型上，而不是实例上
+    const prototype = Object.getPrototypeOf(target);
+    if (prototype && prototype !== Object.prototype) {
+      metadata = Reflect.getMetadata(metadataKey, prototype, propertyKey) as T | undefined;
+      if (metadata !== undefined) {
+        return metadata;
+      }
+    }
+
+    // 如果仍然找不到，尝试从构造函数原型获取
+    // 这处理了 target 是实例但原型链查找失败的情况
+    const constructor = (target as any).constructor;
+    if (constructor && typeof constructor === 'function') {
+      // 如果 target 本身不是构造函数原型，尝试从构造函数原型获取
+      if (target !== constructor.prototype) {
+        metadata = Reflect.getMetadata(metadataKey, constructor.prototype, propertyKey) as T | undefined;
+        if (metadata !== undefined) {
+          return metadata;
+        }
+      }
+    }
+
     return undefined;
   }
 

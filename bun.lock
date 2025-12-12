@@ -35,7 +35,7 @@
     },
     "packages/bun-server": {
       "name": "@dangao/bun-server",
-      "version": "0.1.4",
+      "version": "1.0.3",
       "dependencies": {
         "@dangao/logsmith": "workspace:*",
         "reflect-metadata": "catalog:",
@@ -47,7 +47,7 @@
     },
     "packages/logsmith": {
       "name": "@dangao/logsmith",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "devDependencies": {
         "typescript": "catalog:",
       },

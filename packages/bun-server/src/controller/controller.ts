@@ -181,6 +181,8 @@ export class ControllerRegistry {
 
             if (interceptors.length > 0) {
               // 执行拦截器链
+              // 注意：传递 controllerInstance 以确保 originalMethod.apply 的 this 绑定正确
+              // getMetadata 方法已经修复以支持从原型链查找元数据
               result = await InterceptorChain.execute(
                 interceptors,
                 controllerInstance,

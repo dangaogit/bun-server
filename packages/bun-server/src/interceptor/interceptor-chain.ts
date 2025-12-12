@@ -34,11 +34,17 @@ export class InterceptorChain {
 
     // 构建执行链
     let index = 0;
+    let currentArgs = args; // Track arguments that might be modified by interceptors
     
-    const next = async (): Promise<T> => {
+    const next = async (modifiedArgs?: unknown[]): Promise<T> => {
+      // 如果拦截器传递了新参数，使用新参数；否则使用当前参数
+      if (modifiedArgs && modifiedArgs.length > 0) {
+        currentArgs = modifiedArgs;
+      }
+      
       if (index >= interceptors.length) {
-        // 所有拦截器执行完毕，执行原方法
-        return await Promise.resolve(originalMethod.apply(target, args));
+        // 所有拦截器执行完毕，执行原方法（使用可能被修改的参数）
+        return await Promise.resolve(originalMethod.apply(target, currentArgs));
       }
 
       const interceptor = interceptors[index++];
@@ -48,11 +54,10 @@ export class InterceptorChain {
         target,
         propertyKey,
         async (...nextArgs: unknown[]) => {
-          // 如果拦截器传递了新参数，使用新参数；否则使用原参数
-          const finalArgs = nextArgs.length > 0 ? nextArgs : args;
-          return await next();
+          // 如果拦截器传递了新参数，传递给 next；否则传递 undefined（使用当前参数）
+          return await next(nextArgs.length > 0 ? nextArgs : undefined);
         },
-        args,
+        currentArgs, // Pass current args to the interceptor
         container,
         context,
       );

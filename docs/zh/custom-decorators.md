@@ -14,7 +14,9 @@
 
 ## 概述
 
-Bun Server Framework 提供了强大的拦截器机制，允许您创建自定义装饰器和拦截器来实现 AOP（面向切面编程）。这使您能够添加横切关注点，如缓存、日志记录、权限检查等。
+Bun Server Framework
+提供了强大的拦截器机制，允许您创建自定义装饰器和拦截器来实现
+AOP（面向切面编程）。这使您能够添加横切关注点，如缓存、日志记录、权限检查等。
 
 ### 核心概念
 
@@ -27,13 +29,14 @@ Bun Server Framework 提供了强大的拦截器机制，允许您创建自定�
 
 ### 基本装饰器模式
 
-自定义装饰器是一个返回 `MethodDecorator` 的函数。它使用 `reflect-metadata` 在方法上存储元数据。
+自定义装饰器是一个返回 `MethodDecorator` 的函数。它使用 `reflect-metadata`
+在方法上存储元数据。
 
 ```typescript
-import 'reflect-metadata';
+import "reflect-metadata";
 
 // 1. 定义元数据键（使用 Symbol 确保唯一性）
-export const MY_METADATA_KEY = Symbol('@my-app:my-decorator');
+export const MY_METADATA_KEY = Symbol("@my-app:my-decorator");
 
 // 2. 定义元数据类型
 export interface MyDecoratorOptions {
@@ -60,7 +63,11 @@ export function MyDecorator(options: MyDecoratorOptions): MethodDecorator {
 
 ```typescript
 function MyDecorator(options?: MyOptions): MethodDecorator {
-  return (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
+  return (
+    target: any,
+    propertyKey: string | symbol,
+    descriptor: PropertyDescriptor,
+  ) => {
     // 实现
   };
 }
@@ -73,9 +80,9 @@ function MyDecorator(options?: MyOptions): MethodDecorator {
 拦截器必须实现 `Interceptor` 接口：
 
 ```typescript
-import type { Interceptor } from '@dangao/bun-server';
-import type { Container } from '@dangao/bun-server';
-import type { Context } from '@dangao/bun-server';
+import type { Interceptor } from "@dangao/bun-server";
+import type { Container } from "@dangao/bun-server";
+import type { Context } from "@dangao/bun-server";
 
 class MyInterceptor implements Interceptor {
   public async execute<T>(
@@ -105,12 +112,14 @@ class MyInterceptor implements Interceptor {
 拦截器必须注册到 `InterceptorRegistry`：
 
 ```typescript
-import { Application } from '@dangao/bun-server';
-import { INTERCEPTOR_REGISTRY_TOKEN } from '@dangao/bun-server';
-import type { InterceptorRegistry } from '@dangao/bun-server';
+import { Application } from "@dangao/bun-server";
+import { INTERCEPTOR_REGISTRY_TOKEN } from "@dangao/bun-server";
+import type { InterceptorRegistry } from "@dangao/bun-server";
 
 const app = new Application({ port: 3000 });
-const registry = app.getContainer().resolve<InterceptorRegistry>(INTERCEPTOR_REGISTRY_TOKEN);
+const registry = app.getContainer().resolve<InterceptorRegistry>(
+  INTERCEPTOR_REGISTRY_TOKEN,
+);
 
 // 使用元数据键和优先级注册拦截器
 registry.register(MY_METADATA_KEY, new MyInterceptor(), 100);
@@ -129,9 +138,9 @@ registry.register(MY_METADATA_KEY, new MyInterceptor(), 100);
 `BaseInterceptor` 提供了一个便捷的基类，包含常用操作的钩子：
 
 ```typescript
-import { BaseInterceptor } from '@dangao/bun-server';
-import type { Container } from '@dangao/bun-server';
-import type { Context } from '@dangao/bun-server';
+import { BaseInterceptor } from "@dangao/bun-server";
+import type { Container } from "@dangao/bun-server";
+import type { Context } from "@dangao/bun-server";
 
 class MyInterceptor extends BaseInterceptor {
   public async execute<T>(
@@ -150,7 +159,13 @@ class MyInterceptor extends BaseInterceptor {
       const result = await Promise.resolve(originalMethod.apply(target, args));
 
       // 后置处理
-      return await this.after(target, propertyKey, result, container, context) as T;
+      return await this.after(
+        target,
+        propertyKey,
+        result,
+        container,
+        context,
+      ) as T;
     } catch (error) {
       // 错误处理
       return await this.onError(target, propertyKey, error, container, context);
@@ -197,15 +212,19 @@ class MyInterceptor extends BaseInterceptor {
 
 ```typescript
 // 从方法获取元数据
-const metadata = this.getMetadata<MyOptions>(MY_METADATA_KEY, target, propertyKey);
+const metadata = this.getMetadata<MyOptions>(
+  MY_METADATA_KEY,
+  target,
+  propertyKey,
+);
 
 // 从容器解析服务
 const service = this.resolveService<MyService>(container, MyService);
 
 // 访问上下文
-const header = this.getHeader(context!, 'Authorization');
-const query = this.getQuery(context!, 'page');
-const param = this.getParam(context!, 'id');
+const header = this.getHeader(context!, "Authorization");
+const query = this.getQuery(context!, "page");
+const param = this.getParam(context!, "id");
 ```
 
 ## 访问容器和上下文
@@ -260,12 +279,12 @@ class MyInterceptor extends BaseInterceptor {
 ### 存储元数据
 
 ```typescript
-import 'reflect-metadata';
+import "reflect-metadata";
 
-const METADATA_KEY = Symbol('my-metadata');
+const METADATA_KEY = Symbol("my-metadata");
 
 // 存储元数据
-Reflect.defineMetadata(METADATA_KEY, { value: 'data' }, target, propertyKey);
+Reflect.defineMetadata(METADATA_KEY, { value: "data" }, target, propertyKey);
 ```
 
 ### 读取元数据
@@ -399,4 +418,3 @@ export class RateLimitInterceptor extends BaseInterceptor {
 - [API 文档](./api.md)
 - [示例](../examples/)
 - [内置拦截器](../packages/bun-server/src/interceptor/builtin/)
-

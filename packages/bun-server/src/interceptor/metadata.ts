@@ -23,9 +23,9 @@ export function scanInterceptorMetadata(
     
     if (metadata !== undefined && metadata !== null) {
       // 找到匹配的元数据，获取对应的拦截器元数据
-      // 我们需要获取完整的元数据（包括优先级），而不是只获取拦截器
-      const metadataList = (registry as any).interceptors.get(metadataKey);
-      if (metadataList) {
+      // 使用公共方法获取完整的元数据（包括优先级）
+      const metadataList = registry.getInterceptorMetadata(metadataKey);
+      if (metadataList.length > 0) {
         interceptorMetadataList.push(...metadataList);
       }
     }

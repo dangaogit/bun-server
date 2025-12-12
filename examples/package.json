@@ -10,7 +10,8 @@
     "start:cache-app": "bun cache-app.ts",
     "start:queue-app": "bun queue-app.ts",
     "start:session-app": "bun session-app.ts",
-    "start:database-test": "bun database-test-app.ts"
+    "start:database-test": "bun database-test-app.ts",
+    "start:advanced-decorator-app": "bun advanced-decorator-app.ts"
   },
   "dependencies": {
     "@dangao/bun-server": "workspace:^",

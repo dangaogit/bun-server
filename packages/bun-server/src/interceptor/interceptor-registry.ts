@@ -48,6 +48,21 @@ export class InterceptorRegistry {
   }
 
   /**
+   * 获取拦截器元数据列表（按优先级排序）
+   * @param metadataKey - 元数据键
+   * @returns 拦截器元数据列表
+   */
+  public getInterceptorMetadata(metadataKey: symbol): InterceptorMetadata[] {
+    const metadataList = this.interceptors.get(metadataKey);
+    if (!metadataList || metadataList.length === 0) {
+      return [];
+    }
+    
+    // 返回已排序的拦截器元数据列表（包括优先级信息）
+    return [...metadataList];
+  }
+
+  /**
    * 获取拦截器列表（按优先级排序）
    * @param metadataKey - 元数据键
    * @returns 拦截器列表
