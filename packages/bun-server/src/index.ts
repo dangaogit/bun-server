@@ -1,11 +1,13 @@
 export { Application, type ApplicationOptions } from './core/application';
 export { BunServer, type ServerOptions } from './core/server';
 export { Context } from './core/context';
+export { ContextService, CONTEXT_SERVICE_TOKEN, contextStore } from './core/context-service';
 export { Route, Router, RouteRegistry } from './router';
 export { GET, POST, PUT, DELETE, PATCH } from './router/decorators';
 export type { HttpMethod, RouteHandler, RouteMatch } from './router/types';
 export { BodyParser, RequestWrapper, ResponseBuilder } from './request';
 export { Body, Query, Param, Header, ParamBinder, Controller, ControllerRegistry } from './controller';
+export { Context as ContextParam } from './controller';
 export type { ParamMetadata, ControllerMetadata } from './controller';
 export { Container } from './di/container';
 export { Injectable, Inject } from './di/decorators';

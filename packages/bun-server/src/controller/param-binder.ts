@@ -3,6 +3,7 @@ import { getParamMetadata, ParamType, type ParamMetadata } from './decorators';
 import { Container } from '../di/container';
 import { SessionService } from '../session/service';
 import { SESSION_SERVICE_TOKEN } from '../session/types';
+import { contextStore } from '../core/context-service';
 
 /**
  * 参数绑定器
@@ -102,6 +103,9 @@ export class ParamBinder {
           // SessionService 未注册，返回 undefined
         }
         return undefined;
+      case ParamType.CONTEXT:
+        // 从 AsyncLocalStorage 获取当前请求的 Context
+        return contextStore.getStore() ?? context;
       default:
         return undefined;
     }

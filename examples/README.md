@@ -7,6 +7,7 @@
 | `cache-app.ts`         | 缓存示例，演示 CacheModule 的使用（@Cacheable, @CacheEvict, @CachePut） | `bun run examples/cache-app.ts`         | 3200 |
 | `queue-app.ts`         | 队列示例，演示 QueueModule 的使用（任务队列、Cron 定时任务）            | `bun run examples/queue-app.ts`         | 3300 |
 | `session-app.ts`       | Session 示例，演示 SessionModule 的使用（登录、购物车）                 | `bun run examples/session-app.ts`       | 3400 |
+| `context-scope-app.ts` | ContextService + 请求作用域示例，演示 `ContextService` / `@Context()` / `Lifecycle.Scoped` | `bun run examples/context-scope-app.ts` | 3500 |
 | `database-test-app.ts` | 数据库测试工具，Web UI 界面测试 PostgreSQL/MySQL 连接                   | `bun run examples/database-test-app.ts` | 3000 |
 | `perf/app.ts`          | 性能压测示例，暴露 `/api/ping` 供 wrk 等工具测试                        | `bun run examples/perf/app.ts`          | 3300 |
 
