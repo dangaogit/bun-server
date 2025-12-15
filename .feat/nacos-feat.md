@@ -1,0 +1,961 @@
+# Bun Server Framework - v1.3.x Roadmap
+
+> 目标版本：v1.3.0 - v1.3.x\
+> 重点：微服务架构支持，优先实现 Nacos 配置中心和服务注册与发现\
+> **状态**：未开始
+
+## 🎯 v1.3.x 版本目标
+
+v1.3.x
+版本专注于微服务架构支持，为企业级分布式应用提供完整的微服务基础设施。主要目标包括：
+
+1. **配置中心集成**：优先支持 Nacos 配置中心，实现动态配置管理
+2. **服务注册与发现**：基于 Nacos 实现服务注册、发现和负载均衡
+3. **微服务通信**：提供 HTTP 客户端和服务间调用支持
+4. **服务治理**：实现熔断、限流、重试等微服务治理能力
+
+---
+
+## 🏗️ 架构设计原则：抽象与解耦
+
+### 核心设计理念
+
+**重要**：Nacos 在 bun-server 中仅作为微服务实现方案之一，bun-server
+应该有自己的核心抽象，达到解耦目的。
+
+### 设计目标
+
+1. **抽象优先**：定义清晰的抽象接口，不依赖具体实现
+2. **可扩展性**：支持多种配置中心和服务注册中心实现
+3. **解耦设计**：框架核心与具体实现分离，便于切换和扩展
+4. **向后兼容**：抽象层设计不影响现有功能
+
+### 核心抽象接口
+
+#### 1. 配置中心抽象（ConfigCenter）
+
+```typescript
+// packages/bun-server/src/microservice/config-center/types.ts
+
+/**
+ * 配置中心抽象接口
+ * 定义配置中心的核心能力，不依赖具体实现
+ */
+export interface ConfigCenter {
+  /**
+   * 获取配置
+   * @param dataId - 配置 ID
+   * @param groupName - 配置分组
+   * @param namespaceId - 命名空间
+   * @returns 配置内容
+   */
+  getConfig(
+    dataId: string,
+    groupName: string,
+    namespaceId?: string,
+  ): Promise<ConfigResult>;
+
+  /**
+   * 监听配置变更
+   * @param dataId - 配置 ID
+   * @param groupName - 配置分组
+   * @param listener - 变更监听器
+   * @returns 取消监听的函数
+   */
+  watchConfig(
+    dataId: string,
+    groupName: string,
+    listener: ConfigChangeListener,
+  ): () => void;
+
+  /**
+   * 关闭配置中心连接
+   */
+  close(): Promise<void>;
+}
+
+export interface ConfigResult {
+  content: string;
+  md5: string;
+  lastModified: number;
+  contentType: string;
+}
+
+export interface ConfigChangeListener {
+  (result: ConfigResult): void;
+}
+```
+
+#### 2. 服务注册中心抽象（ServiceRegistry）
+
+```typescript
+// packages/bun-server/src/microservice/service-registry/types.ts
+
+/**
+ * 服务注册中心抽象接口
+ * 定义服务注册与发现的核心能力，不依赖具体实现
+ */
+export interface ServiceRegistry {
+  /**
+   * 注册服务实例
+   * @param instance - 服务实例信息
+   */
+  register(instance: ServiceInstance): Promise<void>;
+
+  /**
+   * 注销服务实例
+   * @param instance - 服务实例信息
+   */
+  deregister(instance: ServiceInstance): Promise<void>;
+
+  /**
+   * 续约服务实例（心跳）
+   * @param instance - 服务实例信息
+   */
+  renew(instance: ServiceInstance): Promise<void>;
+
+  /**
+   * 查询服务实例列表
+   * @param serviceName - 服务名
+   * @param options - 查询选项
+   * @returns 服务实例列表
+   */
+  getInstances(
+    serviceName: string,
+    options?: GetInstancesOptions,
+  ): Promise<ServiceInstance[]>;
+
+  /**
+   * 监听服务实例变更
+   * @param serviceName - 服务名
+   * @param listener - 变更监听器
+   * @returns 取消监听的函数
+   */
+  watchInstances(
+    serviceName: string,
+    listener: InstancesChangeListener,
+  ): () => void;
+
+  /**
+   * 关闭注册中心连接
+   */
+  close(): Promise<void>;
+}
+
+export interface ServiceInstance {
+  serviceName: string;
+  ip: string;
+  port: number;
+  weight?: number;
+  healthy?: boolean;
+  enabled?: boolean;
+  metadata?: Record<string, string>;
+  clusterName?: string;
+  namespaceId?: string;
+  groupName?: string;
+}
+
+export interface GetInstancesOptions {
+  namespaceId?: string;
+  groupName?: string;
+  clusterName?: string;
+  healthyOnly?: boolean;
+}
+
+export interface InstancesChangeListener {
+  (instances: ServiceInstance[]): void;
+}
+```
+
+### 实现层设计
+
+#### Nacos 实现（具体实现之一）
+
+```
+packages/
+├── bun-server/
+│   └── src/
+│       └── microservice/
+│           ├── config-center/
+│           │   ├── types.ts              # ConfigCenter 抽象接口
+│           │   ├── nacos-config-center.ts # Nacos 实现（实现 ConfigCenter）
+│           │   └── index.ts
+│           └── service-registry/
+│               ├── types.ts              # ServiceRegistry 抽象接口
+│               ├── nacos-service-registry.ts # Nacos 实现（实现 ServiceRegistry）
+│               └── index.ts
+└── nacos-client/                         # Nacos SDK（独立包）
+    └── src/
+        ├── client.ts                     # Nacos HTTP 客户端
+        ├── config.ts                     # 配置管理实现
+        └── service.ts                    # 服务注册与发现实现
+```
+
+**实现关系**：
+
+- `NacosConfigCenter` 实现 `ConfigCenter` 接口，内部使用 `@dangao/nacos-client`
+- `NacosServiceRegistry` 实现 `ServiceRegistry` 接口，内部使用
+  `@dangao/nacos-client`
+- 框架核心代码只依赖抽象接口，不直接依赖 Nacos 实现
+
+### 未来扩展性
+
+通过抽象接口设计，未来可以轻松支持其他实现：
+
+- **配置中心**：
+  - Nacos（v1.3.0 优先实现）
+  - Consul
+  - etcd
+  - Apollo
+  - Spring Cloud Config
+
+- **服务注册中心**：
+  - Nacos（v1.3.0 优先实现）
+  - Consul
+  - Eureka
+  - etcd
+  - Kubernetes Service Discovery
+
+### 使用示例
+
+```typescript
+// 使用抽象接口，不依赖具体实现
+import { ConfigCenter, ServiceRegistry } from "@dangao/bun-server";
+
+// 通过模块配置选择实现
+MicroserviceModule.forRoot({
+  configCenter: {
+    provider: "nacos", // 或 'consul', 'etcd' 等
+    options: {/* ... */},
+  },
+  serviceRegistry: {
+    provider: "nacos", // 或 'consul', 'eureka' 等
+    options: {/* ... */},
+  },
+});
+
+// 业务代码只使用抽象接口
+@Injectable()
+class MyService {
+  public constructor(
+    @Inject(CONFIG_CENTER_TOKEN) private readonly configCenter: ConfigCenter,
+    @Inject(SERVICE_REGISTRY_TOKEN) private readonly registry: ServiceRegistry,
+  ) {}
+}
+```
+
+---
+
+## 📦 Nacos SDK 包结构
+
+Nacos SDK 将作为独立的包与 `logsmith` 同级，位于 `packages/` 目录下：
+
+```
+packages/
+├── bun-server/          # 主框架包
+├── logsmith/            # 日志包
+└── nacos-client/        # Nacos SDK 包（新建）
+    ├── package.json     # 包名：@dangao/nacos-client
+    ├── src/
+    │   ├── client.ts    # Nacos 客户端核心实现
+    │   ├── config.ts   # 配置管理
+    │   ├── service.ts  # 服务注册与发现
+    │   └── index.ts    # 导出
+    └── ...
+```
+
+**包名**：`@dangao/nacos-client`
+
+**职责**：
+
+- 提供 Nacos 客户端核心功能
+- 实现配置管理 API
+- 实现服务注册与发现 API
+- 独立于主框架，可单独使用
+
+---
+
+## 📚 Nacos 官方文档参考
+
+在实现 Nacos 集成时，请参考以下官方文档：
+
+- **Nacos 3.X Open API 文档**：
+  - [客户端 API](https://nacos.io/docs/latest/manual/user/open-api/)
+  - [配置管理 API](https://nacos.io/docs/latest/manual/user/open-api/#11-%E8%8E%B7%E5%8F%96%E9%85%8D%E7%BD%AE)
+  - [服务发现 API](https://nacos.io/docs/latest/manual/user/open-api/#2-%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0)
+- **Nacos 3.X 文档源码**：
+  - [GitHub 文档仓库](https://github.com/nacos-group/nacos-group.github.io/tree/develop-astro-nacos/src/content/docs/v3.0)
+
+**重要说明**：
+
+- Nacos 3.X 版本使用新的 Open API，不再兼容 1.X 和 2.X 版本的 HTTP OpenAPI
+- Nacos 3.X 的 HTTP OpenAPI 主要面向不支持 gRPC 的编程语言
+- 配置管理仅提供获取配置接口，不提供发布和删除接口（需使用运维 API）
+- 服务发现支持实例注册、续约、注销和查询实例列表
+
+---
+
+## 🚀 v1.3.0 Roadmap
+
+### Phase 1: Nacos 配置中心集成 🔴 高优先级
+
+**目标**：实现 Nacos 配置中心集成，支持动态配置管理和配置热更新
+
+**技术参考**：
+
+- 使用 Nacos 3.X Open API：`GET /nacos/v3/client/cs/config`
+- 支持配置热更新：通过轮询获取配置，比对 md5 判断是否需要更新
+
+#### 1.1 Nacos 客户端集成
+
+**实现位置**：`packages/nacos-client/`（独立包）
+
+- [ ] 实现 NacosClient（`packages/nacos-client/src/client.ts`）
+  - [ ] Nacos 服务器连接管理
+  - [ ] HTTP 客户端封装（基于 Nacos 3.X Open API）
+  - [ ] 连接重试和故障转移
+  - [ ] 请求/响应处理
+- [ ] 实现配置管理客户端（`packages/nacos-client/src/config.ts`）
+  - [ ] 获取配置（`GET /nacos/v3/client/cs/config`）
+  - [ ] 配置 md5 比对
+  - [ ] 配置轮询机制（用于配置热更新）
+- [ ] 实现配置监听器接口
+- [ ] 支持命名空间（Namespace）和分组（Group）
+- [ ] 支持配置加密和敏感信息保护
+
+**API 参考**：
+
+- 获取配置：`GET /nacos/v3/client/cs/config?dataId={dataId}&groupName={groupName}&namespaceId={namespaceId}`
+- 返回数据包含：`content`, `md5`, `lastModified`, `contentType` 等字段
+
+**优先级**：🔴 高\
+**预计完成时间**：v1.3.0
+
+#### 1.2 配置中心模块实现
+
+**实现位置**：`packages/bun-server/src/microservice/config-center/`
+
+**设计思路**：
+
+1. 先定义 `ConfigCenter` 抽象接口（`types.ts`）
+2. 实现 `NacosConfigCenter`（实现 `ConfigCenter` 接口）
+3. 创建 `ConfigCenterModule`（支持多种实现）
+
+- [ ] **定义 ConfigCenter 抽象接口**（`types.ts`）
+  - [ ] `ConfigCenter` 接口定义
+  - [ ] `ConfigResult` 类型定义
+  - [ ] `ConfigChangeListener` 类型定义
+  - [ ] `CONFIG_CENTER_TOKEN` Symbol token
+
+- [ ] **实现 NacosConfigCenter**（`nacos-config-center.ts`）
+  - [ ] 实现 `ConfigCenter` 接口
+  - [ ] 内部使用 `@dangao/nacos-client` 进行 API 调用
+  - [ ] 配置加载和合并（本地配置 + Nacos 配置）
+  - [ ] 配置优先级管理（Nacos > 环境变量 > 默认配置）
+  - [ ] 配置热更新支持（通过轮询和 md5 比对）
+  - [ ] 配置监听和回调
+
+- [ ] **实现 ConfigCenterModule**（`config-center-module.ts`）
+  - [ ] 模块配置（支持选择 provider：nacos、consul 等）
+  - [ ] 根据配置创建对应的 `ConfigCenter` 实现
+  - [ ] 注册到 DI 容器（使用 `CONFIG_CENTER_TOKEN`）
+  - [ ] 集成到 ConfigModule
+    - [ ] 扩展 ConfigService 支持配置中心配置源
+    - [ ] 配置变更自动刷新
+    - [ ] 配置监听和回调
+
+- [ ] **提供装饰器支持**（在 `bun-server` 中）
+  - [ ] `@ConfigCenterValue()` 装饰器（通用，不绑定 Nacos）
+  - [ ] `@NacosValue()` 装饰器（Nacos 特定，可选）
+
+- [ ] **提供示例和文档**
+
+**优先级**：🔴 高\
+**预计完成时间**：v1.3.0
+
+**关键点**：
+
+- 框架核心代码只依赖 `ConfigCenter` 抽象接口
+- `NacosConfigCenter` 是可选实现，通过模块配置启用
+- 未来可以轻松添加其他实现（Consul、etcd 等）
+
+#### 1.3 配置管理功能
+
+- [ ] 配置监听和热更新
+  - [ ] 配置变更监听
+  - [ ] 自动刷新应用配置
+  - [ ] 配置变更事件通知
+- [ ] 配置版本管理
+  - [ ] 配置版本追踪
+  - [ ] 配置回滚支持
+- [ ] 配置加密支持
+  - [ ] 敏感配置加密存储
+  - [ ] 配置解密和注入
+
+**优先级**：🟡 中\
+**预计完成时间**：v1.3.0
+
+---
+
+### Phase 2: 服务注册与发现 🔴 高优先级
+
+**目标**：基于 Nacos 实现服务注册、发现和负载均衡
+
+#### 2.1 Nacos 服务注册
+
+**实现位置**：`packages/nacos-client/src/service.ts`（服务注册与发现）
+
+- [ ] 实现 NacosServiceRegistry
+  - [ ] 服务实例注册（`POST /nacos/v3/client/ns/instance`）
+  - [ ] 服务实例续约（`POST /nacos/v3/client/ns/instance` with
+        `heartBeat=true`）
+  - [ ] 服务实例下线（`DELETE /nacos/v3/client/ns/instance`）
+  - [ ] 服务实例元数据管理
+- [ ] 实现心跳机制
+  - [ ] 定期发送心跳保持连接
+  - [ ] 心跳失败时重新注册
+- [ ] 实现服务注册装饰器（在 `bun-server` 中）
+  - [ ] `@ServiceRegistry()` 装饰器
+  - [ ] 自动服务注册
+  - [ ] 服务元数据配置（版本、权重、健康状态等）
+- [ ] 集成到 Application
+  - [ ] 应用启动时自动注册
+  - [ ] 应用关闭时自动注销
+  - [ ] 健康检查集成
+
+**API 参考**：
+
+- 注册实例：`POST /nacos/v3/client/ns/instance` with `serviceName`, `ip`,
+  `port`, `heartBeat=false`
+- 续约实例：`POST /nacos/v3/client/ns/instance` with `serviceName`, `ip`,
+  `port`, `heartBeat=true`
+- 注销实例：`DELETE /nacos/v3/client/ns/instance?serviceName={serviceName}&ip={ip}&port={port}`
+
+**优先级**：🔴 高\
+**预计完成时间**：v1.3.0
+
+#### 2.2 Nacos 服务发现
+
+**实现位置**：`packages/nacos-client/src/service.ts`（服务注册与发现）
+
+- [ ] 实现 NacosServiceDiscovery
+  - [ ] 服务实例查询（`GET /nacos/v3/client/ns/instance/list`）
+  - [ ] 服务实例列表缓存
+  - [ ] 服务实例变更监听（通过轮询实现，Nacos 3.X 移除 UDP 推送）
+  - [ ] 服务实例过滤（版本、标签、健康状态等）
+- [ ] 实现负载均衡（在 `bun-server` 中）
+  - [ ] 随机负载均衡（Random）
+  - [ ] 轮询负载均衡（RoundRobin）
+  - [ ] 加权轮询（WeightedRoundRobin）
+  - [ ] 一致性哈希（ConsistentHash）
+  - [ ] 最少连接（LeastActive）
+- [ ] 实现服务发现装饰器（在 `bun-server` 中）
+  - [ ] `@ServiceDiscovery()` 装饰器
+  - [ ] 服务实例选择器
+
+**API 参考**：
+
+- 查询实例列表：`GET /nacos/v3/client/ns/instance/list?serviceName={serviceName}&namespaceId={namespaceId}&groupName={groupName}&healthyOnly={healthyOnly}`
+- 返回数据包含：`ip`, `port`, `weight`, `healthy`, `enabled`, `metadata` 等字段
+
+**优先级**：🔴 高\
+**预计完成时间**：v1.3.0
+
+#### 2.3 服务注册中心模块实现
+
+**实现位置**：`packages/bun-server/src/microservice/service-registry/`
+
+**设计思路**：
+
+1. 先定义 `ServiceRegistry` 抽象接口（`types.ts`）
+2. 实现 `NacosServiceRegistry`（实现 `ServiceRegistry` 接口）
+3. 创建 `ServiceRegistryModule`（支持多种实现）
+
+- [ ] **定义 ServiceRegistry 抽象接口**（`types.ts`）
+  - [ ] `ServiceRegistry` 接口定义
+  - [ ] `ServiceInstance` 类型定义
+  - [ ] `GetInstancesOptions` 类型定义
+  - [ ] `InstancesChangeListener` 类型定义
+  - [ ] `SERVICE_REGISTRY_TOKEN` Symbol token
+
+- [ ] **实现 NacosServiceRegistry**（`nacos-service-registry.ts`）
+  - [ ] 实现 `ServiceRegistry` 接口
+  - [ ] 内部使用 `@dangao/nacos-client` 进行 API 调用
+  - [ ] 服务实例注册、续约、注销
+  - [ ] 服务实例查询和监听
+  - [ ] 心跳机制实现
+
+- [ ] **实现 ServiceRegistryModule**（`service-registry-module.ts`）
+  - [ ] 模块配置（支持选择 provider：nacos、consul、eureka 等）
+  - [ ] 根据配置创建对应的 `ServiceRegistry` 实现
+  - [ ] 注册到 DI 容器（使用 `SERVICE_REGISTRY_TOKEN`）
+  - [ ] 集成到 Application
+    - [ ] 自动服务注册和发现
+    - [ ] 服务健康检查集成
+    - [ ] 应用启动时注册，关闭时注销
+
+- [ ] **提供装饰器支持**（在 `bun-server` 中）
+  - [ ] `@ServiceRegistry()` 装饰器（通用，不绑定 Nacos）
+  - [ ] `@ServiceDiscovery()` 装饰器（通用，不绑定 Nacos）
+
+- [ ] **提供示例和文档**
+
+**优先级**：🔴 高\
+**预计完成时间**：v1.3.0
+
+**关键点**：
+
+- 框架核心代码只依赖 `ServiceRegistry` 抽象接口
+- `NacosServiceRegistry` 是可选实现，通过模块配置启用
+- 未来可以轻松添加其他实现（Consul、Eureka、etcd 等）
+
+---
+
+### Phase 3: 微服务通信 🟡 中优先级
+
+**目标**：提供微服务间 HTTP 调用支持
+
+#### 3.1 服务调用客户端
+
+**设计思路**：ServiceClient 依赖 `ServiceRegistry` 抽象接口，不依赖具体实现。
+
+- [ ] **实现
+      ServiceClient**（`packages/bun-server/src/microservice/service-client/service-client.ts`）
+  - [ ] 依赖 `ServiceRegistry` 抽象接口（通过 DI 注入）
+  - [ ] 基于服务名的服务调用
+  - [ ] 自动服务发现（通过 `ServiceRegistry.getInstances()`）
+  - [ ] 负载均衡集成（使用 `LoadBalancer`）
+  - [ ] 请求重试机制
+  - [ ] 请求超时控制
+  - [ ] 请求日志和追踪
+
+- [ ] **实现服务调用装饰器**
+  - [ ] `@ServiceClient()` 装饰器（注入 ServiceClient）
+  - [ ] `@ServiceCall()` 装饰器（标记服务调用方法）
+
+- [ ] **支持多种调用方式**
+  - [ ] 同步调用
+  - [ ] 异步调用
+  - [ ] 流式调用
+
+**关键点**：
+
+- ServiceClient 只依赖 `ServiceRegistry` 接口，不依赖 Nacos
+- 可以配合任何实现了 `ServiceRegistry` 的注册中心使用
+- 负载均衡策略可配置（随机、轮询、加权轮询等）
+
+**优先级**：🟡 中\
+**预计完成时间**：v1.3.1
+
+#### 3.2 服务调用拦截器
+
+**设计思路**：拦截器基于抽象接口设计，不依赖具体实现。
+
+- [ ] **定义拦截器接口**（`packages/bun-server/src/microservice/service-client/types.ts`）
+  - [ ] `ServiceRequestInterceptor` 接口
+  - [ ] `ServiceResponseInterceptor` 接口
+  - [ ] 拦截器链管理
+
+- [ ] **实现请求拦截器**
+  - [ ] 请求头注入（追踪 ID、用户信息等）
+  - [ ] 请求参数转换
+  - [ ] 请求日志记录
+  - [ ] 支持自定义拦截器
+
+- [ ] **实现响应拦截器**
+  - [ ] 响应数据转换
+  - [ ] 错误处理
+  - [ ] 响应日志记录
+  - [ ] 支持自定义拦截器
+
+**关键点**：
+
+- 拦截器接口设计通用，不绑定特定实现
+- 支持多个拦截器链式执行
+- 拦截器可配置和扩展
+
+**优先级**：🟡 中\
+**预计完成时间**：v1.3.1
+
+---
+
+### Phase 4: 服务治理 🟡 中优先级
+
+**目标**：实现熔断、限流、重试等微服务治理能力
+
+#### 4.1 熔断器（Circuit Breaker）
+
+- [ ] 实现熔断器
+  - [ ] 熔断状态管理（关闭、开启、半开）
+  - [ ] 熔断策略配置（失败率、超时时间等）
+  - [ ] 熔断恢复机制
+- [ ] 集成到服务调用
+  - [ ] 自动熔断保护
+  - [ ] 降级处理支持
+- [ ] 提供装饰器支持
+  - [ ] `@CircuitBreaker()` 装饰器
+
+**优先级**：🟡 中\
+**预计完成时间**：v1.3.2
+
+#### 4.2 服务限流
+
+- [ ] 实现服务级限流
+  - [ ] 基于服务实例的限流
+  - [ ] 分布式限流支持（基于 Redis）
+- [ ] 集成到服务调用
+  - [ ] 自动限流保护
+  - [ ] 限流策略配置
+
+**优先级**：🟡 中\
+**预计完成时间**：v1.3.2
+
+#### 4.3 重试机制
+
+- [ ] 实现重试策略
+  - [ ] 固定间隔重试
+  - [ ] 指数退避重试
+  - [ ] 自定义重试策略
+- [ ] 集成到服务调用
+  - [ ] 自动重试机制
+  - [ ] 重试条件配置
+
+**优先级**：🟡 中\
+**预计完成时间**：v1.3.2
+
+---
+
+### Phase 5: 监控和追踪 🟢 低优先级
+
+**目标**：提供微服务监控和分布式追踪支持
+
+#### 5.1 分布式追踪
+
+- [ ] 实现分布式追踪
+  - [ ] Trace ID 生成和传播
+  - [ ] Span 管理
+  - [ ] 追踪数据收集
+- [ ] 集成到服务调用
+  - [ ] 自动追踪支持
+  - [ ] 追踪数据上报
+
+**优先级**：🟢 低\
+**预计完成时间**：v1.3.3
+
+#### 5.2 服务监控
+
+- [ ] 实现服务监控指标
+  - [ ] 服务调用次数
+  - [ ] 服务调用延迟
+  - [ ] 服务调用错误率
+  - [ ] 服务实例健康状态
+- [ ] 集成到 MetricsModule
+  - [ ] 自动指标收集
+  - [ ] Prometheus 格式导出
+
+**优先级**：🟢 低\
+**预计完成时间**：v1.3.3
+
+---
+
+## 📦 模块结构规划
+
+### 架构分层
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              应用层（Application Layer）                   │
+│  使用抽象接口：ConfigCenter, ServiceRegistry              │
+└─────────────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────────┐
+│           框架抽象层（Framework Abstraction）              │
+│  packages/bun-server/src/microservice/                  │
+│  ├── config-center/types.ts          # ConfigCenter 接口 │
+│  └── service-registry/types.ts       # ServiceRegistry 接口│
+└─────────────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────────┐
+│           实现层（Implementation Layer）                  │
+│  packages/bun-server/src/microservice/                  │
+│  ├── config-center/                                     │
+│  │   └── nacos-config-center.ts      # Nacos 实现      │
+│  └── service-registry/                                 │
+│      └── nacos-service-registry.ts   # Nacos 实现      │
+└─────────────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────────┐
+│           SDK 层（SDK Layer）                            │
+│  packages/nacos-client/                                 │
+│  └── src/                                               │
+│      ├── client.ts                  # Nacos HTTP 客户端 │
+│      ├── config.ts                  # 配置管理实现       │
+│      └── service.ts                 # 服务注册与发现实现 │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Nacos SDK 包结构（独立包）
+
+```
+packages/
+└── nacos-client/                    # Nacos SDK 独立包
+    ├── package.json                 # @dangao/nacos-client
+    ├── src/
+    │   ├── client.ts                # Nacos 客户端核心
+    │   ├── config.ts                # 配置管理客户端
+    │   ├── service.ts               # 服务注册与发现客户端
+    │   ├── types.ts                 # Nacos 相关类型定义
+    │   └── index.ts                 # 包导出
+    └── ...
+```
+
+**职责**：
+
+- 提供 Nacos 3.X Open API 的 HTTP 客户端封装
+- 实现配置管理和服务注册与发现的具体 API 调用
+- 独立于框架，可单独使用
+
+### Bun Server 微服务模块结构
+
+```
+packages/bun-server/src/
+├── microservice/
+│   ├── config-center/
+│   │   ├── types.ts                  # ConfigCenter 抽象接口
+│   │   ├── nacos-config-center.ts    # Nacos 实现（实现 ConfigCenter）
+│   │   │                              # 内部使用 @dangao/nacos-client
+│   │   └── index.ts
+│   ├── service-registry/
+│   │   ├── types.ts                  # ServiceRegistry 抽象接口
+│   │   ├── nacos-service-registry.ts # Nacos 实现（实现 ServiceRegistry）
+│   │   │                              # 内部使用 @dangao/nacos-client
+│   │   └── index.ts
+│   ├── microservice-module.ts        # 微服务模块（统一入口）
+│   ├── service-client/
+│   │   ├── service-client.ts         # 服务调用客户端（使用 ServiceRegistry）
+│   │   ├── load-balancer.ts          # 负载均衡器
+│   │   └── types.ts                  # 服务调用相关类型
+│   ├── governance/
+│   │   ├── circuit-breaker.ts        # 熔断器
+│   │   ├── retry.ts                  # 重试机制
+│   │   └── types.ts                  # 治理相关类型
+│   ├── tracing/
+│   │   ├── tracer.ts                 # 分布式追踪
+│   │   └── types.ts                  # 追踪相关类型
+│   └── index.ts                      # 微服务模块导出
+```
+
+**依赖关系**：
+
+1. **框架核心**（`bun-server/src/microservice/`）：
+   - 定义抽象接口（`ConfigCenter`, `ServiceRegistry`）
+   - 不依赖任何具体实现
+
+2. **Nacos
+   实现**（`bun-server/src/microservice/config-center/nacos-config-center.ts`）：
+   - 实现 `ConfigCenter` 接口
+   - 依赖 `@dangao/nacos-client` SDK
+   - 可选依赖，通过模块配置启用
+
+3. **Nacos SDK**（`packages/nacos-client/`）：
+   - 独立包，不依赖 `bun-server`
+   - 提供 Nacos 3.X Open API 的 HTTP 客户端封装
+
+4. **应用代码**：
+   - 只依赖抽象接口（`ConfigCenter`, `ServiceRegistry`）
+   - 通过模块配置选择具体实现（Nacos、Consul 等）
+
+---
+
+## 🎯 v1.3.0 发布标准
+
+### 功能完整性
+
+- [ ] **核心抽象接口定义完成**
+  - [ ] `ConfigCenter` 抽象接口定义
+  - [ ] `ServiceRegistry` 抽象接口定义
+  - [ ] 接口文档和类型定义完整
+
+- [ ] **Nacos 实现完成**（作为第一个实现）
+  - [ ] `NacosConfigCenter` 实现（实现 `ConfigCenter` 接口）
+  - [ ] `NacosServiceRegistry` 实现（实现 `ServiceRegistry` 接口）
+  - [ ] `ConfigCenterModule` 支持 Nacos provider
+  - [ ] `ServiceRegistryModule` 支持 Nacos provider
+
+- [ ] **配置中心功能**
+  - [ ] 配置热更新支持
+  - [ ] 配置监听和回调
+  - [ ] 配置优先级管理
+
+- [ ] **服务注册与发现功能**
+  - [ ] 服务注册功能
+  - [ ] 服务发现功能
+  - [ ] 负载均衡支持
+  - [ ] 心跳机制
+
+- [ ] **Nacos SDK 独立包**
+  - [ ] `@dangao/nacos-client` 包实现
+  - [ ] 配置管理 API 封装
+  - [ ] 服务注册与发现 API 封装
+
+### 稳定性
+
+- [ ] **抽象接口测试**
+  - [ ] `ConfigCenter` 接口测试（使用 Mock 实现）
+  - [ ] `ServiceRegistry` 接口测试（使用 Mock 实现）
+
+- [ ] **Nacos 实现测试**
+  - [ ] `NacosConfigCenter` 单元测试
+  - [ ] `NacosServiceRegistry` 单元测试
+  - [ ] 集成测试（连接真实 Nacos 服务器）
+
+- [ ] **Nacos SDK 测试**
+  - [ ] `@dangao/nacos-client` 单元测试
+  - [ ] API 调用测试
+
+- [ ] **性能测试**
+  - [ ] 配置获取性能测试
+  - [ ] 服务发现性能测试
+  - [ ] 负载均衡性能测试
+
+- [ ] **无已知严重 Bug**
+
+### 文档
+
+- [ ] **架构设计文档**
+  - [ ] 微服务架构设计说明
+  - [ ] 抽象接口设计文档
+  - [ ] 实现层设计文档
+
+- [ ] **使用文档**
+  - [ ] 微服务使用指南
+  - [ ] 配置中心使用指南
+  - [ ] 服务注册与发现使用指南
+
+- [ ] **集成文档**
+  - [ ] Nacos 集成文档（作为实现示例）
+  - [ ] 如何添加新的配置中心实现
+  - [ ] 如何添加新的服务注册中心实现
+
+- [ ] **示例代码**
+  - [ ] 基础微服务示例
+  - [ ] Nacos 集成示例
+  - [ ] 服务调用示例
+
+---
+
+## 📝 实现注意事项
+
+### 1. 抽象优先原则
+
+**核心原则**：先定义抽象接口，再实现具体功能。
+
+1. **抽象接口定义**：
+   - 先定义 `ConfigCenter` 和 `ServiceRegistry` 抽象接口
+   - 接口设计要考虑通用性，不绑定特定实现
+   - 接口方法要简洁明确，易于实现
+
+2. **实现层分离**：
+   - Nacos 实现作为可选模块，不强制依赖
+   - 框架核心代码只依赖抽象接口
+   - 通过 DI 容器注入具体实现
+
+3. **扩展性设计**：
+   - 接口设计要考虑未来扩展（Consul、Eureka 等）
+   - 避免在接口中暴露 Nacos 特定概念
+   - 使用适配器模式处理不同实现的差异
+
+### 2. Nacos SDK 实现
+
+- **独立包**：`@dangao/nacos-client` 位于 `packages/nacos-client/`
+- **实现方式**：基于 Nacos 3.X Open API 自行实现 HTTP 客户端
+- **参考文档**：[Nacos 3.X 客户端 API](https://nacos.io/docs/latest/manual/user/open-api/)
+- **不依赖**：不依赖官方 Nacos Node.js SDK，避免版本兼容问题
+- **轻量级**：仅实现必要的配置管理和服务发现功能
+- **职责**：提供 Nacos API 的底层封装，不包含业务逻辑
+
+### 3. 配置优先级
+
+- **配置中心配置** > 环境变量 > 默认配置
+- 支持配置合并和覆盖
+- 配置变更时自动刷新应用配置
+
+### 4. 服务注册与发现
+
+- **服务注册**：
+  - 应用启动时自动注册
+  - 定期发送心跳保持连接（续约）
+  - 应用关闭时自动注销
+  - 心跳失败时自动重新注册
+
+- **服务发现**：
+  - 支持服务实例列表缓存
+  - 监听服务实例变更（通过轮询实现）
+  - 支持多种负载均衡策略
+  - 支持健康实例过滤
+
+### 5. 模块化设计
+
+- **MicroserviceModule**：统一入口模块
+  - 配置选择配置中心实现（nacos、consul 等）
+  - 配置选择服务注册中心实现（nacos、consul、eureka 等）
+  - 统一管理微服务相关功能
+
+- **可选依赖**：
+  - Nacos 相关实现为可选模块
+  - 不启用微服务功能时，不影响框架核心
+  - 通过模块配置动态加载实现
+
+### 6. 向后兼容
+
+- **不影响现有功能**：
+  - 微服务功能为可选模块
+  - 不启用时，框架行为与 v1.1.x 一致
+  - 现有代码无需修改
+
+- **渐进式迁移**：
+  - 支持从单机部署逐步迁移到微服务架构
+  - 配置中心和服务注册中心可独立启用
+  - 支持混合模式（部分服务使用微服务，部分不使用）
+
+### 7. 性能考虑
+
+- **缓存策略**：
+  - 配置内容缓存（基于 md5 判断是否需要更新）
+  - 服务实例列表缓存
+  - 减少不必要的 API 调用
+
+- **异步机制**：
+  - 配置更新异步处理
+  - 服务实例变更异步通知
+  - 心跳发送异步执行
+
+- **连接管理**：
+  - HTTP 连接池复用
+  - 连接超时和重试机制
+  - 故障转移支持
+
+### 8. 错误处理
+
+- **抽象层错误**：
+  - 定义统一的错误类型（`ConfigCenterError`, `ServiceRegistryError`）
+  - 不同实现将底层错误转换为统一错误类型
+
+- **实现层错误**：
+  - Nacos 实现处理 Nacos 特定错误
+  - 网络错误、超时错误等统一处理
+  - 提供详细的错误信息和恢复建议
+
+---
+
+## 🔗 相关资源
+
+- [v1.1.x Roadmap](./v1.1.x.md) - 自定义注解和拦截器机制
+- [v1.2.x Roadmap](./v1.2.x.md) - 请求上下文全局访问和请求作用域支持
+- [v1.x.x 汇总清单](./v1.x.x.md) - 所有待实现功能特性汇总
+- **Nacos 官方文档**：
+  - [Nacos 3.X 客户端 API](https://nacos.io/docs/latest/manual/user/open-api/)
+  - [配置管理 API](https://nacos.io/docs/latest/manual/user/open-api/#11-%E8%8E%B7%E5%8F%96%E9%85%8D%E7%BD%AE)
+  - [服务发现 API](https://nacos.io/docs/latest/manual/user/open-api/#2-%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0)
+  - [Nacos 文档源码](https://github.com/nacos-group/nacos-group.github.io/tree/develop-astro-nacos/src/content/docs/v3.0)
+- [微服务最佳实践](../docs/best-practices.md)
