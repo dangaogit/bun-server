@@ -48,8 +48,7 @@
     "bundle": "bun build src/index.ts --target=bun --format=esm --outfile=dist/index.js --external reflect-metadata --external @dangao/logsmith",
     "dts": "tsc -p tsconfig.build.json",
     "build": "bun run clean && bun run bundle && bun run dts",
-    "prepare": "bun run build",
-    "publish:package": "cp -r ../../README.md ../../LICENSE ../../docs . && bun publish --access public && rm -rf ./README.md ./LICENSE ./docs"
+    "publish:package": "cp -r ../../README.md ../../LICENSE ../../docs . && bun run build && bun publish --access public && rm -rf ./README.md ./LICENSE ./docs"
   },
   "devDependencies": {
     "typescript": "catalog:",

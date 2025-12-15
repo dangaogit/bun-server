@@ -65,6 +65,21 @@ Application (Controllers / Modules / DI)
 
 - Bun ≥ `1.3.3`
 
+### TypeScript Configuration ⚠️
+
+**Critical**: Ensure your `tsconfig.json` includes these decorator settings:
+
+```json
+{
+  "compilerOptions": {
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
+  }
+}
+```
+
+Without these, dependency injection will fail (injected services will be `undefined`). See [Troubleshooting Guide](./docs/troubleshooting.md#-critical-injected-dependencies-are-undefined) for details.
+
 ### Install
 
 ```bash

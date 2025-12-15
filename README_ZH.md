@@ -83,6 +83,21 @@
 - Bun ≥ `1.3.3`
 - Node.js / npm 只在极少数脚手架场景使用
 
+### TypeScript 配置 ⚠️
+
+**重要**：确保你的 `tsconfig.json` 包含以下装饰器配置：
+
+```json
+{
+  "compilerOptions": {
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
+  }
+}
+```
+
+没有这些配置，依赖注入将失败（注入的服务将为 `undefined`）。详见[故障排查指南](./docs/zh/troubleshooting.md#-重要注入的依赖为-undefined)。
+
 ### 安装依赖
 
 ```bash
