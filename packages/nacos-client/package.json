@@ -1,0 +1,41 @@
+{
+  "name": "@dangao/nacos-client",
+  "description": "Nacos 3.X Open API client for Bun runtime",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "author": "dangaogit",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dangaogit/bun-server.git"
+  },
+  "keywords": [
+    "nacos",
+    "config-center",
+    "service-discovery",
+    "microservice",
+    "bun"
+  ],
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun run clean && bun run bundle && bun run dts",
+    "clean": "rm -rf dist",
+    "bundle": "bun build src/index.ts --target=bun --format=esm --outfile=dist/index.js",
+    "dts": "tsc -p tsconfig.build.json"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  }
+}
+

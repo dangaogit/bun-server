@@ -13,6 +13,9 @@ import { ModuleRegistry } from '../di/module-registry';
 import type { ModuleClass } from '../di/module';
 import type { Constructor } from './types';
 import { InterceptorRegistry, INTERCEPTOR_REGISTRY_TOKEN } from '../interceptor';
+import { CONFIG_SERVICE_TOKEN } from '../config/types';
+import { ConfigService } from '../config/service';
+import { ConfigModule } from '../config/config-module';
 
 /**
  * 应用配置选项
@@ -81,15 +84,24 @@ export class Application {
     // 初始化所有扩展（包括数据库连接等）
     await this.initializeExtensions();
 
+    // 初始化配置中心集成（在所有模块注册完成后）
+    await this.initializeConfigCenter();
+
+    const finalPort = port ?? this.options.port ?? 3000;
+    const finalHostname = hostname ?? this.options.hostname;
+
     const serverOptions: ServerOptions = {
-      port: port ?? this.options.port ?? 3000,
-      hostname: hostname ?? this.options.hostname,
+      port: finalPort,
+      hostname: finalHostname,
       fetch: this.handleRequest.bind(this),
       websocketRegistry: this.websocketRegistry,
     };
 
     this.server = new BunServer(serverOptions);
     this.server.start();
+
+    // 自动注册服务到注册中心（如果使用了 @ServiceRegistry 装饰器）
+    await this.registerServices(finalPort, finalHostname);
   }
 
   /**
@@ -117,9 +129,41 @@ export class Application {
   }
 
   /**
+   * 初始化配置中心集成
+   * 在所有模块注册完成后调用，确保 ConfigCenterModule 已注册
+   */
+  private async initializeConfigCenter(): Promise<void> {
+    const container = this.getContainer();
+    // ConfigModule 可能未注册（很多测试/应用不使用配置模块），此时不要抛错
+    if (!container.isRegistered(CONFIG_SERVICE_TOKEN)) {
+      return;
+    }
+
+    const configService = container.resolve<ConfigService>(CONFIG_SERVICE_TOKEN);
+
+    // 检查是否有待初始化的配置中心选项
+    const configCenterOptions = (configService as any)._configCenterOptions;
+    if (configCenterOptions) {
+      try {
+        await ConfigModule.initializeConfigCenter(configService, configCenterOptions);
+        // 清除临时选项
+        delete (configService as any)._configCenterOptions;
+      } catch (error) {
+        console.error(
+          '[Application] Failed to initialize config center:',
+          error,
+        );
+      }
+    }
+  }
+
+  /**
    * 停止应用
    */
   public async stop(): Promise<void> {
+    // 自动注销服务（如果使用了 @ServiceRegistry 装饰器）
+    await this.deregisterServices();
+
     // 关闭所有扩展（包括数据库连接等）
     await this.closeExtensions();
     this.server?.stop();
@@ -233,6 +277,60 @@ export class Application {
    */
   public getServer(): BunServer | undefined {
     return this.server;
+  }
+
+  /**
+   * 自动注册服务到注册中心
+   * 扫描所有使用 @ServiceRegistry 装饰器的控制器，自动注册服务
+   */
+  private async registerServices(port: number, hostname?: string): Promise<void> {
+    try {
+      // 动态导入服务注册装饰器（避免循环依赖）
+      const { registerServiceInstance } = await import(
+        '../microservice/service-registry/decorators'
+      );
+
+      const registry = ControllerRegistry.getInstance();
+      const controllers = registry.getRegisteredControllers();
+
+      for (const controllerClass of controllers) {
+        await registerServiceInstance(controllerClass, port, hostname);
+      }
+    } catch (error) {
+      // 如果服务注册失败，不影响应用启动（可能是没有配置 ServiceRegistryModule）
+      // 只在调试模式下输出警告
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[Application] Failed to register services:', error);
+      }
+    }
+  }
+
+  /**
+   * 自动注销服务
+   * 注销所有使用 @ServiceRegistry 装饰器的服务
+   */
+  private async deregisterServices(): Promise<void> {
+    try {
+      // 动态导入服务注册装饰器（避免循环依赖）
+      const { deregisterServiceInstance } = await import(
+        '../microservice/service-registry/decorators'
+      );
+
+      const registry = ControllerRegistry.getInstance();
+      const controllers = registry.getRegisteredControllers();
+
+      const port = this.server?.getPort() ?? this.options.port ?? 3000;
+      const hostname = this.server?.getHostname() ?? this.options.hostname;
+
+      for (const controllerClass of controllers) {
+        await deregisterServiceInstance(controllerClass, port, hostname);
+      }
+    } catch (error) {
+      // 如果服务注销失败，不影响应用关闭
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[Application] Failed to deregister services:', error);
+      }
+    }
   }
 
   /**

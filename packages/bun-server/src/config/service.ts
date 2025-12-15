@@ -3,12 +3,63 @@
  * 提供类型安全的配置访问能力
  */
 export class ConfigService<TConfig extends Record<string, unknown> = Record<string, unknown>> {
-  private readonly config: TConfig;
+  private config: TConfig;
   private readonly namespace?: string;
+  private configUpdateListeners: Array<(config: TConfig) => void> = [];
 
   public constructor(config: TConfig, namespace?: string) {
     this.config = config;
     this.namespace = namespace;
+  }
+
+  /**
+   * 更新配置（用于配置中心动态刷新）
+   * @param newConfig - 新配置对象
+   */
+  public updateConfig(newConfig: TConfig): void {
+    this.config = newConfig;
+    // 通知所有监听器
+    for (const listener of this.configUpdateListeners) {
+      try {
+        listener(newConfig);
+      } catch (error) {
+        console.error('[ConfigService] Error in config update listener:', error);
+      }
+    }
+  }
+
+  /**
+   * 合并配置（用于配置中心增量更新）
+   * @param partialConfig - 部分配置对象
+   */
+  public mergeConfig(partialConfig: Partial<TConfig>): void {
+    this.config = {
+      ...this.config,
+      ...partialConfig,
+    } as TConfig;
+    // 通知所有监听器
+    for (const listener of this.configUpdateListeners) {
+      try {
+        listener(this.config);
+      } catch (error) {
+        console.error('[ConfigService] Error in config update listener:', error);
+      }
+    }
+  }
+
+  /**
+   * 添加配置更新监听器
+   * @param listener - 监听器函数
+   * @returns 取消监听的函数
+   */
+  public onConfigUpdate(listener: (config: TConfig) => void): () => void {
+    this.configUpdateListeners.push(listener);
+    return () => {
+      const index = this.configUpdateListeners.indexOf(listener);
+      if (index > -1) {
+        this.configUpdateListeners.splice(index, 1);
+      }
+    };
   }
 
   /**
