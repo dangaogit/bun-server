@@ -306,4 +306,85 @@ export type {
   SessionData,
   RedisSessionStoreOptions,
 } from './session';
+// Microservice 模块
+export {
+  ConfigCenterModule,
+  NacosConfigCenter,
+  CONFIG_CENTER_TOKEN,
+  type ConfigCenterModuleOptions,
+  type ConfigCenterProvider,
+  type NacosConfigCenterOptions,
+  type ConfigCenter,
+  type ConfigChangeListener,
+  type ConfigResult,
+} from './microservice';
+export {
+  ServiceRegistryModule,
+  NacosServiceRegistry,
+  SERVICE_REGISTRY_TOKEN,
+  type ServiceRegistryModuleOptions,
+  type ServiceRegistryProvider,
+  type NacosServiceRegistryOptions,
+  type ServiceRegistry,
+  type GetInstancesOptions,
+  type InstancesChangeListener,
+  type ServiceInstance,
+} from './microservice';
+// Service Client 模块
+export {
+  ServiceClient,
+  LoadBalancerFactory,
+  RandomLoadBalancer,
+  RoundRobinLoadBalancer,
+  WeightedRoundRobinLoadBalancer,
+  ConsistentHashLoadBalancer,
+  LeastActiveLoadBalancer,
+  TraceIdRequestInterceptor,
+  UserInfoRequestInterceptor,
+  RequestLogInterceptor,
+  ResponseLogInterceptor,
+  ResponseTransformInterceptor,
+  ErrorHandlerInterceptor,
+  type LoadBalanceStrategy,
+  type LoadBalancer,
+  type ServiceCallOptions,
+  type ServiceCallResponse,
+  type ServiceRequestInterceptor,
+  type ServiceResponseInterceptor,
+  type ServiceCallError,
+} from './microservice';
+// Governance 模块
+export {
+  CircuitBreaker,
+  CircuitBreakerState,
+  RateLimiter,
+  RetryStrategyImpl,
+  type CircuitBreakerOptions,
+  type CircuitBreakerStats,
+  type RateLimiterOptions,
+  type RetryStrategy,
+} from './microservice';
+// Tracing 模块
+export {
+  Tracer,
+  ConsoleTraceCollector,
+  MemoryTraceCollector,
+  SpanStatus,
+  SpanKind,
+  type TraceId,
+  type SpanId,
+  type SpanContext,
+  type Span,
+  type SpanTags,
+  type SpanEvent,
+  type TracingOptions,
+  type TraceCollector,
+} from './microservice';
+// Monitoring 模块
+export {
+  ServiceMetricsCollector,
+  type ServiceCallMetrics,
+  type ServiceInstanceHealth,
+  type MonitoringOptions,
+} from './microservice';
 

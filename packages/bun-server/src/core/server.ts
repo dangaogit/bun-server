@@ -125,4 +125,18 @@ export class BunServer {
   public isRunning(): boolean {
     return this.server !== undefined;
   }
+
+  /**
+   * 获取服务器端口
+   */
+  public getPort(): number {
+    return this.options.port ?? 3000;
+  }
+
+  /**
+   * 获取服务器主机名
+   */
+  public getHostname(): string | undefined {
+    return this.options.hostname;
+  }
 }

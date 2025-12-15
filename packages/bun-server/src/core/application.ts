@@ -81,15 +81,21 @@ export class Application {
     // 初始化所有扩展（包括数据库连接等）
     await this.initializeExtensions();
 
+    const finalPort = port ?? this.options.port ?? 3000;
+    const finalHostname = hostname ?? this.options.hostname;
+
     const serverOptions: ServerOptions = {
-      port: port ?? this.options.port ?? 3000,
-      hostname: hostname ?? this.options.hostname,
+      port: finalPort,
+      hostname: finalHostname,
       fetch: this.handleRequest.bind(this),
       websocketRegistry: this.websocketRegistry,
     };
 
     this.server = new BunServer(serverOptions);
     this.server.start();
+
+    // 自动注册服务到注册中心（如果使用了 @ServiceRegistry 装饰器）
+    await this.registerServices(finalPort, finalHostname);
   }
 
   /**
@@ -120,6 +126,9 @@ export class Application {
    * 停止应用
    */
   public async stop(): Promise<void> {
+    // 自动注销服务（如果使用了 @ServiceRegistry 装饰器）
+    await this.deregisterServices();
+
     // 关闭所有扩展（包括数据库连接等）
     await this.closeExtensions();
     this.server?.stop();
@@ -233,6 +242,60 @@ export class Application {
    */
   public getServer(): BunServer | undefined {
     return this.server;
+  }
+
+  /**
+   * 自动注册服务到注册中心
+   * 扫描所有使用 @ServiceRegistry 装饰器的控制器，自动注册服务
+   */
+  private async registerServices(port: number, hostname?: string): Promise<void> {
+    try {
+      // 动态导入服务注册装饰器（避免循环依赖）
+      const { registerServiceInstance } = await import(
+        '../microservice/service-registry/decorators'
+      );
+
+      const registry = ControllerRegistry.getInstance();
+      const controllers = registry.getRegisteredControllers();
+
+      for (const controllerClass of controllers) {
+        await registerServiceInstance(controllerClass, port, hostname);
+      }
+    } catch (error) {
+      // 如果服务注册失败，不影响应用启动（可能是没有配置 ServiceRegistryModule）
+      // 只在调试模式下输出警告
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[Application] Failed to register services:', error);
+      }
+    }
+  }
+
+  /**
+   * 自动注销服务
+   * 注销所有使用 @ServiceRegistry 装饰器的服务
+   */
+  private async deregisterServices(): Promise<void> {
+    try {
+      // 动态导入服务注册装饰器（避免循环依赖）
+      const { deregisterServiceInstance } = await import(
+        '../microservice/service-registry/decorators'
+      );
+
+      const registry = ControllerRegistry.getInstance();
+      const controllers = registry.getRegisteredControllers();
+
+      const port = this.server?.getPort() ?? this.options.port ?? 3000;
+      const hostname = this.server?.getHostname() ?? this.options.hostname;
+
+      for (const controllerClass of controllers) {
+        await deregisterServiceInstance(controllerClass, port, hostname);
+      }
+    } catch (error) {
+      // 如果服务注销失败，不影响应用关闭
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[Application] Failed to deregister services:', error);
+      }
+    }
   }
 
   /**

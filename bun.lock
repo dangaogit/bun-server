@@ -38,6 +38,7 @@
       "version": "1.3.0",
       "dependencies": {
         "@dangao/logsmith": "workspace:*",
+        "@dangao/nacos-client": "workspace:*",
         "reflect-metadata": "catalog:",
       },
       "devDependencies": {
@@ -52,6 +53,13 @@
         "typescript": "catalog:",
       },
     },
+    "packages/nacos-client": {
+      "name": "@dangao/nacos-client",
+      "version": "0.1.0",
+      "devDependencies": {
+        "typescript": "catalog:",
+      },
+    },
   },
   "catalog": {
     "@types/bun": "latest",
@@ -62,6 +70,8 @@
     "@dangao/bun-server": ["@dangao/bun-server@workspace:packages/bun-server"],
 
     "@dangao/logsmith": ["@dangao/logsmith@workspace:packages/logsmith"],
+
+    "@dangao/nacos-client": ["@dangao/nacos-client@workspace:packages/nacos-client"],
 
     "@types/bun": ["@types/bun@1.3.4", "", { "dependencies": { "bun-types": "1.3.4" } }, "sha512-EEPTKXHP+zKGPkhRLv+HI0UEX8/o+65hqARxLy8Ov5rIxMBPNTjeZww00CIihrIQGEQBYg+0roO5qOnS/7boGA=="],
 
