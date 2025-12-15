@@ -6,9 +6,24 @@ export { Route, Router, RouteRegistry } from './router';
 export { GET, POST, PUT, DELETE, PATCH } from './router/decorators';
 export type { HttpMethod, RouteHandler, RouteMatch } from './router/types';
 export { BodyParser, RequestWrapper, ResponseBuilder } from './request';
-export { Body, Query, Param, Header, ParamBinder, Controller, ControllerRegistry } from './controller';
+export {
+  Body,
+  Query,
+  QueryMap,
+  Param,
+  Header,
+  HeaderMap,
+  ParamBinder,
+  Controller,
+  ControllerRegistry,
+} from './controller';
 export { Context as ContextParam } from './controller';
-export type { ParamMetadata, ControllerMetadata } from './controller';
+export type {
+  ParamMetadata,
+  QueryMapOptions,
+  HeaderMapOptions,
+  ControllerMetadata,
+} from './controller';
 export { Container } from './di/container';
 export { Injectable, Inject } from './di/decorators';
 export { Lifecycle, type ProviderConfig, type DependencyMetadata } from './di/types';

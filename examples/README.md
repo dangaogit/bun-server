@@ -14,6 +14,25 @@
 > 运行前请确保 `bun install` 已完成依赖安装。示例默认监听不同端口，可通过设置
 > `PORT` 环境变量覆盖（例如 `PORT=0 bun run ...` 交由系统分配端口）。
 
+## 额外示例片段：QueryMap / HeaderMap
+
+> 片段可直接嵌入到你的控制器中使用，无需单独运行文件。
+
+```ts
+import { Controller, GET, QueryMap, HeaderMap } from '@dangao/bun-server';
+
+@Controller('/api/search')
+class SearchController {
+  @GET('/')
+  public list(
+    @QueryMap() query: Record<string, string | string[]>, // 聚合 query，重复 key 变数组
+    @HeaderMap({ pick: ['x-token'] }) headers: Record<string, string | string[]>, // 只取部分 header
+  ) {
+    return { query, headers };
+  }
+}
+```
+
 ## 常用命令
 
 ```bash

@@ -1,5 +1,11 @@
 import type { Context } from '../core/context';
-import { getParamMetadata, ParamType, type ParamMetadata } from './decorators';
+import {
+  getParamMetadata,
+  ParamType,
+  type ParamMetadata,
+  type QueryMapOptions,
+  type HeaderMapOptions,
+} from './decorators';
 import { Container } from '../di/container';
 import { SessionService } from '../session/service';
 import { SESSION_SERVICE_TOKEN } from '../session/types';
@@ -106,6 +112,10 @@ export class ParamBinder {
       case ParamType.CONTEXT:
         // 从 AsyncLocalStorage 获取当前请求的 Context
         return contextStore.getStore() ?? context;
+      case ParamType.QUERY_MAP:
+        return await this.getQueryMapValue(meta.options as QueryMapOptions, context);
+      case ParamType.HEADER_MAP:
+        return await this.getHeaderMapValue(meta.options as HeaderMapOptions, context);
       default:
         return undefined;
     }
@@ -156,6 +166,75 @@ export class ParamBinder {
    */
   private static getHeaderValue(key: string, context: Context): string | null {
     return context.getHeader(key);
+  }
+
+  /**
+   * 获取 QueryMap 值
+   * @param options - 装饰器选项
+   * @param context - 请求上下文
+   */
+  private static async getQueryMapValue(
+    options: QueryMapOptions | undefined,
+    context: Context,
+  ): Promise<unknown> {
+    const result: Record<string, string | string[]> = {};
+    const searchParams = context.query;
+    // 收集所有键，处理重复 key -> string[]
+    for (const key of searchParams.keys()) {
+      const values = searchParams.getAll(key);
+      if (values.length === 1) {
+        result[key] = values[0];
+      } else {
+        result[key] = values;
+      }
+    }
+
+    let output: unknown = result;
+    if (options?.transform) {
+      output = await options.transform(result);
+    }
+    if (options?.validate) {
+      await options.validate(output as never);
+    }
+    return output;
+  }
+
+  /**
+   * 获取 HeaderMap 值
+   * @param options - 装饰器选项
+   * @param context - 请求上下文
+   */
+  private static async getHeaderMapValue(
+    options: HeaderMapOptions | undefined,
+    context: Context,
+  ): Promise<unknown> {
+    const normalize = options?.normalize ?? true;
+    const pick = options?.pick;
+    const headers = context.headers;
+    const result: Record<string, string | string[]> = {};
+
+    headers.forEach((value, rawKey) => {
+      const key = normalize ? rawKey.toLowerCase() : rawKey;
+      if (pick && !pick.includes(key)) {
+        return;
+      }
+      // 处理可能的多值（逗号分隔）
+      const parts = value.split(',').map((item) => item.trim()).filter((item) => item.length > 0);
+      if (parts.length <= 1) {
+        result[key] = value;
+      } else {
+        result[key] = parts;
+      }
+    });
+
+    let output: unknown = result;
+    if (options?.transform) {
+      output = await options.transform(result);
+    }
+    if (options?.validate) {
+      await options.validate(output as never);
+    }
+    return output;
   }
 }
 

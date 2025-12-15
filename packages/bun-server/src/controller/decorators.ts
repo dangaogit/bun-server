@@ -15,6 +15,8 @@ export enum ParamType {
   HEADER = 'header',
   SESSION = 'session',
   CONTEXT = 'context',
+  QUERY_MAP = 'query_map',
+  HEADER_MAP = 'header_map',
 }
 
 /**
@@ -24,6 +26,7 @@ export interface ParamMetadata {
   type: ParamType;
   key?: string;
   index: number;
+  options?: unknown;
 }
 
 /**
@@ -71,6 +74,58 @@ export function Param(key: string) {
  */
 export function Header(key: string) {
   return createParamDecorator(ParamType.HEADER, key);
+}
+
+/**
+ * QueryMap 注解选项
+ */
+export interface QueryMapOptions<T = unknown> {
+  transform?: (input: Record<string, string | string[]>) => T | Promise<T>;
+  validate?: (dto: T) => void | Promise<void>;
+}
+
+/**
+ * HeaderMap 注解选项
+ */
+export interface HeaderMapOptions<T = unknown> {
+  normalize?: boolean;
+  pick?: string[];
+  transform?: (input: Record<string, string | string[]>) => T | Promise<T>;
+  validate?: (dto: T) => void | Promise<void>;
+}
+
+/**
+ * QueryMap 参数装饰器
+ * 一次性注入完整查询对象
+ */
+export function QueryMap<T = Record<string, string | string[]>>(
+  options?: QueryMapOptions<T> | ((input: Record<string, string | string[]>) => T | Promise<T>),
+) {
+  return function (target: any, propertyKey: string | symbol | undefined, parameterIndex: number) {
+    const existingParams: ParamMetadata[] =
+      Reflect.getMetadata(PARAM_METADATA_KEY, target, propertyKey as string) || [];
+    const normalizedOptions: QueryMapOptions<T> =
+      typeof options === 'function' ? { transform: options } : options ?? {};
+    existingParams.push({ type: ParamType.QUERY_MAP, index: parameterIndex, options: normalizedOptions });
+    Reflect.defineMetadata(PARAM_METADATA_KEY, existingParams, target, propertyKey as string);
+  };
+}
+
+/**
+ * HeaderMap 参数装饰器
+ * 一次性注入完整 headers 对象
+ */
+export function HeaderMap<T = Record<string, string | string[]>>(
+  options?: HeaderMapOptions<T> | ((input: Record<string, string | string[]>) => T | Promise<T>),
+) {
+  return function (target: any, propertyKey: string | symbol | undefined, parameterIndex: number) {
+    const existingParams: ParamMetadata[] =
+      Reflect.getMetadata(PARAM_METADATA_KEY, target, propertyKey as string) || [];
+    const normalizedOptions: HeaderMapOptions<T> =
+      typeof options === 'function' ? { transform: options } : options ?? {};
+    existingParams.push({ type: ParamType.HEADER_MAP, index: parameterIndex, options: normalizedOptions });
+    Reflect.defineMetadata(PARAM_METADATA_KEY, existingParams, target, propertyKey as string);
+  };
 }
 
 /**
