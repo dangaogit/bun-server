@@ -99,6 +99,47 @@ const { SomeService } = await import("./some-service");
 
 ## Dependency Injection
 
+### ⚠️ CRITICAL: Injected Dependencies Are Undefined
+
+**Error**: Injected services are `undefined` at runtime, or work with `bun app.ts` but fail in VSCode debugger.
+
+**Cause**: Missing TypeScript decorator metadata configuration in `tsconfig.json`.
+
+**Solution**: **This is critical!** Ensure your `tsconfig.json` includes these two options:
+
+```json
+{
+  "compilerOptions": {
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
+  }
+}
+```
+
+**Why this matters**:
+- `emitDecoratorMetadata`: Enables TypeScript to emit metadata for decorators, which is required for dependency injection to work
+- `experimentalDecorators`: Enables decorator syntax support
+- Without these, the DI container cannot determine parameter types and will inject `undefined`
+
+**Check all tsconfig.json files**:
+- Root `tsconfig.json`
+- `examples/tsconfig.json`
+- Any project-specific `tsconfig.json` files
+
+**Example**:
+```json
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "./",
+    "emitDecoratorMetadata": true,  // ⚠️ REQUIRED
+    "experimentalDecorators": true   // ⚠️ REQUIRED
+  },
+  "include": ["**/*.ts"]
+}
+```
+
 ### Service Not Injectable
 
 **Error**: `Cannot resolve dependency` or service not found.

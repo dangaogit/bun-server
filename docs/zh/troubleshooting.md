@@ -93,6 +93,47 @@ const { SomeService } = await import("./some-service");
 
 ## 依赖注入
 
+### ⚠️ 重要：注入的依赖为 undefined
+
+**错误**：注入的服务在运行时为 `undefined`，或通过 `bun app.ts` 运行正常，但在 VSCode 调试器中失败。
+
+**原因**：`tsconfig.json` 中缺少 TypeScript 装饰器元数据配置。
+
+**解决方案**：**这非常重要！** 确保你的 `tsconfig.json` 包含以下两个选项：
+
+```json
+{
+  "compilerOptions": {
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
+  }
+}
+```
+
+**为什么重要**：
+- `emitDecoratorMetadata`：使 TypeScript 能够为装饰器发出元数据，这是依赖注入正常工作所必需的
+- `experimentalDecorators`：启用装饰器语法支持
+- 没有这些配置，DI 容器无法确定参数类型，将注入 `undefined`
+
+**检查所有 tsconfig.json 文件**：
+- 根目录的 `tsconfig.json`
+- `examples/tsconfig.json`
+- 任何项目特定的 `tsconfig.json` 文件
+
+**示例**：
+```json
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "./",
+    "emitDecoratorMetadata": true,  // ⚠️ 必需
+    "experimentalDecorators": true   // ⚠️ 必需
+  },
+  "include": ["**/*.ts"]
+}
+```
+
 ### 服务不可注入
 
 **错误**：`Cannot resolve dependency` 或找不到服务。
