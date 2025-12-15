@@ -1,4 +1,4 @@
-export { Body, Query, Param, Header, getParamMetadata, ParamType } from './decorators';
+export { Body, Query, Param, Header, Context, getParamMetadata, ParamType } from './decorators';
 export type { ParamMetadata } from './decorators';
 export { ParamBinder } from './param-binder';
 export { Controller, ControllerRegistry } from './controller';

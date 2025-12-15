@@ -1,5 +1,6 @@
 import { BunServer, type ServerOptions } from './server';
 import { Context } from './context';
+import { contextStore, ContextService, CONTEXT_SERVICE_TOKEN } from './context-service';
 import { RouteRegistry } from '../router/registry';
 import { ControllerRegistry } from '../controller/controller';
 import { MiddlewarePipeline } from '../middleware/pipeline';
@@ -53,6 +54,9 @@ export class Application {
     const container = ControllerRegistry.getInstance().getContainer();
     const interceptorRegistry = new InterceptorRegistry();
     container.registerInstance(INTERCEPTOR_REGISTRY_TOKEN, interceptorRegistry);
+
+    // 自动注册 ContextService
+    container.registerInstance(CONTEXT_SERVICE_TOKEN, new ContextService());
 
     // 默认注册 Logger（如果通过模块注册，会被覆盖）
     this.registerExtension(new LoggerExtension());
@@ -148,29 +152,32 @@ export class Application {
    * @returns 响应对象
    */
   private async handleRequest(context: Context): Promise<Response> {
-    // 对于 POST、PUT、PATCH 请求，提前解析 body 并缓存
-    // 这样可以确保 Request.body 流只读取一次
-    if (['POST', 'PUT', 'PATCH'].includes(context.method)) {
-      await context.getBody();
-    }
-
-    // 先通过路由解析出处理器信息，便于安全中间件等基于路由元数据做决策
-    const registry = RouteRegistry.getInstance();
-    const router = registry.getRouter();
-
-    // 预解析路由，仅设置上下文信息，不执行处理器
-    await router.preHandle(context);
-
-    // 再进入中间件管道，由中间件（如安全过滤器）根据 routeHandler 和 Auth 元数据做校验，
-    // 最后再由路由真正执行控制器方法
-    return await this.middlewarePipeline.run(context, async () => {
-      const response = await router.handle(context);
-      if (response) {
-        return response;
+    // 使用 AsyncLocalStorage 包裹请求处理，确保所有中间件和控制器都在请求上下文中执行
+    return await contextStore.run(context, async () => {
+      // 对于 POST、PUT、PATCH 请求，提前解析 body 并缓存
+      // 这样可以确保 Request.body 流只读取一次
+      if (['POST', 'PUT', 'PATCH'].includes(context.method)) {
+        await context.getBody();
       }
 
-      context.setStatus(404);
-      return context.createResponse({ error: 'Not Found' });
+      // 先通过路由解析出处理器信息，便于安全中间件等基于路由元数据做决策
+      const registry = RouteRegistry.getInstance();
+      const router = registry.getRouter();
+
+      // 预解析路由，仅设置上下文信息，不执行处理器
+      await router.preHandle(context);
+
+      // 再进入中间件管道，由中间件（如安全过滤器）根据 routeHandler 和 Auth 元数据做校验，
+      // 最后再由路由真正执行控制器方法
+      return await this.middlewarePipeline.run(context, async () => {
+        const response = await router.handle(context);
+        if (response) {
+          return response;
+        }
+
+        context.setStatus(404);
+        return context.createResponse({ error: 'Not Found' });
+      });
     });
   }
 

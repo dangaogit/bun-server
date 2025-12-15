@@ -1,18 +1,23 @@
-import { describe, expect, test, beforeEach } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 import { Application } from '../../src/core/application';
 import { Context } from '../../src/core/context';
 import { Controller } from '../../src/controller';
 import { GET } from '../../src/router/decorators';
 import { createRateLimitMiddleware, MemoryRateLimitStore, type RateLimitOptions } from '../../src/middleware/builtin/rate-limit';
 import { RateLimit } from '../../src/middleware/decorators';
+import { getTestPort } from '../utils/test-port';
 
 describe('Rate Limit Middleware', () => {
   let app: Application;
   let port: number;
 
   beforeEach(() => {
-    port = 3000 + Math.floor(Math.random() * 10000);
+    port = getTestPort();
     app = new Application({ port });
+  });
+
+  afterEach(async () => {
+    await app.stop();
   });
 
   test('should allow requests within limit', async () => {

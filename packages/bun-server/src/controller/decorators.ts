@@ -14,6 +14,7 @@ export enum ParamType {
   PARAM = 'param',
   HEADER = 'header',
   SESSION = 'session',
+  CONTEXT = 'context',
 }
 
 /**
@@ -70,6 +71,24 @@ export function Param(key: string) {
  */
 export function Header(key: string) {
   return createParamDecorator(ParamType.HEADER, key);
+}
+
+/**
+ * Context 参数装饰器
+ * 用于在控制器方法中注入当前请求的 Context 对象
+ * 
+ * @example
+ * ```typescript
+ * @GET('/users/:id')
+ * public async getUser(@Param('id') id: string, @Context() context: Context) {
+ *   // 可以直接访问 context
+ *   const header = context.getHeader('Authorization');
+ *   return { id, header };
+ * }
+ * ```
+ */
+export function Context() {
+  return createParamDecorator(ParamType.CONTEXT);
 }
 
 /**

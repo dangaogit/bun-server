@@ -11,6 +11,7 @@ import {
 } from "./decorators";
 import { LoggerManager } from "@dangao/logsmith";
 import type { Constructor } from "@/core/types";
+import { contextStore } from "../core/context-service";
 
 /**
  * 依赖注入容器
@@ -35,6 +36,12 @@ export class Container {
    * 单例实例缓存
    */
   private readonly singletons = new Map<string | symbol, unknown>();
+
+  /**
+   * 请求作用域实例缓存（使用 WeakMap 存储，key 为 Context）
+   * 每个请求都有独立的实例映射
+   */
+  private readonly scopedInstances = new WeakMap<object, Map<string | symbol, unknown>>();
 
   /**
    * 类型到 token 的映射（用于接口注入）
@@ -144,6 +151,22 @@ export class Container {
       }
     }
 
+    // 检查请求作用域缓存
+    if (provider.lifecycle === Lifecycle.Scoped) {
+      const context = contextStore.getStore();
+      if (context) {
+        let scopedMap = this.scopedInstances.get(context);
+        if (!scopedMap) {
+          scopedMap = new Map();
+          this.scopedInstances.set(context, scopedMap);
+        }
+        const scopedInstance = scopedMap.get(tokenKey);
+        if (scopedInstance) {
+          return scopedInstance as T;
+        }
+      }
+    }
+
     // 使用工厂函数或实例化
     let instance: T;
     if (provider.factory) {
@@ -165,6 +188,19 @@ export class Container {
     // 缓存单例
     if (provider.lifecycle === Lifecycle.Singleton) {
       this.singletons.set(tokenKey, instance);
+    }
+
+    // 缓存请求作用域实例
+    if (provider.lifecycle === Lifecycle.Scoped) {
+      const context = contextStore.getStore();
+      if (context) {
+        let scopedMap = this.scopedInstances.get(context);
+        if (!scopedMap) {
+          scopedMap = new Map();
+          this.scopedInstances.set(context, scopedMap);
+        }
+        scopedMap.set(tokenKey, instance);
+      }
     }
 
     return instance;
@@ -213,30 +249,57 @@ export class Container {
         }
       }
 
-      // 使用工厂函数或实现类
-      if (provider.factory) {
-        const instance = provider.factory();
-        if (provider.lifecycle === Lifecycle.Singleton) {
-          this.singletons.set(token, instance);
+      // 检查请求作用域缓存
+      if (provider.lifecycle === Lifecycle.Scoped) {
+        const context = contextStore.getStore();
+        if (context) {
+          let scopedMap = this.scopedInstances.get(context);
+          if (!scopedMap) {
+            scopedMap = new Map();
+            this.scopedInstances.set(context, scopedMap);
+          }
+          const scopedInstance = scopedMap.get(token);
+          if (scopedInstance) {
+            return scopedInstance;
+          }
         }
-        return instance;
       }
 
-      if (
+      // 使用工厂函数或实现类
+      let instance: unknown;
+      if (provider.factory) {
+        instance = provider.factory();
+      } else if (
         provider.implementation && typeof provider.implementation === "function"
       ) {
-        const instance = this.instantiate(provider.implementation);
-        if (provider.lifecycle === Lifecycle.Singleton) {
-          this.singletons.set(token, instance);
-        }
-        return instance;
+        instance = this.instantiate(provider.implementation);
+      } else {
+        throw new Error(
+          `Cannot instantiate token: ${
+            String(token)
+          }. Factory function required.`,
+        );
       }
 
-      throw new Error(
-        `Cannot instantiate token: ${
-          String(token)
-        }. Factory function required.`,
-      );
+      // 缓存单例
+      if (provider.lifecycle === Lifecycle.Singleton) {
+        this.singletons.set(token, instance);
+      }
+
+      // 缓存请求作用域实例
+      if (provider.lifecycle === Lifecycle.Scoped) {
+        const context = contextStore.getStore();
+        if (context) {
+          let scopedMap = this.scopedInstances.get(context);
+          if (!scopedMap) {
+            scopedMap = new Map();
+            this.scopedInstances.set(context, scopedMap);
+          }
+          scopedMap.set(token, instance);
+        }
+      }
+
+      return instance;
     }
 
     // 对于构造函数类型，使用公共 resolve 方法
@@ -286,12 +349,14 @@ export class Container {
 
   /**
    * 清除所有注册（主要用于测试）
+   * 注意：scopedInstances 使用 WeakMap，会自动清理，无需手动清除
    */
   public clear(): void {
     this.providers.clear();
     this.singletons.clear();
     this.typeToToken.clear();
     this.dependencyPlans.clear();
+    // scopedInstances 使用 WeakMap，当 Context 对象被 GC 时会自动清理
   }
 
   /**
