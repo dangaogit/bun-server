@@ -63,6 +63,17 @@ class HeaderMapController {
     return headers;
   }
 
+  public async handlePickedWithNormalizeFalse(
+    @HeaderMap({
+      normalize: false,
+      pick: ['X-Custom', 'X-List'], // 混合大小写
+    })
+    headers: Record<string, string | string[]>,
+  ) {
+    this.store.push(headers);
+    return headers;
+  }
+
   public async handleTransformed(
     @HeaderMap<{ token: string }>((input) => ({
       token: (input.authorization as string) ?? '',
@@ -198,6 +209,27 @@ describe('ParamBinder HeaderMap', () => {
     const params = await ParamBinder.bind(controller, 'handle', ctx);
     expect(params[0]).toMatchObject({
       'x-single': 'abc',
+    });
+  });
+
+  test('should pick headers with mixed-case pick keys when normalize=false', async () => {
+    const controller = new HeaderMapController();
+    const ctx = createContext('http://localhost/api', {
+      headers: {
+        'X-Custom': 'val',
+        'X-List': 'a, b',
+        'Other': 'ignore',
+      },
+    });
+    const params = await ParamBinder.bind(
+      controller,
+      'handlePickedWithNormalizeFalse',
+      ctx,
+    );
+    // Headers API 总是返回小写的 key，所以即使 normalize=false，结果中的 key 也是小写
+    expect(params[0]).toEqual({
+      'x-custom': 'val',
+      'x-list': ['a', 'b'],
     });
   });
 });

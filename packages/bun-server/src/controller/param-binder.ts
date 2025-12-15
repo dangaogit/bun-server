@@ -209,11 +209,14 @@ export class ParamBinder {
     context: Context,
   ): Promise<unknown> {
     const normalize = options?.normalize ?? true;
-    const pick = options?.pick?.map((key) => (normalize ? key.toLowerCase() : key));
+    // Headers API 总是将 header 名称规范化为小写，所以 pick 数组也应该总是小写化
+    const pick = options?.pick?.map((key) => key.toLowerCase());
     const headers = context.headers;
     const result: Record<string, string | string[]> = {};
 
     headers.forEach((value, rawKey) => {
+      // Headers API 总是返回小写的 key，所以 rawKey 已经是小写
+      // normalize 选项决定结果中的 key 格式（虽然实际上总是小写）
       const key = normalize ? rawKey.toLowerCase() : rawKey;
       if (pick && !pick.includes(key)) {
         return;
