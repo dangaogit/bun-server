@@ -153,6 +153,26 @@ describe('ParamBinder HeaderMap', () => {
     });
   });
 
+  test('should pick headers with case-insensitive pick when normalize=true (default)', async () => {
+    const controller = new HeaderMapController();
+    const ctx = createContext('http://localhost/api', {
+      headers: {
+        'X-CUSTOM': 'val',
+        'X-LIST': 'a, b',
+        'Other': 'ignore',
+      },
+    });
+    const params = await ParamBinder.bind(
+      controller,
+      'handlePicked',
+      ctx,
+    );
+    expect(params[0]).toEqual({
+      'x-custom': 'val',
+      'x-list': ['a', 'b'],
+    });
+  });
+
   test('should transform headers', async () => {
     const controller = new HeaderMapController();
     const ctx = createContext('http://localhost/api', {

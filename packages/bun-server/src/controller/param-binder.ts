@@ -209,7 +209,7 @@ export class ParamBinder {
     context: Context,
   ): Promise<unknown> {
     const normalize = options?.normalize ?? true;
-    const pick = options?.pick;
+    const pick = options?.pick?.map((key) => (normalize ? key.toLowerCase() : key));
     const headers = context.headers;
     const result: Record<string, string | string[]> = {};
 
