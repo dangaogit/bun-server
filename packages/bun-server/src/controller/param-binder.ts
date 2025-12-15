@@ -218,10 +218,14 @@ export class ParamBinder {
       if (pick && !pick.includes(key)) {
         return;
       }
-      // 处理可能的多值（逗号分隔）
-      const parts = value.split(',').map((item) => item.trim()).filter((item) => item.length > 0);
+      // 处理可能的多值（逗号分隔），统一 trim
+      const parts = value
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
       if (parts.length <= 1) {
-        result[key] = value;
+        // 单值也保持 trim 后的形态
+        result[key] = parts[0] ?? '';
       } else {
         result[key] = parts;
       }

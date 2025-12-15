@@ -177,7 +177,7 @@ describe('ParamBinder HeaderMap', () => {
     const controller = new HeaderMapController();
     const ctx = createContext('http://localhost/api', {
       headers: {
-        Authorization: 'Bearer token123',
+        Authorization: '  Bearer token123  ',
       },
     });
     const params = await ParamBinder.bind(
@@ -186,6 +186,19 @@ describe('ParamBinder HeaderMap', () => {
       ctx,
     );
     expect(params[0]).toEqual({ token: 'Bearer token123' });
+  });
+
+  test('should trim single header value when no comma', async () => {
+    const controller = new HeaderMapController();
+    const ctx = createContext('http://localhost/api', {
+      headers: {
+        'X-Single': '  abc  ',
+      },
+    });
+    const params = await ParamBinder.bind(controller, 'handle', ctx);
+    expect(params[0]).toMatchObject({
+      'x-single': 'abc',
+    });
   });
 });
 
