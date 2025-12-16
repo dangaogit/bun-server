@@ -1,6 +1,7 @@
 import { BodyParser } from '../request/body-parser';
 import type { UploadedFileInfo } from '../files';
 import type { BodyInit } from 'bun'
+import { type URLSearchParams, URL } from 'url';
 
 /**
  * 请求上下文

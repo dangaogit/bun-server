@@ -1,4 +1,5 @@
 import { BodyParser } from './body-parser';
+import { type URLSearchParams, URL } from 'url';
 
 /**
  * 请求封装类

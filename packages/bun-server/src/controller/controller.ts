@@ -262,6 +262,14 @@ export class ControllerRegistry {
    * 获取所有已注册的控制器类
    * @returns 控制器类数组
    */
+  public getAllControllers(): Constructor<unknown>[] {
+    return Array.from(this.controllerContainers.keys());
+  }
+
+  /**
+   * 获取所有已注册的控制器类
+   * @returns 控制器类数组
+   */
   public getRegisteredControllers(): Constructor<unknown>[] {
     return Array.from(this.controllerContainers.keys());
   }

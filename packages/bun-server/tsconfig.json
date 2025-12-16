@@ -34,9 +34,6 @@
       "@/*": [
         "src/*"
       ],
-      // "@dangao/logsmith": [
-      //   "../../@dangao/logsmith/src"
-      // ]
     }
   },
   "include": [
