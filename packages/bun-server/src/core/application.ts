@@ -16,6 +16,7 @@ import { InterceptorRegistry, INTERCEPTOR_REGISTRY_TOKEN } from '../interceptor'
 import { CONFIG_SERVICE_TOKEN } from '../config/types';
 import { ConfigService } from '../config/service';
 import { ConfigModule } from '../config/config-module';
+import { LoggerManager } from '@dangao/logsmith';
 
 /**
  * 应用配置选项
@@ -30,6 +31,18 @@ export interface ApplicationOptions {
    * 主机名
    */
   hostname?: string;
+
+  /**
+   * 优雅停机超时时间（毫秒）
+   * 默认 30 秒
+   */
+  gracefulShutdownTimeout?: number;
+
+  /**
+   * 是否启用信号监听（SIGTERM、SIGINT）
+   * 默认 true
+   */
+  enableSignalHandlers?: boolean;
 }
 
 /**
@@ -42,6 +55,7 @@ export class Application {
   private readonly middlewarePipeline: MiddlewarePipeline;
   private readonly websocketRegistry: WebSocketGatewayRegistry;
   private readonly extensions: ApplicationExtension[] = [];
+  private signalHandlersInstalled: boolean = false;
 
   public constructor(options: ApplicationOptions = {}) {
     this.options = options;
@@ -95,10 +109,16 @@ export class Application {
       hostname: finalHostname,
       fetch: this.handleRequest.bind(this),
       websocketRegistry: this.websocketRegistry,
+      gracefulShutdownTimeout: this.options.gracefulShutdownTimeout,
     };
 
     this.server = new BunServer(serverOptions);
     this.server.start();
+
+    // 安装信号处理器（如果启用）
+    if (this.options.enableSignalHandlers !== false) {
+      this.installSignalHandlers();
+    }
 
     // 自动注册服务到注册中心（如果使用了 @ServiceRegistry 装饰器）
     await this.registerServices(finalPort, finalHostname);
@@ -158,15 +178,40 @@ export class Application {
   }
 
   /**
-   * 停止应用
+   * 停止应用（立即停止，不等待请求完成）
    */
   public async stop(): Promise<void> {
+    // 移除信号处理器
+    this.removeSignalHandlers();
+
     // 自动注销服务（如果使用了 @ServiceRegistry 装饰器）
     await this.deregisterServices();
 
     // 关闭所有扩展（包括数据库连接等）
     await this.closeExtensions();
     this.server?.stop();
+  }
+
+  /**
+   * 优雅停机
+   * 停止接受新请求，等待正在处理的请求完成，然后关闭应用
+   * @param timeout - 超时时间（毫秒），默认使用配置的 gracefulShutdownTimeout 或 30000
+   * @returns Promise，在停机完成时 resolve
+   */
+  public async gracefulShutdown(timeout?: number): Promise<void> {
+    // 移除信号处理器
+    this.removeSignalHandlers();
+
+    // 自动注销服务（如果使用了 @ServiceRegistry 装饰器）
+    await this.deregisterServices();
+
+    // 关闭所有扩展（包括数据库连接等）
+    await this.closeExtensions();
+
+    // 优雅关闭服务器
+    if (this.server) {
+      await this.server.gracefulShutdown(timeout);
+    }
   }
 
   /**
@@ -339,6 +384,49 @@ export class Application {
    */
   public getContainer() {
     return ControllerRegistry.getInstance().getContainer();
+  }
+
+  /**
+   * 安装信号处理器（SIGTERM、SIGINT）
+   */
+  private installSignalHandlers(): void {
+    if (this.signalHandlersInstalled) {
+      return;
+    }
+
+    const logger = LoggerManager.getLogger();
+
+    const shutdownHandler = async (signal: string) => {
+      logger.info(`Received ${signal}, starting graceful shutdown...`);
+      try {
+        await this.gracefulShutdown();
+        process.exit(0);
+      } catch (error) {
+        logger.error(`Error during graceful shutdown:`, error);
+        process.exit(1);
+      }
+    };
+
+    // 监听 SIGTERM（通常由进程管理器发送）
+    process.on('SIGTERM', () => shutdownHandler('SIGTERM'));
+
+    // 监听 SIGINT（通常由 Ctrl+C 触发）
+    process.on('SIGINT', () => shutdownHandler('SIGINT'));
+
+    this.signalHandlersInstalled = true;
+  }
+
+  /**
+   * 移除信号处理器
+   */
+  private removeSignalHandlers(): void {
+    if (!this.signalHandlersInstalled) {
+      return;
+    }
+
+    process.removeAllListeners('SIGTERM');
+    process.removeAllListeners('SIGINT');
+    this.signalHandlersInstalled = false;
   }
 }
 
