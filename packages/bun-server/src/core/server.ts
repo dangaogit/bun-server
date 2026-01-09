@@ -27,6 +27,12 @@ export interface ServerOptions {
    * WebSocket 网关注册表
    */
   websocketRegistry?: WebSocketGatewayRegistry;
+
+  /**
+   * 优雅停机超时时间（毫秒）
+   * 默认 30 秒
+   */
+  gracefulShutdownTimeout?: number;
 }
 
 /**
@@ -36,6 +42,10 @@ export interface ServerOptions {
 export class BunServer {
   private server?: Server<WebSocketConnectionData>;
   private readonly options: ServerOptions;
+  private activeRequests: number = 0;
+  private isShuttingDown: boolean = false;
+  private shutdownPromise?: Promise<void>;
+  private shutdownResolve?: () => void;
 
   public constructor(options: ServerOptions) {
     this.options = options;
@@ -51,6 +61,12 @@ export class BunServer {
 
     const logger = LoggerManager.getLogger();
 
+    // 重置状态
+    this.activeRequests = 0;
+    this.isShuttingDown = false;
+    this.shutdownPromise = undefined;
+    this.shutdownResolve = undefined;
+
     this.server = Bun.serve({
       port: this.options.port ?? 3000,
       hostname: this.options.hostname,
@@ -58,6 +74,11 @@ export class BunServer {
         request: Request,
         server: Server<WebSocketConnectionData>,
       ): Response | Promise<Response> | undefined => {
+        // 如果正在关闭，拒绝新请求
+        if (this.isShuttingDown) {
+          return new Response("Server is shutting down", { status: 503 });
+        }
+
         const upgradeHeader = request.headers.get("upgrade");
         if (
           this.options.websocketRegistry &&
@@ -77,8 +98,34 @@ export class BunServer {
           return new Response("WebSocket upgrade failed", { status: 400 });
         }
 
+        // 增加活跃请求计数
+        this.activeRequests++;
+
         const context = new Context(request);
-        return this.options.fetch(context);
+        const responsePromise = this.options.fetch(context);
+
+        // 处理响应完成后的清理
+        if (responsePromise instanceof Promise) {
+          responsePromise
+            .finally(() => {
+              this.activeRequests--;
+              // 如果正在关闭且没有活跃请求，触发关闭完成
+              if (this.isShuttingDown && this.activeRequests === 0 && this.shutdownResolve) {
+                this.shutdownResolve();
+              }
+            })
+            .catch(() => {
+              // 错误已在中间件中处理，这里只负责计数
+            });
+        } else {
+          // 同步响应
+          this.activeRequests--;
+          if (this.isShuttingDown && this.activeRequests === 0 && this.shutdownResolve) {
+            this.shutdownResolve();
+          }
+        }
+
+        return responsePromise;
       },
       websocket: {
         open: (ws) => {
@@ -99,15 +146,80 @@ export class BunServer {
   }
 
   /**
-   * 停止服务器
+   * 停止服务器（立即停止，不等待请求完成）
    */
   public stop(): void {
     if (this.server) {
       const logger = LoggerManager.getLogger();
       this.server.stop();
       this.server = undefined;
+      this.isShuttingDown = false;
+      this.activeRequests = 0;
       logger.info("Server stopped");
     }
+  }
+
+  /**
+   * 优雅停机
+   * 停止接受新请求，等待正在处理的请求完成
+   * @param timeout - 超时时间（毫秒），默认使用配置的 gracefulShutdownTimeout 或 30000
+   * @returns Promise，在停机完成时 resolve
+   */
+  public async gracefulShutdown(timeout?: number): Promise<void> {
+    if (!this.server || this.isShuttingDown) {
+      return;
+    }
+
+    const logger = LoggerManager.getLogger();
+    const shutdownTimeout = timeout ?? this.options.gracefulShutdownTimeout ?? 30000;
+
+    logger.info(`Starting graceful shutdown (timeout: ${shutdownTimeout}ms, active requests: ${this.activeRequests})`);
+
+    // 标记为正在关闭，停止接受新请求
+    this.isShuttingDown = true;
+
+    // 如果没有活跃请求，立即关闭
+    if (this.activeRequests === 0) {
+      this.stop();
+      logger.info("Graceful shutdown completed (no active requests)");
+      return;
+    }
+
+    // 创建关闭 Promise
+    if (!this.shutdownPromise) {
+      this.shutdownPromise = new Promise<void>((resolve) => {
+        this.shutdownResolve = resolve;
+      });
+    }
+
+    // 设置超时
+    const timeoutPromise = new Promise<void>((resolve) => {
+      setTimeout(() => {
+        logger.warn(`Graceful shutdown timeout (${shutdownTimeout}ms), forcing shutdown`);
+        resolve();
+      }, shutdownTimeout);
+    });
+
+    // 等待所有请求完成或超时
+    await Promise.race([this.shutdownPromise, timeoutPromise]);
+
+    // 停止服务器
+    this.stop();
+    logger.info(`Graceful shutdown completed (remaining active requests: ${this.activeRequests})`);
+  }
+
+  /**
+   * 获取当前活跃请求数
+   */
+  public getActiveRequests(): number {
+    return this.activeRequests;
+  }
+
+  /**
+   * 检查是否正在关闭
+   */
+  public isShuttingDownState(): boolean {
+    return this.isShuttingDown;
   }
 
   /**
