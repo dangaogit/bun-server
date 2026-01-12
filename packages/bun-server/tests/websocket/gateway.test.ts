@@ -5,7 +5,7 @@ import { WebSocketGateway, OnOpen, OnMessage, OnClose } from '../../src/websocke
 import { WebSocketGatewayRegistry } from '../../src/websocket/registry';
 import { ControllerRegistry } from '../../src/controller/controller';
 import { Application } from '../../src/core/application';
-import { Query, Context } from '../../src/controller/decorators';
+import { Query, Context, Param } from '../../src/controller/decorators';
 import { getTestPort } from '../utils/test-port';
 import type { WebSocketConnectionData } from '../../src/websocket/registry';
 import type { Context as RequestContext } from '../../src/core/context';
@@ -1084,6 +1084,212 @@ describe('WebSocket Gateway Integration', () => {
     expect(result.queryValue).toBe(roomId);
     expect(result.contextPath).toBe('/ws/combined-decorators');
     expect(result.hasContext).toBe(true);
+
+    ws.close();
+  });
+
+  test('should support dynamic path matching with path parameters', async () => {
+    @WebSocketGateway('/ws/rooms/:roomId')
+    class DynamicPathGateway {
+      public static connected = false;
+      public static roomIds: string[] = [];
+      public static params: Record<string, string>[] = [];
+
+      @OnOpen
+      public handleOpen(ws: ServerWebSocket<WebSocketConnectionData>): void {
+        DynamicPathGateway.connected = true;
+        const roomId = ws.data?.params?.roomId;
+        if (roomId) {
+          DynamicPathGateway.roomIds.push(roomId);
+          DynamicPathGateway.params.push(ws.data.params || {});
+        }
+      }
+
+      @OnMessage
+      public handleMessage(
+        ws: ServerWebSocket<WebSocketConnectionData>,
+        message: string,
+      ): void {
+        const roomId = ws.data?.params?.roomId;
+        if (roomId) {
+          ws.send(`Room ${roomId}: ${message}`);
+        }
+      }
+    }
+
+    app.registerWebSocketGateway(DynamicPathGateway);
+    await app.listen();
+
+    const registry = WebSocketGatewayRegistry.getInstance();
+
+    // 验证动态路径匹配
+    expect(registry.hasGateway('/ws/rooms/123')).toBe(true);
+    expect(registry.hasGateway('/ws/rooms/abc')).toBe(true);
+    expect(registry.hasGateway('/ws/rooms/room-xyz')).toBe(true);
+    // 不匹配的路径
+    expect(registry.hasGateway('/ws/rooms')).toBe(false);
+    expect(registry.hasGateway('/ws/rooms/123/users')).toBe(false);
+
+    // 测试访问动态路径
+    const roomId1 = 'room-123';
+    const ws1 = new WebSocket(`ws://localhost:${port}/ws/rooms/${roomId1}`);
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('WebSocket connection timeout'));
+      }, 2000);
+
+      ws1.onopen = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
+
+      ws1.onerror = (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      };
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(DynamicPathGateway.connected).toBe(true);
+    expect(DynamicPathGateway.roomIds).toContain(roomId1);
+    expect(DynamicPathGateway.params[0]?.roomId).toBe(roomId1);
+
+    // 测试另一个房间 ID
+    const roomId2 = 'room-456';
+    const ws2 = new WebSocket(`ws://localhost:${port}/ws/rooms/${roomId2}`);
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('WebSocket connection timeout'));
+      }, 2000);
+
+      ws2.onopen = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
+
+      ws2.onerror = (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      };
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(DynamicPathGateway.roomIds).toContain(roomId2);
+    expect(DynamicPathGateway.params.some((p) => p.roomId === roomId2)).toBe(true);
+
+    ws1.close();
+    ws2.close();
+  });
+
+  test('should support multiple path parameters', async () => {
+    @WebSocketGateway('/ws/users/:userId/rooms/:roomId')
+    class MultiParamGateway {
+      public static connections: Array<{
+        userId: string;
+        roomId: string;
+      }> = [];
+
+      @OnOpen
+      public handleOpen(ws: ServerWebSocket<WebSocketConnectionData>): void {
+        const params = ws.data?.params || {};
+        MultiParamGateway.connections.push({
+          userId: params.userId || '',
+          roomId: params.roomId || '',
+        });
+      }
+    }
+
+    app.registerWebSocketGateway(MultiParamGateway);
+    await app.listen();
+
+    const registry = WebSocketGatewayRegistry.getInstance();
+
+    // 验证多参数路径匹配
+    expect(registry.hasGateway('/ws/users/user1/rooms/room1')).toBe(true);
+    expect(registry.hasGateway('/ws/users/user2/rooms/room2')).toBe(true);
+
+    const userId = 'user-123';
+    const roomId = 'room-456';
+    const ws = new WebSocket(
+      `ws://localhost:${port}/ws/users/${userId}/rooms/${roomId}`,
+    );
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('WebSocket connection timeout'));
+      }, 2000);
+
+      ws.onopen = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
+
+      ws.onerror = (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      };
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // 验证路径参数被正确提取
+    expect(MultiParamGateway.connections.length).toBeGreaterThan(0);
+    const connection = MultiParamGateway.connections[0];
+    expect(connection.userId).toBe(userId);
+    expect(connection.roomId).toBe(roomId);
+
+    ws.close();
+  });
+
+  test('should support @Param decorator with dynamic path parameters', async () => {
+    @WebSocketGateway('/ws/param-test/:id')
+    class ParamDecoratorGateway {
+      public static receivedIds: string[] = [];
+      public static paramValues: string[] = [];
+
+      @OnMessage
+      public handleMessage(
+        _ws: ServerWebSocket<WebSocketConnectionData>,
+        message: string,
+        @Param('id') id: string,
+      ): void {
+        ParamDecoratorGateway.receivedIds.push(message);
+        ParamDecoratorGateway.paramValues.push(id);
+      }
+    }
+
+    app.registerWebSocketGateway(ParamDecoratorGateway);
+    await app.listen();
+
+    const testId = 'test-123';
+    const ws = new WebSocket(`ws://localhost:${port}/ws/param-test/${testId}`);
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('WebSocket connection timeout'));
+      }, 2000);
+
+      ws.onopen = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
+
+      ws.onerror = (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      };
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    ws.send('test-message');
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // 验证消息被接收
+    expect(ParamDecoratorGateway.receivedIds).toContain('test-message');
+    // 验证 @Param 装饰器正确提取了路径参数
+    expect(ParamDecoratorGateway.paramValues).toContain(testId);
 
     ws.close();
   });
