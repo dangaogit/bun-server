@@ -91,10 +91,12 @@ export class BunServer {
           }
           // 创建 Context 以便在 WebSocket 处理器中使用
           const context = new Context(request);
+          // 创建 Bun 兼容的 URLSearchParams（需要 toJSON 方法）
+          const queryParams = new URLSearchParams(url.searchParams);
           const upgraded = server.upgrade(request, {
             data: {
               path: url.pathname,
-              query: url.searchParams,
+              query: queryParams,
               context,
             },
           });
