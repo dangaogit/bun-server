@@ -89,8 +89,14 @@ export class BunServer {
           if (!this.options.websocketRegistry.hasGateway(url.pathname)) {
             return new Response("WebSocket gateway not found", { status: 404 });
           }
+          // 创建 Context 以便在 WebSocket 处理器中使用
+          const context = new Context(request);
           const upgraded = server.upgrade(request, {
-            data: { path: url.pathname },
+            data: {
+              path: url.pathname,
+              query: url.searchParams,
+              context,
+            },
           });
           if (upgraded) {
             return undefined;
@@ -128,14 +134,14 @@ export class BunServer {
         return responsePromise;
       },
       websocket: {
-        open: (ws) => {
-          this.options.websocketRegistry?.handleOpen(ws);
+        open: async (ws) => {
+          await this.options.websocketRegistry?.handleOpen(ws);
         },
-        message: (ws, message) => {
-          this.options.websocketRegistry?.handleMessage(ws, message);
+        message: async (ws, message) => {
+          await this.options.websocketRegistry?.handleMessage(ws, message);
         },
-        close: (ws, code, reason) => {
-          this.options.websocketRegistry?.handleClose(ws, code, reason);
+        close: async (ws, code, reason) => {
+          await this.options.websocketRegistry?.handleClose(ws, code, reason);
         },
       },
     });

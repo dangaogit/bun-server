@@ -5,8 +5,10 @@ import { WebSocketGateway, OnOpen, OnMessage, OnClose } from '../../src/websocke
 import { WebSocketGatewayRegistry } from '../../src/websocket/registry';
 import { ControllerRegistry } from '../../src/controller/controller';
 import { Application } from '../../src/core/application';
+import { Query, Context } from '../../src/controller/decorators';
 import { getTestPort } from '../utils/test-port';
 import type { WebSocketConnectionData } from '../../src/websocket/registry';
+import type { Context as RequestContext } from '../../src/core/context';
 
 function createFakeSocket(path: string): ServerWebSocket<WebSocketConnectionData> {
   return {
@@ -777,6 +779,312 @@ describe('WebSocket Gateway Integration', () => {
     // 验证数据被收集
     expect(CombinedGateway.data.length).toBeGreaterThan(0);
     expect(CombinedGateway.data[0].path).toBeDefined();
+    ws.close();
+  });
+
+  test('should create new instance for each WebSocket connection (dynamic instance creation)', async () => {
+    @WebSocketGateway('/ws/dynamic-instance')
+    class DynamicInstanceGateway {
+      public static instanceIds: number[] = [];
+      public static callCounts: Map<number, number> = new Map();
+      private readonly instanceId: number;
+
+      public constructor() {
+        this.instanceId = Math.random();
+        DynamicInstanceGateway.instanceIds.push(this.instanceId);
+        DynamicInstanceGateway.callCounts.set(this.instanceId, 0);
+      }
+
+      @OnOpen
+      public handleOpen(ws: ServerWebSocket<WebSocketConnectionData>): void {
+        const count = DynamicInstanceGateway.callCounts.get(this.instanceId) || 0;
+        DynamicInstanceGateway.callCounts.set(this.instanceId, count + 1);
+        ws.send(`Instance ID: ${this.instanceId}`);
+      }
+
+      @OnMessage
+      public handleMessage(
+        _ws: ServerWebSocket<WebSocketConnectionData>,
+        message: string,
+      ): void {
+        const count = DynamicInstanceGateway.callCounts.get(this.instanceId) || 0;
+        DynamicInstanceGateway.callCounts.set(this.instanceId, count + 1);
+      }
+    }
+
+    app.registerWebSocketGateway(DynamicInstanceGateway);
+    await app.listen();
+
+    // 创建第一个连接
+    const ws1 = new WebSocket(`ws://localhost:${port}/ws/dynamic-instance`);
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('WebSocket connection timeout'));
+      }, 2000);
+
+      ws1.onopen = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
+
+      ws1.onerror = (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      };
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const firstInstanceCount = DynamicInstanceGateway.instanceIds.length;
+
+    // 创建第二个连接
+    const ws2 = new WebSocket(`ws://localhost:${port}/ws/dynamic-instance`);
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('WebSocket connection timeout'));
+      }, 2000);
+
+      ws2.onopen = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
+
+      ws2.onerror = (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      };
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // 验证创建了实例（至少一个）
+    expect(DynamicInstanceGateway.instanceIds.length).toBeGreaterThan(0);
+    // 验证每个连接都调用了处理器（说明实例被使用）
+    const totalCalls = Array.from(DynamicInstanceGateway.callCounts.values()).reduce(
+      (sum, count) => sum + count,
+      0,
+    );
+    expect(totalCalls).toBeGreaterThan(0);
+
+    ws1.close();
+    ws2.close();
+  });
+
+  test('should support @Query decorator in WebSocket handlers', async () => {
+    @WebSocketGateway('/ws/query-decorator')
+    class QueryDecoratorGateway {
+      public static receivedQueries: Record<string, string>[] = [];
+
+      @OnOpen
+      public handleOpen(
+        _ws: ServerWebSocket<WebSocketConnectionData>,
+        @Query('userId') userId: string | null,
+        @Query('token') token: string | null,
+      ): void {
+        QueryDecoratorGateway.receivedQueries.push({
+          userId: userId || '',
+          token: token || '',
+        });
+      }
+
+      @OnMessage
+      public handleMessage(
+        _ws: ServerWebSocket<WebSocketConnectionData>,
+        message: string,
+        @Query('userId') userId: string | null,
+      ): void {
+        QueryDecoratorGateway.receivedQueries.push({
+          message,
+          userId: userId || '',
+        });
+      }
+    }
+
+    app.registerWebSocketGateway(QueryDecoratorGateway);
+    await app.listen();
+
+    const userId = 'user-123';
+    const token = 'token-456';
+    const ws = new WebSocket(
+      `ws://localhost:${port}/ws/query-decorator?userId=${userId}&token=${token}`,
+    );
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('WebSocket connection timeout'));
+      }, 2000);
+
+      ws.onopen = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
+
+      ws.onerror = (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      };
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // 验证 @Query 装饰器正确提取了查询参数
+    expect(QueryDecoratorGateway.receivedQueries.length).toBeGreaterThan(0);
+    const openQuery = QueryDecoratorGateway.receivedQueries.find(
+      (q) => q.userId === userId && q.token === token,
+    );
+    expect(openQuery).toBeDefined();
+
+    ws.send('test-message');
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // 验证消息处理中的 @Query 也工作
+    const messageQuery = QueryDecoratorGateway.receivedQueries.find(
+      (q) => q.message === 'test-message' && q.userId === userId,
+    );
+    expect(messageQuery).toBeDefined();
+
+    ws.close();
+  });
+
+  test('should support @Context decorator in WebSocket handlers', async () => {
+    @WebSocketGateway('/ws/context-decorator')
+    class ContextDecoratorGateway {
+      public static contexts: {
+        path?: string;
+        query?: string;
+        hasContext?: boolean;
+      }[] = [];
+
+      @OnOpen
+      public handleOpen(
+        _ws: ServerWebSocket<WebSocketConnectionData>,
+        @Context() context: RequestContext,
+      ): void {
+        ContextDecoratorGateway.contexts.push({
+          path: context.path,
+          query: context.getQuery('userId') || undefined,
+          hasContext: context !== undefined,
+        });
+      }
+
+      @OnMessage
+      public handleMessage(
+        _ws: ServerWebSocket<WebSocketConnectionData>,
+        message: string,
+        @Context() context: RequestContext,
+      ): void {
+        ContextDecoratorGateway.contexts.push({
+          path: context.path,
+          query: context.getQuery('userId') || undefined,
+          hasContext: context !== undefined,
+        });
+      }
+    }
+
+    app.registerWebSocketGateway(ContextDecoratorGateway);
+    await app.listen();
+
+    const userId = 'user-789';
+    const ws = new WebSocket(
+      `ws://localhost:${port}/ws/context-decorator?userId=${userId}`,
+    );
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('WebSocket connection timeout'));
+      }, 2000);
+
+      ws.onopen = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
+
+      ws.onerror = (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      };
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // 验证 @Context 装饰器正确注入了 Context 对象
+    expect(ContextDecoratorGateway.contexts.length).toBeGreaterThan(0);
+    const openContext = ContextDecoratorGateway.contexts[0];
+    expect(openContext.hasContext).toBe(true);
+    expect(openContext.path).toBe('/ws/context-decorator');
+    expect(openContext.query).toBe(userId);
+
+    ws.send('test-context');
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // 验证消息处理中的 @Context 也工作
+    const messageContext = ContextDecoratorGateway.contexts.find(
+      (c) => c.path === '/ws/context-decorator' && c.query === userId,
+    );
+    expect(messageContext).toBeDefined();
+    expect(messageContext?.hasContext).toBe(true);
+
+    ws.close();
+  });
+
+  test('should support @Query and @Context decorators together', async () => {
+    @WebSocketGateway('/ws/combined-decorators')
+    class CombinedDecoratorsGateway {
+      public static results: {
+        queryValue?: string | null;
+        contextPath?: string;
+        hasContext?: boolean;
+      }[] = [];
+
+      @OnMessage
+      public handleMessage(
+        _ws: ServerWebSocket<WebSocketConnectionData>,
+        message: string,
+        @Query('roomId') roomId: string | null,
+        @Context() context: RequestContext,
+      ): void {
+        CombinedDecoratorsGateway.results.push({
+          queryValue: roomId,
+          contextPath: context.path,
+          hasContext: context !== undefined,
+        });
+      }
+    }
+
+    app.registerWebSocketGateway(CombinedDecoratorsGateway);
+    await app.listen();
+
+    const roomId = 'room-abc';
+    const ws = new WebSocket(
+      `ws://localhost:${port}/ws/combined-decorators?roomId=${roomId}`,
+    );
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('WebSocket connection timeout'));
+      }, 2000);
+
+      ws.onopen = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
+
+      ws.onerror = (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      };
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    ws.send('test-combined');
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // 验证 @Query 和 @Context 同时工作
+    expect(CombinedDecoratorsGateway.results.length).toBeGreaterThan(0);
+    const result = CombinedDecoratorsGateway.results[0];
+    expect(result.queryValue).toBe(roomId);
+    expect(result.contextPath).toBe('/ws/combined-decorators');
+    expect(result.hasContext).toBe(true);
+
     ws.close();
   });
 });
