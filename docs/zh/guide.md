@@ -6,7 +6,7 @@
 
 ```ts
 import "reflect-metadata";
-import { Application } from "../src";
+import { Application } from "@dangao/bun-server";
 
 const app = new Application({ port: 3000 });
 app.listen();
@@ -26,7 +26,7 @@ import {
   Injectable,
   Param,
   POST,
-} from "../src";
+} from "@dangao/bun-server";
 
 @Injectable()
 class UserService {
@@ -64,7 +64,7 @@ app.listen();
 ## 3. 使用中间件
 
 ```ts
-import { createCorsMiddleware, createLoggerMiddleware } from "../src";
+import { createCorsMiddleware, createLoggerMiddleware } from "@dangao/bun-server";
 
 const app = new Application();
 app.use(createLoggerMiddleware({ prefix: "[Example]" }));
@@ -74,7 +74,7 @@ app.use(createCorsMiddleware({ origin: "*" }));
 `@UseMiddleware()` 可作用于单个控制器或方法：
 
 ```ts
-import { UseMiddleware } from '../src';
+import { UseMiddleware } from "@dangao/bun-server";
 
 const auth = async (ctx, next) => {
   if (ctx.getHeader('authorization') !== 'token') {
@@ -92,7 +92,7 @@ class SecureController { ... }
 ## 4. 参数验证
 
 ```ts
-import { Validate, IsEmail, MinLength } from '../src';
+import { Validate, IsEmail, MinLength } from "@dangao/bun-server";
 
 @POST('/register')
 public register(
@@ -108,32 +108,37 @@ public register(
 ## 5. WebSocket 网关
 
 ```ts
-import { OnMessage, WebSocketGateway } from "../src";
+import { OnMessage, WebSocketGateway } from "@dangao/bun-server";
+import type { ServerWebSocket } from "bun";
 
-@WebSocketGateway("/ws/chat")
+@WebSocketGateway("/ws")
 class ChatGateway {
   @OnMessage
-  public onMessage(ws, message: string) {
-    ws.send(`echo: ${message}`);
+  public handleMessage(ws: ServerWebSocket, message: string) {
+    ws.send(`Echo: ${message}`);
   }
 }
 
+const app = new Application({ port: 3000 });
 app.registerWebSocketGateway(ChatGateway);
+app.listen();
 ```
 
 ## 6. 文件上传与静态资源
 
 ```ts
-import { createFileUploadMiddleware, createStaticFileMiddleware } from "../src";
+import {
+  createFileUploadMiddleware,
+  createStaticFileMiddleware,
+} from "@dangao/bun-server";
 
+const app = new Application({ port: 3000 });
+
+// File upload
 app.use(createFileUploadMiddleware({ maxSize: 5 * 1024 * 1024 }));
-app.use(
-  createStaticFileMiddleware({
-    root: "./public",
-    prefix: "/assets",
-    enableCache: true,
-  }),
-);
+
+// Static files
+app.use(createStaticFileMiddleware({ root: "./public", prefix: "/assets" }));
 ```
 
 上传后的文件可在 `context.body.files` 中读取；静态资源请求会自动设置
@@ -142,7 +147,7 @@ Content-Type 与缓存头。
 ## 7. 错误处理与自定义过滤器
 
 ```ts
-import { ExceptionFilterRegistry, HttpException } from "../src";
+import { ExceptionFilterRegistry, HttpException } from "@dangao/bun-server";
 
 ExceptionFilterRegistry.getInstance().register({
   catch(error, context) {
