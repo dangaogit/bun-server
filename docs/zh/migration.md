@@ -63,9 +63,15 @@
 
 - 将原本在 `Bun.serve({ websocket })` 中手写的逻辑迁移到 `@WebSocketGateway`：
   ```ts
-  @WebSocketGateway('/ws/chat')
+  import { OnMessage, WebSocketGateway } from "@dangao/bun-server";
+  import type { ServerWebSocket } from "bun";
+
+  @WebSocketGateway('/ws')
   class ChatGateway {
-    @OnMessage onMessage(ws, msg) { ws.send(msg); }
+    @OnMessage
+    public handleMessage(ws: ServerWebSocket, message: string) {
+      ws.send(`Echo: ${message}`);
+    }
   }
   app.registerWebSocketGateway(ChatGateway);
   ```
