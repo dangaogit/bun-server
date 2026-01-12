@@ -86,6 +86,7 @@ export class BunServer {
           upgradeHeader.toLowerCase() === "websocket"
         ) {
           const url = new URL(request.url);
+          // 检查是否有匹配的网关（支持动态路径匹配）
           if (!this.options.websocketRegistry.hasGateway(url.pathname)) {
             return new Response("WebSocket gateway not found", { status: 404 });
           }

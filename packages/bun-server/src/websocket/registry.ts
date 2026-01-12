@@ -16,18 +16,24 @@ interface GatewayDefinition {
     message?: string;
     close?: string;
   };
+  pattern: RegExp;
+  paramNames: string[];
+  isStatic: boolean;
 }
 
 export interface WebSocketConnectionData {
   path: string;
   query?: URLSearchParams;
   context?: Context;
+  params?: Record<string, string>;
 }
 
 export class WebSocketGatewayRegistry {
   private static instance: WebSocketGatewayRegistry;
   private readonly container: Container;
   private readonly gateways = new Map<string, GatewayDefinition>();
+  private readonly staticGateways = new Map<string, GatewayDefinition>();
+  private readonly dynamicGateways: GatewayDefinition[] = [];
 
   private constructor() {
     this.container = ControllerRegistry.getInstance().getContainer();
@@ -38,6 +44,24 @@ export class WebSocketGatewayRegistry {
       WebSocketGatewayRegistry.instance = new WebSocketGatewayRegistry();
     }
     return WebSocketGatewayRegistry.instance;
+  }
+
+  /**
+   * 解析路径，生成匹配模式和参数名列表
+   * @param path - 路由路径
+   * @returns 匹配模式和参数名列表
+   */
+  private parsePath(path: string): { pattern: RegExp; paramNames: string[] } {
+    const paramNames: string[] = [];
+    const patternString = path
+      .replace(/:([^/]+)/g, (_, paramName) => {
+        paramNames.push(paramName);
+        return '([^/]+)';
+      })
+      .replace(/\*/g, '.*');
+
+    const pattern = new RegExp(`^${patternString}$`);
+    return { pattern, paramNames };
   }
 
   public register(gatewayClass: Constructor<unknown>): void {
@@ -55,23 +79,82 @@ export class WebSocketGatewayRegistry {
       this.container.register(gatewayClass);
     }
 
-    this.gateways.set(metadata.path, {
+    // 解析路径
+    const { pattern, paramNames } = this.parsePath(metadata.path);
+    const isStatic = !metadata.path.includes(':') && !metadata.path.includes('*');
+
+    const definition: GatewayDefinition = {
       path: metadata.path,
       gatewayClass,
       handlers,
-    });
+      pattern,
+      paramNames,
+      isStatic,
+    };
+
+    this.gateways.set(metadata.path, definition);
+
+    // 分别存储静态和动态路由
+    if (isStatic) {
+      this.staticGateways.set(metadata.path, definition);
+    } else {
+      this.dynamicGateways.push(definition);
+    }
   }
 
+  /**
+   * 检查是否有匹配的网关（支持动态路径匹配）
+   * @param path - 请求路径
+   * @returns 是否有匹配的网关
+   */
   public hasGateway(path: string): boolean {
-    return this.gateways.has(path);
+    // 先检查静态路由
+    if (this.staticGateways.has(path)) {
+      return true;
+    }
+
+    // 遍历动态路由
+    for (const gateway of this.dynamicGateways) {
+      if (gateway.pattern.test(path)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   public clear(): void {
     this.gateways.clear();
+    this.staticGateways.clear();
+    this.dynamicGateways.length = 0;
   }
 
-  private getGateway(path: string): GatewayDefinition | undefined {
-    return this.gateways.get(path);
+  /**
+   * 获取匹配的网关（支持动态路径匹配）
+   * @param path - 请求路径
+   * @returns 匹配的网关定义和路径参数
+   */
+  private getGateway(path: string): { definition: GatewayDefinition; params: Record<string, string> } | undefined {
+    // 先检查静态路由
+    const staticGateway = this.staticGateways.get(path);
+    if (staticGateway) {
+      return { definition: staticGateway, params: {} };
+    }
+
+    // 遍历动态路由
+    for (const gateway of this.dynamicGateways) {
+      const match = path.match(gateway.pattern);
+      if (match) {
+        // 提取路径参数
+        const params: Record<string, string> = {};
+        for (let i = 0; i < gateway.paramNames.length; i++) {
+          params[gateway.paramNames[i]] = match[i + 1] ?? '';
+        }
+        return { definition: gateway, params };
+      }
+    }
+
+    return undefined;
   }
 
   /**
@@ -129,7 +212,16 @@ export class WebSocketGatewayRegistry {
           headers: new Headers(),
         });
         context = new Context(request);
+        // 设置路径参数到 Context
+        if (ws.data.params) {
+          context.params = ws.data.params;
+        }
         ws.data.context = context;
+      } else {
+        // 如果 Context 已存在，更新路径参数
+        if (ws.data.params) {
+          context.params = ws.data.params;
+        }
       }
 
       // 使用 ParamBinder 绑定参数
@@ -189,12 +281,16 @@ export class WebSocketGatewayRegistry {
 
   public async handleOpen(ws: ServerWebSocket<WebSocketConnectionData>): Promise<void> {
     const path = ws.data?.path;
-    const definition = path ? this.getGateway(path) : undefined;
-    if (!definition) {
+    const match = path ? this.getGateway(path) : undefined;
+    if (!match) {
       ws.close(1008, 'Gateway not found');
       return;
     }
-    await this.invokeHandler(ws, definition, definition.handlers.open);
+    // 保存路径参数到 WebSocket 连接数据
+    if (match.params && Object.keys(match.params).length > 0) {
+      ws.data.params = match.params;
+    }
+    await this.invokeHandler(ws, match.definition, match.definition.handlers.open);
   }
 
   public async handleMessage(
@@ -202,12 +298,16 @@ export class WebSocketGatewayRegistry {
     message: string | ArrayBuffer | ArrayBufferView,
   ): Promise<void> {
     const path = ws.data?.path;
-    const definition = path ? this.getGateway(path) : undefined;
-    if (!definition) {
+    const match = path ? this.getGateway(path) : undefined;
+    if (!match) {
       ws.close(1008, 'Gateway not found');
       return;
     }
-    await this.invokeHandler(ws, definition, definition.handlers.message, message);
+    // 保存路径参数到 WebSocket 连接数据（如果还没有）
+    if (match.params && Object.keys(match.params).length > 0 && !ws.data.params) {
+      ws.data.params = match.params;
+    }
+    await this.invokeHandler(ws, match.definition, match.definition.handlers.message, message);
   }
 
   public async handleClose(
@@ -216,11 +316,11 @@ export class WebSocketGatewayRegistry {
     reason: string,
   ): Promise<void> {
     const path = ws.data?.path;
-    const definition = path ? this.getGateway(path) : undefined;
-    if (!definition) {
+    const match = path ? this.getGateway(path) : undefined;
+    if (!match) {
       return;
     }
-    await this.invokeHandler(ws, definition, definition.handlers.close, code, reason);
+    await this.invokeHandler(ws, match.definition, match.definition.handlers.close, code, reason);
   }
 }
 
