@@ -249,10 +249,79 @@ app.listen();
 
 ## Examples & Extensions
 
-- `examples/basic-app.ts`: minimal DI + Logger + Middleware showcase.
-- `examples/full-app.ts`: advanced controllers, validation, uploads, WebSocket.
-- `packages/@dangao/bun-server/src/extensions/`: official extensions (e.g.
+### 📚 Organized Examples
+
+Examples are organized by difficulty and feature category:
+
+- **[Quick Start](./examples/00-quick-start/)** - Get started in 5 minutes
+  - `01-hello-world.ts` - Minimal example (5 lines)
+  - `02-basic-routing.ts` - HTTP methods and route parameters
+  - `03-dependency-injection.ts` - DI basics with services
+
+- **[Core Features](./examples/01-core-features/)** - Deep dive into framework mechanics
+  - `basic-app.ts` - DI + Logger + Swagger + Config integration
+  - `multi-module-app.ts` - Module dependencies and organization
+  - `context-scope-app.ts` - Request scoping and ContextService
+  - `full-app.ts` - Validation, uploads, static files, WebSocket
+
+- **[Official Modules](./examples/02-official-modules/)** - Ready-to-use modules
+  - `auth-app.ts` - JWT + OAuth2 authentication (with Web UI)
+  - `session-app.ts` - Session management
+  - `database-app.ts` - Database connection and queries
+  - `orm-app.ts` - Entity + Repository pattern
+  - `cache-app.ts` - Caching with decorators
+  - `queue-app.ts` - Task queues and Cron jobs
+
+- **[Advanced](./examples/03-advanced/)** - Custom framework extensions
+  - `custom-decorator-app.ts` - Create custom decorators
+  - `websocket-chat-app.ts` - Complete WebSocket chat with rooms (with Web UI)
+  - `microservice-app.ts` - Microservices architecture
+
+- **[Real World](./examples/04-real-world/)** - Production-ready examples
+  - `database-test-app.ts` - Database connection tester (Web UI)
+  - `perf/app.ts` - Performance benchmarking
+
+### 🔑 Symbol + Interface Pattern
+
+This framework features a unique **Symbol + Interface co-naming pattern** that solves TypeScript's type erasure problem:
+
+```typescript
+// 1. Define interface and Symbol with same name
+interface UserService {
+  find(id: string): Promise<User>;
+}
+const UserService = Symbol('UserService');
+
+// 2. Implement interface
+@Injectable()
+class UserServiceImpl implements UserService {
+  async find(id: string) { ... }
+}
+
+// 3. Register with Symbol token
+@Module({
+  providers: [{
+    provide: UserService,      // Symbol token
+    useClass: UserServiceImpl, // Implementation
+  }],
+})
+
+// 4. Inject with type safety
+constructor(private readonly userService: UserService) {}
+```
+
+**Key**: Import as `import { UserService }` (not `import type { UserService }`).
+
+See [Symbol + Interface Pattern Guide](./docs/symbol-interface-pattern.md) for details.
+
+### 🔌 Extensions
+
+- `packages/@dangao/bun-server/src/extensions/`: Official extensions (e.g.
   `LoggerExtension`) for plugging in external capabilities.
+
+### 📖 Complete Example Index
+
+See [examples/README.md](./examples/README.md) for the complete catalog with learning paths, difficulty ratings, and usage scenarios.
 
 ## Benchmark Suite
 

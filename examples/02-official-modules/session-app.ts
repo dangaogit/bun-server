@@ -269,12 +269,14 @@ SessionModule.forRoot({
 class RootModule {}
 
 const app = new Application({ port });
-const container = app.getContainer();
 
-// 注册 Session 中间件（必须在注册模块后）
+// 先注册模块，确保 SessionModule 已加载
+app.registerModule(RootModule);
+
+// 注册 Session 中间件（必须在注册模块之后，这样才能从容器中解析 SessionService）
+const container = app.getContainer();
 app.use(createSessionMiddleware(container));
 
-app.registerModule(RootModule);
 app.listen(port);
 
 console.log(`🚀 Session Example Server running on http://localhost:${port}`);

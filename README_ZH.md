@@ -268,16 +268,79 @@ app.listen();
 
 ## 示例与扩展
 
-- `examples/basic-app.ts`：最小可运行示例，覆盖 DI + Logger + Middleware +
-  Swagger + ConfigModule。
-- `examples/full-app.ts`：包含验证、文件上传、WebSocket、复杂控制器，使用
-  ConfigModule 管理端口与中间件配置。
-- `examples/multi-module-app.ts`：多模块示例，展示模块间的依赖关系和服务共享，使用
-  ConfigModule 统一管理应用配置。
-- `examples/auth-app.ts`：完整的认证演示，包含 JWT + OAuth2
-  认证流程、前端演示页面，并通过 ConfigModule 管理应用标题和端口。
+### 📚 分类示例
+
+示例按难度和功能分类组织：
+
+- **[快速入门](./examples/00-quick-start/)** - 5 分钟上手
+  - `01-hello-world.ts` - 最简示例（5 行代码）
+  - `02-basic-routing.ts` - HTTP 方法和路由参数
+  - `03-dependency-injection.ts` - DI 基础与服务
+
+- **[核心功能](./examples/01-core-features/)** - 深入理解框架机制
+  - `basic-app.ts` - DI + Logger + Swagger + Config 集成
+  - `multi-module-app.ts` - 模块依赖与组织
+  - `context-scope-app.ts` - 请求作用域与 ContextService
+  - `full-app.ts` - 验证、上传、静态文件、WebSocket
+
+- **[官方模块](./examples/02-official-modules/)** - 开箱即用的模块
+  - `auth-app.ts` - JWT + OAuth2 认证（含 Web UI）
+  - `session-app.ts` - Session 管理
+  - `database-app.ts` - 数据库连接与查询
+  - `orm-app.ts` - Entity + Repository 模式
+  - `cache-app.ts` - 缓存装饰器
+  - `queue-app.ts` - 任务队列与 Cron 定时任务
+
+- **[高级功能](./examples/03-advanced/)** - 自定义框架扩展
+  - `custom-decorator-app.ts` - 创建自定义装饰器
+  - `websocket-chat-app.ts` - 完整的 WebSocket 聊天室（含 Web UI）
+  - `microservice-app.ts` - 微服务架构
+
+- **[实战案例](./examples/04-real-world/)** - 生产级示例
+  - `database-test-app.ts` - 数据库连接测试工具（Web UI）
+  - `perf/app.ts` - 性能基准测试
+
+### 🔑 Symbol + Interface 模式
+
+本框架的特色设计 —— **Symbol + Interface 同名模式**，优雅解决 TypeScript 类型擦除问题：
+
+```typescript
+// 1. 定义接口和同名 Symbol
+interface UserService {
+  find(id: string): Promise<User>;
+}
+const UserService = Symbol('UserService');
+
+// 2. 实现接口
+@Injectable()
+class UserServiceImpl implements UserService {
+  async find(id: string) { ... }
+}
+
+// 3. 使用 Symbol token 注册
+@Module({
+  providers: [{
+    provide: UserService,      // Symbol token
+    useClass: UserServiceImpl, // 实现类
+  }],
+})
+
+// 4. 类型安全注入
+constructor(private readonly userService: UserService) {}
+```
+
+**关键**：导入时使用 `import { UserService }`（不要用 `import type { UserService }`）。
+
+详见 [Symbol + Interface 模式指南](./docs/zh/symbol-interface-pattern.md)。
+
+### 🔌 扩展
+
 - `packages/bun-server/src/extensions/`：官方扩展（如
-  LoggerExtension、SwaggerExtension），可用于注册第三方能力。
+  LoggerExtension）用于集成外部能力。
+
+### 📖 完整示例索引
+
+查看 [examples/README.md](./examples/README.md) 获取完整目录，包含学习路径、难度评级和使用场景。
 
 ## 性能与 Benchmark
 

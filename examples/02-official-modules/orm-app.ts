@@ -80,14 +80,18 @@ class UserRepository extends BaseRepository<User> {
 // 用户服务
 @Injectable()
 class UserService {
-  public constructor(private readonly userRepository: UserRepository) {}
+  public constructor(
+    private readonly userRepository: UserRepository,
+    @Inject(DATABASE_SERVICE_TOKEN)
+    private readonly databaseService: DatabaseService,
+  ) {}
 
   /**
    * 初始化数据库表
    */
   public async initialize(): Promise<void> {
-    const db = this.userRepository['databaseService'] as DatabaseService;
-    db.query(`
+    // 直接使用注入的 DatabaseService，避免访问 Repository 的私有属性
+    this.databaseService.query(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,

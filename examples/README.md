@@ -1,106 +1,372 @@
-# 示例项目
+# Bun Server Framework - Examples Index
 
-| 文件                   | 说明                                                                    | 运行方式                                | 端口 |
-| ---------------------- | ----------------------------------------------------------------------- | --------------------------------------- | ---- |
-| `basic-app.ts`         | 最小可运行示例，包含 DI、控制器与验证                                   | `bun run examples/basic-app.ts`         | 3100 |
-| `full-app.ts`          | 综合示例，集成日志、CORS、上传、静态资源与 WebSocket                    | `bun run examples/full-app.ts`          | 3200 |
-| `cache-app.ts`         | 缓存示例，演示 CacheModule 的使用（@Cacheable, @CacheEvict, @CachePut） | `bun run examples/cache-app.ts`         | 3200 |
-| `queue-app.ts`         | 队列示例，演示 QueueModule 的使用（任务队列、Cron 定时任务）            | `bun run examples/queue-app.ts`         | 3300 |
-| `session-app.ts`       | Session 示例，演示 SessionModule 的使用（登录、购物车）                 | `bun run examples/session-app.ts`       | 3400 |
-| `context-scope-app.ts` | ContextService + 请求作用域示例，演示 `ContextService` / `@Context()` / `Lifecycle.Scoped` | `bun run examples/context-scope-app.ts` | 3500 |
-| `database-test-app.ts` | 数据库测试工具，Web UI 界面测试 PostgreSQL/MySQL 连接                   | `bun run examples/database-test-app.ts` | 3000 |
-| `perf/app.ts`          | 性能压测示例，暴露 `/api/ping` 供 wrk 等工具测试                        | `bun run examples/perf/app.ts`          | 3300 |
+[中文](./README_ZH.md) | **English**
 
-> 运行前请确保 `bun install` 已完成依赖安装。示例默认监听不同端口，可通过设置
-> `PORT` 环境变量覆盖（例如 `PORT=0 bun run ...` 交由系统分配端口）。
+This directory contains comprehensive examples for Bun Server Framework,
+organized by difficulty and feature category.
 
-## 额外示例片段：QueryMap / HeaderMap
+## 📚 Directory Structure
 
-> 片段可直接嵌入到你的控制器中使用，无需单独运行文件。
-
-```ts
-import { Controller, GET, QueryMap, HeaderMap } from '@dangao/bun-server';
-
-@Controller('/api/search')
-class SearchController {
-  @GET('/')
-  public list(
-    @QueryMap() query: Record<string, string | string[]>, // 聚合 query，重复 key 变数组
-    @HeaderMap({ pick: ['x-token'] }) headers: Record<string, string | string[]>, // 只取部分 header
-  ) {
-    return { query, headers };
-  }
-}
+```
+examples/
+├── 00-quick-start/          # Quick Start (Get started in 5 minutes)
+├── 01-core-features/        # Core Features (Deep dive into framework)
+├── 02-official-modules/     # Official Modules (Ready-to-use)
+├── 03-advanced/             # Advanced (Extending the framework)
+└── 04-real-world/           # Real World (Production-ready examples)
 ```
 
-## 常用命令
+## 🚀 Quick Start
+
+### Recommended Learning Path
+
+1. **Beginners** → Start with `00-quick-start`
+2. **Experienced Developers** → Jump to `02-official-modules` or `04-real-world`
+3. **Framework Contributors** → Check `03-advanced` for advanced features
+
+---
+
+## 📂 Category Details
+
+### 00. Quick Start
+
+**For**: Developers new to Bun Server
+
+| File                         | Description                                        | Difficulty | Port |
+| ---------------------------- | -------------------------------------------------- | ---------- | ---- |
+| `01-hello-world.ts`          | Minimal example: HTTP server in 5 lines            | ⭐         | 3000 |
+| `02-basic-routing.ts`        | Routing basics: GET/POST/PUT/DELETE routes         | ⭐         | 3000 |
+| `03-dependency-injection.ts` | DI basics: `@Injectable` and constructor injection | ⭐⭐       | 3100 |
+
+**Run**:
 
 ```bash
-# 基础示例
-bun run examples/basic-app.ts
+bun run examples/00-quick-start/01-hello-world.ts
+```
 
-# 全功能示例
-bun run examples/full-app.ts
+---
 
-# 缓存示例
-bun run examples/cache-app.ts
+### 01. Core Features
 
-# 队列示例
-bun run examples/queue-app.ts
+**For**: Developers who want to understand framework internals
 
-# Session 示例
-bun run examples/session-app.ts
+| File                   | Description                                                 | Difficulty | Port |
+| ---------------------- | ----------------------------------------------------------- | ---------- | ---- |
+| `basic-app.ts`         | Comprehensive: DI + Logger + Swagger + Config               | ⭐⭐       | 3100 |
+| `multi-module-app.ts`  | Module system: dependencies and exports                     | ⭐⭐⭐     | 3300 |
+| `basic-router.ts`      | Low-level routing: using RouteRegistry directly             | ⭐⭐       | 3000 |
+| `context-scope-app.ts` | Request scoping: ContextService and Scoped lifecycle        | ⭐⭐⭐     | 3500 |
+| `full-app.ts`          | Full features: validation, uploads, static files, WebSocket | ⭐⭐⭐     | 3200 |
 
-# 数据库测试工具
-bun run examples/database-test-app.ts
+**Core Concepts**:
 
-# 性能测试
-bun run examples/perf/app.ts
+- **Dependency Injection**: `@Injectable`, constructor injection, Symbol tokens
+- **Module System**: `@Module`, imports/providers/exports
+- **Middleware**: Global/controller/method-level middleware
+- **Lifecycle**: Singleton vs Scoped
+
+See [01-core-features/README.md](./01-core-features/README.md) for details.
+
+---
+
+### 02. Official Modules
+
+**For**: Developers who need ready-to-use functionality
+
+#### 🔐 Authentication & Security
+
+| File             | Description                           | Key Features               | Port |
+| ---------------- | ------------------------------------- | -------------------------- | ---- |
+| `auth-app.ts`    | SecurityModule: Complete JWT + OAuth2 | Login, token refresh, RBAC | 3000 |
+| `session-app.ts` | SessionModule: Session management     | Login state, shopping cart | 3400 |
+
+**Key Points**:
+
+- **JWT Authentication**: Access tokens, refresh tokens, expiration
+- **OAuth2**: Authorization code flow, token exchange
+- **Authorization**: `@Auth()` decorator, role-based access
+- **Session**: Cookie management, session storage
+
+#### 📊 Data & Caching
+
+| File                 | Description                              | Key Features                                  | Port |
+| -------------------- | ---------------------------------------- | --------------------------------------------- | ---- |
+| `database-app.ts`    | DatabaseModule: SQLite database          | Connection management, queries, health checks | 3000 |
+| `orm-app.ts`         | ORM: Entity + Repository pattern         | Entity definition, CRUD operations            | 3000 |
+| `cache-app.ts`       | CacheModule: Cache management            | `@Cacheable`, `@CacheEvict`, `@CachePut`      | 3200 |
+| `transaction-app.ts` | Transaction management: Data consistency | `@Transactional` decorator                    | 3000 |
+
+**Key Points**:
+
+- **Database**: Connection pooling, parameterized queries, health checks
+- **ORM**: Entity mapping, relationships, Repository pattern
+- **Caching**: Decorator-based caching, manual caching, TTL strategies
+- **Transactions**: ACID guarantees, rollback mechanisms
+
+#### ⚙️ Background Tasks
+
+| File           | Description              | Key Features              | Port |
+| -------------- | ------------------------ | ------------------------- | ---- |
+| `queue-app.ts` | QueueModule: Task queues | Job scheduling, Cron jobs | 3300 |
+
+**Key Points**:
+
+- **Task Queues**: Async tasks, priority queues
+- **Scheduled Tasks**: Cron expressions, periodic execution
+- **Job Handlers**: Register handlers, error handling
+
+#### 📈 Monitoring & Documentation
+
+| File                        | Description                | Key Features                       | Port |
+| --------------------------- | -------------------------- | ---------------------------------- | ---- |
+| `metrics-rate-limit-app.ts` | Monitoring & Rate Limiting | Prometheus metrics, API throttling | 3000 |
+
+See [02-official-modules/README.md](./02-official-modules/README.md) for
+details.
+
+**Run**:
+
+```bash
+# Auth example (with Web UI)
+bun run examples/02-official-modules/auth-app.ts
+# Visit http://localhost:3000
+
+# Cache example
+bun run examples/02-official-modules/cache-app.ts
+
+# Queue example
+bun run examples/02-official-modules/queue-app.ts
+```
+
+---
+
+### 03. Advanced
+
+**For**: Advanced developers who need to customize framework behavior
+
+| File                        | Description                                             | Tech Stack                   | Port     |
+| --------------------------- | ------------------------------------------------------- | ---------------------------- | -------- |
+| `custom-decorator-app.ts`   | Custom decorators: @Timing example                      | Metadata, Interceptor        | 3000     |
+| `advanced-decorator-app.ts` | Advanced decorators: Multiple decorator composition     | Decorator chains, priorities | 3000     |
+| `websocket-chat-app.ts`     | Complete WebSocket chat with rooms (Web UI)             | Rooms, broadcast, user list  | 3600     |
+| `microservice-app.ts`       | Microservices architecture: Inter-service communication | Nacos, config center         | Multiple |
+
+**Key Points**:
+
+- **Custom Decorators**: Metadata API, Reflect
+- **Interceptors**: InterceptorRegistry, execution order
+- **Microservices**: Service discovery, config management, load balancing
+
+See [03-advanced/README.md](./03-advanced/README.md) for details.
+
+**Example: Create custom decorator**
+
+```typescript
+// 1. Define Metadata Key
+const TIMING_KEY = Symbol('@timing');
+
+// 2. Create decorator
+export function Timing(options: TimingOptions = {}): MethodDecorator {
+  return (target, propertyKey, descriptor) => {
+    Reflect.defineMetadata(TIMING_KEY, options, target, propertyKey);
+  };
+}
+
+// 3. Implement interceptor
+class TimingInterceptor implements Interceptor {
+  async execute(...) {
+    const start = performance.now();
+    const result = await originalMethod.apply(target, args);
+    console.log(`Execution time: ${performance.now() - start}ms`);
+    return result;
+  }
+}
+
+// 4. Register interceptor
+registry.register(TIMING_KEY, new TimingInterceptor(), 100);
+
+// 5. Use decorator
+@GET('/users')
+@Timing({ label: 'Get Users' })
+public getUsers() { ... }
+```
+
+---
+
+### 04. Real World
+
+**For**: Developers who need production-ready code references
+
+| Directory              | Description                      | Tech Stack                     |
+| ---------------------- | -------------------------------- | ------------------------------ |
+| `database-test-app.ts` | Database connection testing tool | Web UI, multi-database support |
+| `perf/app.ts`          | Performance benchmarking         | High concurrency, optimization |
+
+**Run**:
+
+```bash
+# Database testing tool (Web UI)
+bun run examples/04-real-world/database-test-app.ts
+# Visit http://localhost:3000
+
+# Performance benchmarking
+bun run examples/04-real-world/perf/app.ts
 wrk -t4 -c64 -d30s http://localhost:3300/api/ping
 ```
 
-## 示例说明
+---
 
-### CacheModule 示例 (`cache-app.ts`)
+## 🎯 Find Examples by Scenario
 
-演示缓存功能的使用：
+### Scenario 1: I want to quickly build a RESTful API
 
-- **装饰器方式**：使用 `@Cacheable`、`@CacheEvict`、`@CachePut`
-  装饰器自动缓存方法结果
-- **手动方式**：直接使用 `CacheService` 进行缓存操作
-- **缓存策略**：演示缓存命中、缓存更新、缓存清除等场景
+1. Start with `basic-app.ts` to understand basic structure
+2. Reference `auth-app.ts` to add authentication
+3. Use `cache-app.ts` to optimize performance
+4. Check `database-app.ts` for database connection
 
-### QueueModule 示例 (`queue-app.ts`)
+### Scenario 2: I want to implement user authentication
 
-演示任务队列功能的使用：
+1. See `auth-app.ts` (JWT + OAuth2)
+2. Reference `session-app.ts` (Session management)
+3. Learn `@Auth()` decorator usage
 
-- **任务队列**：将耗时操作（如发送邮件）放入队列异步处理
-- **任务处理器**：注册任务处理器处理队列中的任务
-- **定时任务**：使用 Cron 表达式创建定时任务（每日报告、清理任务等）
-- **优先级**：演示任务优先级设置
+### Scenario 3: I want to use queues for async tasks
 
-### SessionModule 示例 (`session-app.ts`)
+1. See `queue-app.ts` (Task queues + Cron)
+2. Understand job handler registration
+3. Learn Cron expressions
 
-演示 Session 管理功能的使用：
+### Scenario 4: I want to customize framework behavior
 
-- **登录/登出**：创建和销毁 Session
-- **Session 数据**：存储和读取用户数据（如购物车）
-- **Session 中间件**：自动处理 Session Cookie
-- **Session 装饰器**：使用 `@Session()` 装饰器注入 Session 对象
+1. Reference `custom-decorator-app.ts` (Custom decorators)
+2. Learn `advanced-decorator-app.ts` (Decorator composition)
+3. Study Interceptor mechanism
 
-### 数据库测试工具 (`database-test-app.ts`)
+---
 
-提供 Web UI 界面，用于测试 PostgreSQL 和 MySQL 数据库连接：
+## 💡 Important Concepts
 
-- **连接管理**：手动填写数据库连接信息（主机、端口、数据库名、用户名、密码）
-- **功能检查**：
-  - ✅ 连接测试：验证数据库连接是否正常
-  - 📊 查询测试：执行测试查询，验证查询功能
-  - 🔄 事务测试：测试事务回滚功能
-  - 🏥 健康检查：检查数据库连接健康状态
-  - 📈 连接池统计：查看连接池使用情况
-  - ❌ 断开连接：关闭数据库连接
+### Symbol + Interface Co-naming Pattern
 
-访问 `http://localhost:3000` 使用 Web UI 界面进行数据库连接测试。
+This is a unique feature of Bun Server Framework that solves TypeScript's type
+erasure problem:
 
-所有示例都会在控制台输出服务地址和可用端点，按需调整端口或中间件配置即可。
+```typescript
+// 1. Define interface
+interface UserService {
+  find(id: string): Promise<User | undefined>;
+}
+
+// 2. Define Symbol with the same name (DO NOT use import type)
+const UserService = Symbol('UserService');
+
+// 3. Implement interface
+@Injectable()
+class UserServiceImpl implements UserService {
+  public async find(id: string) { ... }
+}
+
+// 4. Configure in Module
+@Module({
+  providers: [{
+    provide: UserService,      // Symbol token
+    useClass: UserServiceImpl, // Implementation
+  }],
+  exports: [UserServiceImpl],  // Export implementation
+})
+
+// 5. Inject and use
+public constructor(
+  // Type is interface UserService (compile-time)
+  // Injected is Symbol('UserService') mapped instance (runtime)
+  private readonly userService: UserService,
+) {}
+```
+
+**Key Points**:
+
+- ✅ Use `import { UserService }` (imports both Symbol and interface)
+- ❌ **DO NOT** use `import type { UserService }` (imports only type, Symbol is
+  lost)
+
+### Default Constructor Injection
+
+Framework supports decorator-free constructor injection (recommended):
+
+```typescript
+// ✅ Recommended: Direct type specification
+public constructor(
+  private readonly userService: UserService,
+  private readonly productService: ProductService,
+) {}
+
+// ⚠️ Only needed when using Symbol tokens
+public constructor(
+  @Inject(USER_SERVICE_TOKEN) private readonly userService: UserService,
+  @Inject(CONFIG_SERVICE_TOKEN) private readonly config: ConfigService,
+) {}
+```
+
+---
+
+## 🔧 Common Issues
+
+### Q1: Example fails with port already in use?
+
+**A**: Use environment variable to specify port:
+
+```bash
+PORT=4000 bun run examples/basic-app.ts
+```
+
+### Q2: Dependency injection returns `undefined`?
+
+**A**: Check the following:
+
+1. Is `emitDecoratorMetadata` and `experimentalDecorators` enabled in
+   `tsconfig.json`?
+2. Did you use `import type`? (Symbol tokens cannot use import type)
+3. Is the service registered in Module's `providers`?
+
+### Q3: When to use Symbol + Interface pattern?
+
+**A**: Recommended for:
+
+- Interface-oriented programming (easier testing and swapping implementations)
+- Multiple implementations (use different Symbols to distinguish)
+- Exporting interfaces instead of implementation classes
+
+### Q4: How to debug examples?
+
+**A**: Use Bun's debugging features:
+
+```bash
+bun --inspect-brk examples/basic-app.ts
+```
+
+---
+
+## 📖 Further Learning
+
+- 📚 [API Documentation](../docs/api.md)
+- 🎓 [User Guide](../docs/guide.md)
+- 🏆 [Best Practices](../docs/best-practices.md)
+- 🐛 [Troubleshooting](../docs/troubleshooting.md)
+- 🔒 [Error Handling](../docs/error-handling.md)
+- 🔑 [Symbol + Interface Pattern](../docs/symbol-interface-pattern.md)
+
+---
+
+## 🤝 Contributing Examples
+
+We welcome more examples! Before submitting, ensure:
+
+1. ✅ Code follows project conventions (see `.cursor/rules/code-style.mdc`)
+2. ✅ Clear comments added (English)
+3. ✅ Add index entry in this README
+4. ✅ Test that examples run correctly
+
+---
+
+**Happy Coding! 🎉**

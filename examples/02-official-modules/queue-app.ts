@@ -48,7 +48,17 @@ class NotificationService {
     @Inject(QUEUE_SERVICE_TOKEN) private readonly queue: QueueService,
   ) {
     // 注册队列任务处理器
-    this.registerHandlers();
+    // 注意：构造函数中调用异步方法需要特别注意
+    // 这里使用 void 运算符忽略 Promise，因为构造函数不能是 async
+    // 实际应用中，建议在应用启动后显式调用 initialize() 方法
+    void this.registerHandlers();
+  }
+
+  /**
+   * 初始化队列处理器（推荐在应用启动后显式调用）
+   */
+  public async initialize(): Promise<void> {
+    await this.registerHandlers();
   }
 
   private async registerHandlers(): Promise<void> {
@@ -98,7 +108,16 @@ class ScheduledTaskService {
   public constructor(
     @Inject(QUEUE_SERVICE_TOKEN) private readonly queue: QueueService,
   ) {
-    this.registerCronJobs();
+    // 注册 Cron 任务
+    // 注意：构造函数中调用异步方法，使用 void 运算符忽略 Promise
+    void this.registerCronJobs();
+  }
+
+  /**
+   * 初始化 Cron 任务（推荐在应用启动后显式调用）
+   */
+  public async initialize(): Promise<void> {
+    await this.registerCronJobs();
   }
 
   private async registerCronJobs(): Promise<void> {
@@ -110,7 +129,7 @@ class ScheduledTaskService {
         // 生成报告的逻辑
       },
       {
-        pattern: '0 0 * * *', // 每天午夜
+        pattern: '0 0 * * *', // Cron 表达式：分 时 日 月 周，每天午夜 00:00 执行
         runOnInit: false,
       },
     );
@@ -123,7 +142,7 @@ class ScheduledTaskService {
         // 清理逻辑
       },
       {
-        pattern: '0 * * * *', // 每小时
+        pattern: '0 * * * *', // Cron 表达式：每小时的 0 分执行
         runOnInit: true, // 启动时立即执行一次
       },
     );

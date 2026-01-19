@@ -19,6 +19,7 @@ import {
   ResponseBuilder,
   UnauthorizedException,
   SecurityContextHolder,
+  type Container,
   type JWTUtil,
   type UserInfo,
 } from '@dangao/bun-server';
@@ -637,6 +638,9 @@ class FrontendController {
   }
 }
 
+// 创建一个容器引用，用于在 userProvider 中访问
+let appContainer: Container | null = null;
+
 /**
  * 应用模块
  */
@@ -658,12 +662,19 @@ class FrontendController {
         },
       ],
       enableOAuth2Endpoints: true,
-      // 注意：excludePaths 使用前缀匹配，这里不要使用 '/'（否则会排除所有路径）
+      // 注意：excludePaths 使用前缀匹配
+      // '/' 会匹配所有路径，导致认证中间件完全失效，所以需要明确列出排除的路径
       excludePaths: ['/api/users/login', '/api/users/public', '/callback'],
       defaultAuthRequired: false, // 默认不要求认证，通过 @Auth() 装饰器控制
+      // userProvider: 从容器中解析 UserService
+      // 注意：这里通过闭包捕获 appContainer，在应用启动后才能访问到正确的 UserService 实例
       userProvider: {
         findById: async (userId: string) => {
-          return await new UserService().findById(userId);
+          if (!appContainer) {
+            throw new Error('Application container not initialized');
+          }
+          const userService = appContainer.resolve<UserService>(UserService);
+          return await userService.findById(userId);
         },
       },
     }),
@@ -686,9 +697,10 @@ class AppModule {}
 const app = new Application();
 app.registerModule(AppModule);
 
-const config = app
-  .getContainer()
-  .resolve<ConfigService>(CONFIG_SERVICE_TOKEN);
+// 设置容器引用，供 userProvider 使用
+appContainer = app.getContainer();
+
+const config = appContainer.resolve<ConfigService>(CONFIG_SERVICE_TOKEN);
 
 const port =
   config.get<number>('app.port', Number(process.env.PORT ?? 3000)) ?? 3000;
