@@ -59,7 +59,7 @@ interface RoomInfo {
 @Injectable()
 class ChatService {
   // 存储所有连接：userId -> WebSocket
-  private readonly connections = new Map<string, ServerWebSocket<WebSocketConnectionData>>();
+  private readonly connections = new Map<string, ServerWebSocket<ChatWebSocketData>>();
   
   // 存储用户信息：userId -> User
   private readonly users = new Map<string, User>();
@@ -70,7 +70,7 @@ class ChatService {
   /**
    * 用户上线
    */
-  public userOnline(userId: string, username: string, ws: ServerWebSocket<WebSocketConnectionData>) {
+  public userOnline(userId: string, username: string, ws: ServerWebSocket<ChatWebSocketData>) {
     this.connections.set(userId, ws);
     this.users.set(userId, {
       id: userId,
@@ -230,6 +230,11 @@ class ChatService {
 
 // ==================== WebSocket Gateway ====================
 
+// 扩展 WebSocketConnectionData 以存储用户 ID
+interface ChatWebSocketData extends WebSocketConnectionData {
+  userId?: string;
+}
+
 @WebSocketGateway('/ws/chat')
 class ChatGateway {
   public constructor(private readonly chatService: ChatService) {}
@@ -238,10 +243,14 @@ class ChatGateway {
    * 连接建立
    */
   @OnOpen
-  public handleOpen(ws: ServerWebSocket<WebSocketConnectionData>) {
-    // 从连接数据中获取用户信息（实际应用中应该从查询参数或认证 token 中获取）
-    const userId = ws.data.connectionId;  // 使用连接 ID 作为临时用户 ID
-    const username = `User${userId.substring(0, 6)}`;
+  public handleOpen(ws: ServerWebSocket<ChatWebSocketData>) {
+    // 生成唯一用户 ID（实际应用中应该从查询参数或认证 token 中获取）
+    // 例如：ws.data.query?.get('userId') 或从 JWT token 解析
+    const userId = crypto.randomUUID();
+    const username = ws.data.query?.get('username') || `User${userId.substring(0, 6)}`;
+    
+    // 存储用户 ID 到连接数据
+    ws.data.userId = userId;
     
     this.chatService.userOnline(userId, username, ws);
 
@@ -258,10 +267,18 @@ class ChatGateway {
    */
   @OnMessage
   public handleMessage(
-    ws: ServerWebSocket<WebSocketConnectionData>,
+    ws: ServerWebSocket<ChatWebSocketData>,
     message: string,
   ) {
-    const userId = ws.data.connectionId;
+    const userId = ws.data.userId;
+    if (!userId) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        content: 'User ID not found',
+        timestamp: Date.now(),
+      }));
+      return;
+    }
     
     try {
       const data = JSON.parse(message);
@@ -307,9 +324,11 @@ class ChatGateway {
    * 连接关闭
    */
   @OnClose
-  public handleClose(ws: ServerWebSocket<WebSocketConnectionData>) {
-    const userId = ws.data.connectionId;
-    this.chatService.userOffline(userId);
+  public handleClose(ws: ServerWebSocket<ChatWebSocketData>) {
+    const userId = ws.data.userId;
+    if (userId) {
+      this.chatService.userOffline(userId);
+    }
   }
 
   // ==================== 消息处理器 ====================
@@ -317,7 +336,7 @@ class ChatGateway {
   private handleJoinRoom(
     userId: string,
     roomName: string,
-    ws: ServerWebSocket<WebSocketConnectionData>,
+    ws: ServerWebSocket<ChatWebSocketData>,
   ) {
     const success = this.chatService.joinRoom(userId, roomName);
     
@@ -342,7 +361,7 @@ class ChatGateway {
   private handleLeaveRoom(
     userId: string,
     roomName: string,
-    ws: ServerWebSocket<WebSocketConnectionData>,
+    ws: ServerWebSocket<ChatWebSocketData>,
   ) {
     const success = this.chatService.leaveRoom(userId, roomName);
     
@@ -359,7 +378,7 @@ class ChatGateway {
     userId: string,
     roomName: string,
     content: string,
-    ws: ServerWebSocket<WebSocketConnectionData>,
+    ws: ServerWebSocket<ChatWebSocketData>,
   ) {
     // 广播消息到房间
     this.chatService.broadcastToRoom(roomName, {
@@ -384,7 +403,7 @@ class ChatGateway {
     fromUserId: string,
     toUserId: string,
     content: string,
-    ws: ServerWebSocket<WebSocketConnectionData>,
+    ws: ServerWebSocket<ChatWebSocketData>,
   ) {
     const success = this.chatService.sendPrivateMessage(fromUserId, toUserId, content);
     
@@ -400,7 +419,7 @@ class ChatGateway {
   private handleGetUsers(
     userId: string,
     roomName: string | undefined,
-    ws: ServerWebSocket<WebSocketConnectionData>,
+    ws: ServerWebSocket<ChatWebSocketData>,
   ) {
     const users = roomName
       ? this.chatService.getRoomUsers(roomName)
@@ -645,9 +664,16 @@ class FrontendController {
     let ws;
     let currentRoom = null;
     let userId = null;
+    let username = null;
 
     function connect() {
-      ws = new WebSocket(\`ws://\${location.host}/ws/chat\`);
+      // 生成随机用户名（实际应用中应该从登录获取）
+      if (!username) {
+        username = 'User' + Math.random().toString(36).substring(2, 8);
+      }
+      
+      // 将用户名作为查询参数传递
+      ws = new WebSocket(\`ws://\${location.host}/ws/chat?username=\${username}\`);
       
       ws.onopen = () => {
         document.getElementById('status').textContent = '✅ 已连接';
