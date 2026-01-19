@@ -1,38 +1,37 @@
-# Advanced Features Examples
+# 高级功能示例
 
-[中文](./README_ZH.md) | **English**
+**中文** | [English](./README.md)
 
-This directory contains advanced examples showing how to extend and customize Bun Server Framework.
+本目录包含 Bun Server Framework 高级功能的示例，展示如何扩展和自定义框架行为。
 
-## 📚 Examples
+## 📚 示例列表
 
-| File | Description | Tech Stack | Difficulty | Port |
-|------|-------------|------------|------------|------|
-| `custom-decorator-app.ts` | Custom decorators: Create @Timing decorator | Metadata API, Interceptor | ⭐⭐⭐ | 3000 |
-| `advanced-decorator-app.ts` | Advanced decorators: Multiple decorator composition | Decorator chains, priorities | ⭐⭐⭐⭐ | 3000 |
-| `websocket-chat-app.ts` | Complete WebSocket chat with rooms (Web UI) | Rooms, broadcast, user list | ⭐⭐⭐ | 3600 |
-| `microservice-app.ts` | Microservices architecture | Nacos, config center | ⭐⭐⭐⭐⭐ | Multiple |
+| 文件 | 说明 | 核心技术 | 难度 | 端口 |
+|------|------|---------|------|------|
+| `custom-decorator-app.ts` | 自定义装饰器：创建 @Timing 装饰器 | Metadata API、Interceptor | ⭐⭐⭐ | 3000 |
+| `advanced-decorator-app.ts` | 高级装饰器：多装饰器组合 | 装饰器链、优先级 | ⭐⭐⭐⭐ | 3000 |
+| `microservice-app.ts` | 微服务架构：服务间通信 | Nacos、配置中心 | ⭐⭐⭐⭐⭐ | 多端口 |
 
-## 🎯 Learning Path
+## 🎯 学习路径
 
-### 1. Custom Decorators Basics (custom-decorator-app.ts)
+### 1. 自定义装饰器基础 (custom-decorator-app.ts)
 
-Learn how to create your own decorators to extend framework functionality.
+学习如何创建自己的装饰器来扩展框架功能。
 
-**Example: Create @Timing decorator**
+**示例：创建 @Timing 装饰器**
 
 ```typescript
-// Step 1: Define Metadata Key
+// Step 1: 定义 Metadata Key
 const TIMING_METADATA_KEY = Symbol('@example:timing');
 
-// Step 2: Create decorator
+// Step 2: 创建装饰器
 export function Timing(options: TimingOptions = {}): MethodDecorator {
   return (target, propertyKey, descriptor) => {
     Reflect.defineMetadata(TIMING_METADATA_KEY, options, target, propertyKey);
   };
 }
 
-// Step 3: Implement interceptor
+// Step 3: 实现拦截器
 class TimingInterceptor implements Interceptor {
   async execute<T>(
     target: unknown,
@@ -54,14 +53,14 @@ class TimingInterceptor implements Interceptor {
   }
 }
 
-// Step 4: Register interceptor
+// Step 4: 注册拦截器
 const registry = app
   .getContainer()
   .resolve<InterceptorRegistry>(INTERCEPTOR_REGISTRY_TOKEN);
 
 registry.register(TIMING_METADATA_KEY, new TimingInterceptor(), 100);
 
-// Step 5: Use decorator
+// Step 5: 使用装饰器
 @Controller('/api/users')
 class UserController {
   @GET('/')
@@ -72,126 +71,73 @@ class UserController {
 }
 ```
 
-**Run**:
+**运行**：
 ```bash
 bun run examples/03-advanced/custom-decorator-app.ts
 ```
 
-**Test**:
+**测试**：
 ```bash
 curl http://localhost:3000/api/users
-# Console shows execution time
+# 控制台会显示执行时间
 ```
 
-**Use cases**:
-- ✅ Performance monitoring (method execution time)
-- ✅ Logging (method call tracing)
-- ✅ Permission validation (custom auth logic)
-- ✅ Data validation (extended validation rules)
-- ✅ Cache management (custom caching strategies)
+**适用场景**：
+- ✅ 性能监控（方法执行时间）
+- ✅ 日志记录（方法调用追踪）
+- ✅ 权限校验（自定义权限逻辑）
+- ✅ 数据验证（扩展验证规则）
+- ✅ 缓存管理（自定义缓存策略）
 
 ---
 
-### 2. Advanced Decorator Techniques (advanced-decorator-app.ts)
+### 2. 高级装饰器技巧 (advanced-decorator-app.ts)
 
-Learn decorator composition, priority control, and complex scenarios.
+学习装饰器组合、优先级控制和复杂场景处理。
 
-**Key Concepts**:
+**关键概念**：
 
-1. **Decorator execution order**
+1. **装饰器执行顺序**
 ```typescript
-@Decorator1()  // Executes last
-@Decorator2()  // Executes second
-@Decorator3()  // Executes first
+@Decorator1()  // 最后执行
+@Decorator2()  // 第二执行
+@Decorator3()  // 最先执行
 public method() {}
 
-// Execution order: Decorator3 → Decorator2 → Decorator1
+// 执行顺序：Decorator3 → Decorator2 → Decorator1
 ```
 
-2. **Interceptor priorities**
+2. **拦截器优先级**
 ```typescript
-// Lower number = higher priority
-registry.register(KEY1, interceptor1, 10);   // Executes first
+// 数字越小，优先级越高
+registry.register(KEY1, interceptor1, 10);   // 最先执行
 registry.register(KEY2, interceptor2, 50);
-registry.register(KEY3, interceptor3, 100);  // Executes last
+registry.register(KEY3, interceptor3, 100);  // 最后执行
 ```
 
-3. **Decorator composition**
+3. **装饰器组合**
 ```typescript
 @GET('/users')
-@Auth({ roles: ['admin'] })      // Auth check
-@RateLimit({ max: 100 })         // Rate limiting
-@Cache({ ttl: 60000 })           // Caching
-@Timing({ label: 'Get Users' })  // Performance monitoring
+@Auth({ roles: ['admin'] })      // 权限检查
+@RateLimit({ max: 100 })         // 限流
+@Cache({ ttl: 60000 })           // 缓存
+@Timing({ label: 'Get Users' })  // 性能监控
 public getUsers() {}
 ```
 
 ---
 
-### 3. WebSocket Chat Application (websocket-chat-app.ts)
+### 3. 微服务架构 (microservice-app.ts)
 
-Complete WebSocket chat room with Web UI.
+学习如何使用 Bun Server 构建微服务系统。
 
-**Features**:
-- ✅ Room management (join/leave)
-- ✅ Broadcast messages
-- ✅ Online user list
-- ✅ Connection lifecycle management
+**核心功能**：
+- ✅ 服务注册与发现（Nacos）
+- ✅ 配置中心（动态配置）
+- ✅ 负载均衡
+- ✅ 服务间通信
 
-**Run**:
-```bash
-bun run examples/03-advanced/websocket-chat-app.ts
-```
-
-Visit http://localhost:3600 to open Web UI
-
-**Architecture**:
-```typescript
-@WebSocketGateway('/ws/chat')
-class ChatGateway {
-  constructor(private readonly chatService: ChatService) {}
-
-  @OnOpen
-  handleOpen(ws: ServerWebSocket<WebSocketConnectionData>) {
-    // User online
-    this.chatService.userOnline(userId, username, ws);
-  }
-
-  @OnMessage
-  handleMessage(ws: ServerWebSocket<WebSocketConnectionData>, message: string) {
-    const data = JSON.parse(message);
-    
-    switch (data.action) {
-      case 'join_room':
-        this.chatService.joinRoom(userId, data.room);
-        break;
-      case 'send_message':
-        this.chatService.broadcastToRoom(data.room, data.content);
-        break;
-    }
-  }
-
-  @OnClose
-  handleClose(ws: ServerWebSocket<WebSocketConnectionData>) {
-    // User offline
-    this.chatService.userOffline(userId);
-  }
-}
-```
-
----
-
-### 4. Microservices Architecture (microservice-app.ts)
-
-Learn how to build microservice systems with Bun Server.
-
-**Core Features**:
-- ✅ Service registration & discovery (Nacos)
-- ✅ Configuration center (dynamic config)
-- ✅ Load balancing
-- ✅ Inter-service communication
-
-**Architecture**:
+**架构示例**：
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │   Gateway   │────>│   User      │────>│  Database   │
@@ -203,83 +149,90 @@ Learn how to build microservice systems with Bun Server.
                            │
                    ┌───────┴────────┐
                    │  Nacos Server  │
-                   │  (Config +     │
-                   │   Discovery)   │
+                   │  (配置中心 +   │
+                   │   服务发现)    │
                    └────────────────┘
+```
+
+**快速开始**：
+```bash
+# 1. 启动 Nacos（需要单独安装）
+# 2. 运行微服务示例
+bun run examples/03-advanced/microservice-app.ts
 ```
 
 ---
 
-## 💡 Core Concepts
+## 💡 核心概念详解
 
 ### Metadata API
 
-Bun Server uses `reflect-metadata` to store decorator metadata:
+Bun Server 使用 `reflect-metadata` 存储装饰器元数据：
 
 ```typescript
-// Set metadata
+// 设置元数据
 Reflect.defineMetadata(key, value, target, propertyKey);
 
-// Get metadata
+// 获取元数据
 const value = Reflect.getMetadata(key, target, propertyKey);
 
-// Check existence
+// 检查是否存在
 const has = Reflect.hasMetadata(key, target, propertyKey);
 
-// Delete metadata
+// 删除元数据
 Reflect.deleteMetadata(key, target, propertyKey);
 ```
 
-**Notes**:
-- Metadata stored on prototype chain, instances and prototypes need separate handling
-- Use Symbol keys to avoid naming conflicts
-- Must `import 'reflect-metadata'`
+**注意事项**：
+- 元数据存储在原型链上，实例和原型需要分别处理
+- Symbol key 避免命名冲突
+- 必须 `import 'reflect-metadata'`
 
-### Interceptor
+### Interceptor（拦截器）
 
-Interceptors are the execution engine for decorators:
+拦截器是装饰器的执行引擎：
 
 ```typescript
 interface Interceptor {
   execute<T>(
-    target: unknown,              // Target object (instance or prototype)
-    propertyKey: string | symbol, // Method name
-    originalMethod: Function,     // Original method
-    args: unknown[],              // Method arguments
-    container: Container,         // DI container
-    context?: Context,            // HTTP context (if available)
+    target: unknown,              // 目标对象（实例或原型）
+    propertyKey: string | symbol, // 方法名
+    originalMethod: Function,     // 原始方法
+    args: unknown[],              // 方法参数
+    container: Container,         // DI 容器
+    context?: Context,            // HTTP 上下文（如果有）
   ): Promise<T>;
 }
 ```
 
-**Interceptor Registry**:
+**拦截器注册表**：
 ```typescript
 interface InterceptorRegistry {
   register(
-    metadataKey: symbol,          // Decorator's Metadata Key
-    interceptor: Interceptor,     // Interceptor instance
-    priority: number,             // Priority (lower = earlier)
+    metadataKey: symbol,          // 装饰器的 Metadata Key
+    interceptor: Interceptor,     // 拦截器实例
+    priority: number,             // 优先级（越小越先执行）
   ): void;
 }
 ```
 
-### Decorator Best Practices
+### 装饰器最佳实践
 
-1. **Naming conventions**
-   - HTTP method decorators: Uppercase (`@GET`, `@POST`)
-   - Other decorators: PascalCase (`@Injectable`, `@Cacheable`)
-   - Metadata Keys: Use Symbol with prefix (`Symbol('@myapp:timing')`)
+1. **命名规范**
+   - HTTP 方法装饰器：大写（`@GET`, `@POST`）
+   - 其他装饰器：PascalCase（`@Injectable`, `@Cacheable`）
+   - Metadata Key：使用 Symbol 并添加前缀（`Symbol('@myapp:timing')`）
 
-2. **Parameter design**
+2. **参数设计**
    ```typescript
-   // ✅ Use options object
+   // ✅ 使用 options 对象
    @Timing({ label: 'Get Users', threshold: 1000 })
    
-   // ❌ Avoid too many positional parameters
+   // ❌ 避免过多位置参数
    @Timing('Get Users', 1000, true)
    ```
 
-3. **Error handling**
+3. **错误处理**
    ```typescript
    class SafeInterceptor implements Interceptor {
      async execute(...) {
@@ -287,15 +240,15 @@ interface InterceptorRegistry {
          return await originalMethod.apply(target, args);
        } catch (error) {
          console.error('Interceptor error:', error);
-         throw error;  // Rethrow for upper layer handling
+         throw error;  // 重新抛出，让上层处理
        }
      }
    }
    ```
 
-4. **Performance considerations**
+4. **性能考虑**
    ```typescript
-   // ✅ Cache metadata lookups
+   // ✅ 缓存元数据查找
    private metadataCache = new WeakMap();
    
    async execute(...) {
@@ -309,11 +262,11 @@ interface InterceptorRegistry {
 
 ---
 
-## 🎨 Practical Examples
+## 🎨 实战示例
 
-### Example 1: Audit Log Decorator
+### 示例 1: 审计日志装饰器
 
-Record audit logs for method calls:
+记录方法调用的审计日志：
 
 ```typescript
 const AUDIT_KEY = Symbol('@audit');
@@ -347,15 +300,15 @@ class AuditInterceptor implements Interceptor {
   }
 }
 
-// Usage
+// 使用
 @DELETE('/:id')
 @Audit({ action: 'delete', resource: 'user' })
 public deleteUser(@Param('id') id: string) {}
 ```
 
-### Example 2: Retry Decorator
+### 示例 2: 重试装饰器
 
-Auto-retry failed operations:
+自动重试失败的操作：
 
 ```typescript
 const RETRY_KEY = Symbol('@retry');
@@ -387,7 +340,7 @@ class RetryInterceptor implements Interceptor {
   }
 }
 
-// Usage
+// 使用
 @GET('/external-api')
 @Retry({ maxAttempts: 3, delay: 1000 })
 public async fetchExternalData() {}
@@ -395,22 +348,22 @@ public async fetchExternalData() {}
 
 ---
 
-## 🔧 Common Questions
+## 🔧 常见问题
 
-### Q1: How to ensure decorator execution order?
+### Q1: 如何确保装饰器的执行顺序？
 
-**A**: Use interceptor priorities:
+**A**: 使用拦截器优先级：
 ```typescript
-registry.register(AUTH_KEY, authInterceptor, 10);      // Priority 10
-registry.register(CACHE_KEY, cacheInterceptor, 50);    // Priority 50
-registry.register(TIMING_KEY, timingInterceptor, 100); // Priority 100
+registry.register(AUTH_KEY, authInterceptor, 10);      // 优先级 10
+registry.register(CACHE_KEY, cacheInterceptor, 50);    // 优先级 50
+registry.register(TIMING_KEY, timingInterceptor, 100); // 优先级 100
 
-// Execution: auth → cache → timing → method → timing → cache → auth
+// 执行顺序：auth → cache → timing → 原方法 → timing → cache → auth
 ```
 
-### Q2: Can decorators access request context?
+### Q2: 装饰器可以访问请求上下文吗？
 
-**A**: Yes, via `context` parameter:
+**A**: 可以，通过 `context` 参数：
 ```typescript
 class MyInterceptor implements Interceptor {
   async execute(target, propertyKey, originalMethod, args, container, context) {
@@ -423,9 +376,9 @@ class MyInterceptor implements Interceptor {
 }
 ```
 
-### Q3: How to use DI in decorators?
+### Q3: 如何在装饰器中使用依赖注入？
 
-**A**: Via `container` parameter:
+**A**: 通过 `container` 参数解析服务：
 ```typescript
 class MyInterceptor implements Interceptor {
   async execute(target, propertyKey, originalMethod, args, container, context) {
@@ -436,15 +389,15 @@ class MyInterceptor implements Interceptor {
 }
 ```
 
-### Q4: Can decorators modify return values?
+### Q4: 装饰器可以修改返回值吗？
 
-**A**: Yes:
+**A**: 可以：
 ```typescript
 class TransformInterceptor implements Interceptor {
   async execute(...) {
     const result = await originalMethod.apply(target, args);
     
-    // Wrap return value
+    // 包装返回值
     return {
       success: true,
       data: result,
@@ -456,14 +409,14 @@ class TransformInterceptor implements Interceptor {
 
 ---
 
-## 📖 Related Documentation
+## 📖 相关文档
 
-- 📚 [Custom Decorators Guide](../../docs/custom-decorators.md)
-- 🎓 [User Guide](../../docs/guide.md)
-- 🏆 [Best Practices](../../docs/best-practices.md)
+- 📚 [自定义装饰器文档](../../docs/custom-decorators.md)
+- 🎓 [使用指南](../../docs/guide.md)
+- 🏆 [最佳实践](../../docs/best-practices.md)
 - 🔬 [TypeScript Decorators](https://www.typescriptlang.org/docs/handbook/decorators.html)
 - 🔍 [Reflect Metadata](https://github.com/rbuckton/reflect-metadata)
 
-## ⬅️ Back
+## ⬅️ 返回
 
-[← Back to Examples Index](../README.md)
+[← 返回示例索引](../README.md)

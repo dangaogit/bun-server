@@ -1,283 +1,293 @@
-# Bun Server Framework - 示例索引
+# Bun Server Framework - Examples Index
 
-本目录包含 Bun Server Framework 的完整示例代码，按难度和功能分类组织。
+[中文](./README_ZH.md) | **English**
 
-## 📚 目录结构
+This directory contains comprehensive examples for Bun Server Framework, organized by difficulty and feature category.
+
+## 📚 Directory Structure
 
 ```
 examples/
-├── 00-quick-start/          # 快速入门（5 分钟上手）
-├── 01-core-features/        # 核心功能（深入理解框架）
-├── 02-official-modules/     # 官方模块（开箱即用）
-├── 03-advanced/             # 高级功能（进阶技巧）
-└── 04-real-world/           # 实战案例（生产级示例）
+├── 00-quick-start/          # Quick Start (Get started in 5 minutes)
+├── 01-core-features/        # Core Features (Deep dive into framework)
+├── 02-official-modules/     # Official Modules (Ready-to-use)
+├── 03-advanced/             # Advanced (Extending the framework)
+└── 04-real-world/           # Real World (Production-ready examples)
 ```
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 推荐学习路径
+### Recommended Learning Path
 
-1. **初学者** → 从 `00-quick-start` 开始
-2. **有经验的开发者** → 直接查看 `02-official-modules` 或 `04-real-world`
-3. **框架贡献者** → 参考 `03-advanced` 了解高级特性
+1. **Beginners** → Start with `00-quick-start`
+2. **Experienced Developers** → Jump to `02-official-modules` or `04-real-world`
+3. **Framework Contributors** → Check `03-advanced` for advanced features
 
 ---
 
-## 📂 分类详情
+## 📂 Category Details
 
-### 00. 快速入门 (Quick Start)
+### 00. Quick Start
 
-**适合人群**：完全没有使用过 Bun Server 的开发者
+**For**: Developers new to Bun Server
 
-| 文件 | 说明 | 难度 | 运行端口 |
-|------|------|------|---------|
-| `hello-world.ts` | 最简示例：5 行代码启动 HTTP 服务器 | ⭐ | 3000 |
-| `basic-routing.ts` | 路由系统基础：定义 GET/POST/PUT/DELETE 路由 | ⭐ | 3000 |
-| `dependency-injection.ts` | DI 基础：使用 `@Injectable` 和构造函数注入 | ⭐⭐ | 3100 |
+| File | Description | Difficulty | Port |
+|------|-------------|------------|------|
+| `01-hello-world.ts` | Minimal example: HTTP server in 5 lines | ⭐ | 3000 |
+| `02-basic-routing.ts` | Routing basics: GET/POST/PUT/DELETE routes | ⭐ | 3000 |
+| `03-dependency-injection.ts` | DI basics: `@Injectable` and constructor injection | ⭐⭐ | 3100 |
 
-**运行方式**：
+**Run**:
 ```bash
-bun run examples/00-quick-start/hello-world.ts
+bun run examples/00-quick-start/01-hello-world.ts
 ```
 
 ---
 
-### 01. 核心功能 (Core Features)
+### 01. Core Features
 
-**适合人群**：想深入理解框架核心机制的开发者
+**For**: Developers who want to understand framework internals
 
-| 文件 | 说明 | 难度 | 端口 |
-|------|------|------|------|
-| `basic-app.ts` | 综合示例：DI + Logger + Swagger + Config | ⭐⭐ | 3100 |
-| `multi-module-app.ts` | 模块系统：模块间依赖、导入导出 | ⭐⭐⭐ | 3300 |
-| `basic-router.ts` | 底层路由：直接使用 RouteRegistry | ⭐⭐ | 3000 |
-| `context-scope-app.ts` | 请求作用域：ContextService 和 Scoped 生命周期 | ⭐⭐⭐ | 3500 |
-| `full-app.ts` | 完整功能：验证、上传、静态文件、WebSocket | ⭐⭐⭐ | 3200 |
+| File | Description | Difficulty | Port |
+|------|-------------|------------|------|
+| `basic-app.ts` | Comprehensive: DI + Logger + Swagger + Config | ⭐⭐ | 3100 |
+| `multi-module-app.ts` | Module system: dependencies and exports | ⭐⭐⭐ | 3300 |
+| `basic-router.ts` | Low-level routing: using RouteRegistry directly | ⭐⭐ | 3000 |
+| `context-scope-app.ts` | Request scoping: ContextService and Scoped lifecycle | ⭐⭐⭐ | 3500 |
+| `full-app.ts` | Full features: validation, uploads, static files, WebSocket | ⭐⭐⭐ | 3200 |
 
-**核心概念**：
-- **依赖注入**：`@Injectable`、构造函数注入、Symbol Token
-- **模块系统**：`@Module`、imports/providers/exports
-- **中间件**：全局/控制器/方法级中间件
-- **生命周期**：Singleton vs Scoped
+**Core Concepts**:
+- **Dependency Injection**: `@Injectable`, constructor injection, Symbol tokens
+- **Module System**: `@Module`, imports/providers/exports
+- **Middleware**: Global/controller/method-level middleware
+- **Lifecycle**: Singleton vs Scoped
+
+See [01-core-features/README.md](./01-core-features/README.md) for details.
 
 ---
 
-### 02. 官方模块 (Official Modules)
+### 02. Official Modules
 
-**适合人群**：需要快速集成特定功能的开发者
+**For**: Developers who need ready-to-use functionality
 
-#### 🔐 认证与安全
+#### 🔐 Authentication & Security
 
-| 文件 | 说明 | 核心功能 | 端口 |
-|------|------|----------|------|
-| `auth-app.ts` | SecurityModule：JWT + OAuth2 完整示例 | 登录、令牌刷新、权限控制 | 3000 |
-| `session-app.ts` | SessionModule：Session 管理 | 登录状态、购物车 | 3400 |
+| File | Description | Key Features | Port |
+|------|-------------|--------------|------|
+| `auth-app.ts` | SecurityModule: Complete JWT + OAuth2 | Login, token refresh, RBAC | 3000 |
+| `session-app.ts` | SessionModule: Session management | Login state, shopping cart | 3400 |
 
-**关键点**：
-- **JWT 认证**：访问令牌、刷新令牌、令牌过期
-- **OAuth2**：授权码模式、令牌交换
-- **权限控制**：`@Auth()` 装饰器、角色验证
-- **Session**：Cookie 管理、Session 存储
+**Key Points**:
+- **JWT Authentication**: Access tokens, refresh tokens, expiration
+- **OAuth2**: Authorization code flow, token exchange
+- **Authorization**: `@Auth()` decorator, role-based access
+- **Session**: Cookie management, session storage
 
-#### 📊 数据与缓存
+#### 📊 Data & Caching
 
-| 文件 | 说明 | 核心功能 | 端口 |
-|------|------|----------|------|
-| `database-app.ts` | DatabaseModule：SQLite 数据库 | 连接管理、查询、健康检查 | 3000 |
-| `orm-app.ts` | ORM：Entity + Repository 模式 | 实体定义、CRUD 操作 | 3000 |
-| `cache-app.ts` | CacheModule：缓存管理 | `@Cacheable`、`@CacheEvict`、`@CachePut` | 3200 |
-| `transaction-app.ts` | 事务管理：数据一致性 | `@Transactional` 装饰器 | 3000 |
+| File | Description | Key Features | Port |
+|------|-------------|--------------|------|
+| `database-app.ts` | DatabaseModule: SQLite database | Connection management, queries, health checks | 3000 |
+| `orm-app.ts` | ORM: Entity + Repository pattern | Entity definition, CRUD operations | 3000 |
+| `cache-app.ts` | CacheModule: Cache management | `@Cacheable`, `@CacheEvict`, `@CachePut` | 3200 |
+| `transaction-app.ts` | Transaction management: Data consistency | `@Transactional` decorator | 3000 |
 
-**关键点**：
-- **数据库**：连接池、参数化查询、健康检查
-- **ORM**：实体映射、关系管理、Repository 模式
-- **缓存**：装饰器缓存、手动缓存、TTL 策略
-- **事务**：ACID 保证、回滚机制
+**Key Points**:
+- **Database**: Connection pooling, parameterized queries, health checks
+- **ORM**: Entity mapping, relationships, Repository pattern
+- **Caching**: Decorator-based caching, manual caching, TTL strategies
+- **Transactions**: ACID guarantees, rollback mechanisms
 
-#### ⚙️ 后台任务
+#### ⚙️ Background Tasks
 
-| 文件 | 说明 | 核心功能 | 端口 |
-|------|------|----------|------|
-| `queue-app.ts` | QueueModule：任务队列 | 任务调度、Cron 定时任务 | 3300 |
+| File | Description | Key Features | Port |
+|------|-------------|--------------|------|
+| `queue-app.ts` | QueueModule: Task queues | Job scheduling, Cron jobs | 3300 |
 
-**关键点**：
-- **任务队列**：异步任务、优先级队列
-- **定时任务**：Cron 表达式、周期执行
-- **任务处理器**：注册处理器、错误处理
+**Key Points**:
+- **Task Queues**: Async tasks, priority queues
+- **Scheduled Tasks**: Cron expressions, periodic execution
+- **Job Handlers**: Register handlers, error handling
 
-#### 📈 监控与文档
+#### 📈 Monitoring & Documentation
 
-| 文件 | 说明 | 核心功能 | 端口 |
-|------|------|----------|------|
-| `metrics-rate-limit-app.ts` | 监控与限流 | Prometheus 指标、API 限流 | 3000 |
+| File | Description | Key Features | Port |
+|------|-------------|--------------|------|
+| `metrics-rate-limit-app.ts` | Monitoring & Rate Limiting | Prometheus metrics, API throttling | 3000 |
 
-**运行方式**：
+See [02-official-modules/README.md](./02-official-modules/README.md) for details.
+
+**Run**:
 ```bash
-# 认证示例（包含 Web UI）
-bun run examples/auth-app.ts
-# 访问 http://localhost:3000
+# Auth example (with Web UI)
+bun run examples/02-official-modules/auth-app.ts
+# Visit http://localhost:3000
 
-# 缓存示例
-bun run examples/cache-app.ts
+# Cache example
+bun run examples/02-official-modules/cache-app.ts
 
-# 队列示例
-bun run examples/queue-app.ts
+# Queue example
+bun run examples/02-official-modules/queue-app.ts
 ```
 
 ---
 
-### 03. 高级功能 (Advanced)
+### 03. Advanced
 
-**适合人群**：需要自定义框架行为的高级开发者
+**For**: Advanced developers who need to customize framework behavior
 
-| 文件 | 说明 | 核心技术 | 端口 |
-|------|------|----------|------|
-| `custom-decorator-app.ts` | 自定义装饰器：@Timing 示例 | Metadata、Interceptor | 3000 |
-| `advanced-decorator-app.ts` | 高级装饰器：多装饰器组合 | 装饰器链、优先级 | 3000 |
-| `microservice-app.ts` | 微服务架构：服务间通信 | Nacos、配置中心 | 多端口 |
+| File | Description | Tech Stack | Port |
+|------|-------------|------------|------|
+| `custom-decorator-app.ts` | Custom decorators: @Timing example | Metadata, Interceptor | 3000 |
+| `advanced-decorator-app.ts` | Advanced decorators: Multiple decorator composition | Decorator chains, priorities | 3000 |
+| `websocket-chat-app.ts` | Complete WebSocket chat with rooms (Web UI) | Rooms, broadcast, user list | 3600 |
+| `microservice-app.ts` | Microservices architecture: Inter-service communication | Nacos, config center | Multiple |
 
-**关键点**：
-- **自定义装饰器**：Metadata API、Reflect
-- **拦截器**：InterceptorRegistry、执行顺序
-- **微服务**：服务发现、配置管理、负载均衡
+**Key Points**:
+- **Custom Decorators**: Metadata API, Reflect
+- **Interceptors**: InterceptorRegistry, execution order
+- **Microservices**: Service discovery, config management, load balancing
 
-**示例：创建自定义装饰器**
+See [03-advanced/README.md](./03-advanced/README.md) for details.
+
+**Example: Create custom decorator**
 ```typescript
-// 1. 定义 Metadata Key
+// 1. Define Metadata Key
 const TIMING_KEY = Symbol('@timing');
 
-// 2. 创建装饰器
+// 2. Create decorator
 export function Timing(options: TimingOptions = {}): MethodDecorator {
   return (target, propertyKey, descriptor) => {
     Reflect.defineMetadata(TIMING_KEY, options, target, propertyKey);
   };
 }
 
-// 3. 实现拦截器
+// 3. Implement interceptor
 class TimingInterceptor implements Interceptor {
   async execute(...) {
     const start = performance.now();
     const result = await originalMethod.apply(target, args);
-    console.log(`执行时间: ${performance.now() - start}ms`);
+    console.log(`Execution time: ${performance.now() - start}ms`);
     return result;
   }
 }
 
-// 4. 注册拦截器
+// 4. Register interceptor
 registry.register(TIMING_KEY, new TimingInterceptor(), 100);
 
-// 5. 使用装饰器
+// 5. Use decorator
 @GET('/users')
-@Timing({ label: '获取用户列表' })
+@Timing({ label: 'Get Users' })
 public getUsers() { ... }
 ```
 
 ---
 
-### 04. 实战案例 (Real World)
+### 04. Real World
 
-**适合人群**：需要生产级代码参考的开发者
+**For**: Developers who need production-ready code references
 
-| 目录 | 说明 | 技术栈 |
-|------|------|--------|
-| `database-test-app.ts` | 数据库连接测试工具 | Web UI、多数据库支持 |
-| `perf/app.ts` | 性能压测基准 | 高并发、性能优化 |
+| Directory | Description | Tech Stack |
+|-----------|-------------|------------|
+| `database-test-app.ts` | Database connection testing tool | Web UI, multi-database support |
+| `perf/app.ts` | Performance benchmarking | High concurrency, optimization |
 
-**运行方式**：
+**Run**:
 ```bash
-# 数据库测试工具（Web UI）
-bun run examples/database-test-app.ts
-# 访问 http://localhost:3000
+# Database testing tool (Web UI)
+bun run examples/04-real-world/database-test-app.ts
+# Visit http://localhost:3000
 
-# 性能压测
-bun run examples/perf/app.ts
+# Performance benchmarking
+bun run examples/04-real-world/perf/app.ts
 wrk -t4 -c64 -d30s http://localhost:3300/api/ping
 ```
 
 ---
 
-## 🎯 按场景查找示例
+## 🎯 Find Examples by Scenario
 
-### 场景 1: 我想快速搭建一个 RESTful API
+### Scenario 1: I want to quickly build a RESTful API
 
-1. 从 `basic-app.ts` 开始，了解基本结构
-2. 参考 `auth-app.ts` 添加认证
-3. 使用 `cache-app.ts` 优化性能
-4. 查看 `database-app.ts` 连接数据库
+1. Start with `basic-app.ts` to understand basic structure
+2. Reference `auth-app.ts` to add authentication
+3. Use `cache-app.ts` to optimize performance
+4. Check `database-app.ts` for database connection
 
-### 场景 2: 我想实现用户认证系统
+### Scenario 2: I want to implement user authentication
 
-1. 查看 `auth-app.ts`（JWT + OAuth2）
-2. 参考 `session-app.ts`（Session 管理）
-3. 了解 `@Auth()` 装饰器用法
+1. See `auth-app.ts` (JWT + OAuth2)
+2. Reference `session-app.ts` (Session management)
+3. Learn `@Auth()` decorator usage
 
-### 场景 3: 我想使用队列处理异步任务
+### Scenario 3: I want to use queues for async tasks
 
-1. 查看 `queue-app.ts`（任务队列 + Cron）
-2. 了解任务处理器注册
-3. 学习 Cron 表达式
+1. See `queue-app.ts` (Task queues + Cron)
+2. Understand job handler registration
+3. Learn Cron expressions
 
-### 场景 4: 我想自定义框架行为
+### Scenario 4: I want to customize framework behavior
 
-1. 参考 `custom-decorator-app.ts`（自定义装饰器）
-2. 了解 `advanced-decorator-app.ts`（装饰器组合）
-3. 学习 Interceptor 机制
+1. Reference `custom-decorator-app.ts` (Custom decorators)
+2. Learn `advanced-decorator-app.ts` (Decorator composition)
+3. Study Interceptor mechanism
 
 ---
 
-## 💡 重要概念说明
+## 💡 Important Concepts
 
-### Symbol + Interface 同名模式
+### Symbol + Interface Co-naming Pattern
 
-这是本项目的特色设计，解决了 TypeScript 编译后无类型信息的问题：
+This is a unique feature of Bun Server Framework that solves TypeScript's type erasure problem:
 
 ```typescript
-// 1. 定义接口
+// 1. Define interface
 interface UserService {
   find(id: string): Promise<User | undefined>;
 }
 
-// 2. 定义同名 Symbol（注意：不要用 import type）
+// 2. Define Symbol with the same name (DO NOT use import type)
 const UserService = Symbol('UserService');
 
-// 3. 实现接口
+// 3. Implement interface
 @Injectable()
 class UserServiceImpl implements UserService {
   public async find(id: string) { ... }
 }
 
-// 4. 在 Module 中配置
+// 4. Configure in Module
 @Module({
   providers: [{
     provide: UserService,      // Symbol token
-    useClass: UserServiceImpl, // 实现类
+    useClass: UserServiceImpl, // Implementation
   }],
-  exports: [UserServiceImpl],  // 导出实现类
+  exports: [UserServiceImpl],  // Export implementation
 })
 
-// 5. 注入使用
+// 5. Inject and use
 public constructor(
-  // 类型是 interface，注入的是 Symbol 对应的实现
+  // Type is interface UserService (compile-time)
+  // Injected is Symbol('UserService') mapped instance (runtime)
   private readonly userService: UserService,
 ) {}
 ```
 
-**关键点**：
-- ✅ 使用 `import { UserService }`（导入 Symbol + interface）
-- ❌ **不要**用 `import type { UserService }`（只导入类型，丢失 Symbol）
+**Key Points**:
+- ✅ Use `import { UserService }` (imports both Symbol and interface)
+- ❌ **DO NOT** use `import type { UserService }` (imports only type, Symbol is lost)
 
-### 默认构造函数注入
+### Default Constructor Injection
 
-框架支持无装饰器的构造函数注入（推荐方式）：
+Framework supports decorator-free constructor injection (recommended):
 
 ```typescript
-// ✅ 推荐：直接指定类型
+// ✅ Recommended: Direct type specification
 public constructor(
   private readonly userService: UserService,
   private readonly productService: ProductService,
 ) {}
 
-// ⚠️ 仅在使用 Symbol Token 时需要
+// ⚠️ Only needed when using Symbol tokens
 public constructor(
   @Inject(USER_SERVICE_TOKEN) private readonly userService: UserService,
   @Inject(CONFIG_SERVICE_TOKEN) private readonly config: ConfigService,
@@ -286,56 +296,57 @@ public constructor(
 
 ---
 
-## 🔧 常见问题
+## 🔧 Common Issues
 
-### Q1: 示例运行失败，提示端口被占用？
+### Q1: Example fails with port already in use?
 
-**A**: 使用环境变量指定端口：
+**A**: Use environment variable to specify port:
 ```bash
 PORT=4000 bun run examples/basic-app.ts
 ```
 
-### Q2: 依赖注入返回 `undefined`？
+### Q2: Dependency injection returns `undefined`?
 
-**A**: 检查以下几点：
-1. `tsconfig.json` 中是否启用了 `emitDecoratorMetadata` 和 `experimentalDecorators`
-2. 是否使用了 `import type`（Symbol Token 不能用 import type）
-3. 服务是否在 Module 的 `providers` 中注册
+**A**: Check the following:
+1. Is `emitDecoratorMetadata` and `experimentalDecorators` enabled in `tsconfig.json`?
+2. Did you use `import type`? (Symbol tokens cannot use import type)
+3. Is the service registered in Module's `providers`?
 
-### Q3: Symbol + Interface 模式什么时候用？
+### Q3: When to use Symbol + Interface pattern?
 
-**A**: 以下场景推荐使用：
-- 需要面向接口编程（便于测试和替换实现）
-- 有多个实现类（使用不同的 Symbol 区分）
-- 需要导出接口而非实现类
+**A**: Recommended for:
+- Interface-oriented programming (easier testing and swapping implementations)
+- Multiple implementations (use different Symbols to distinguish)
+- Exporting interfaces instead of implementation classes
 
-### Q4: 如何调试示例代码？
+### Q4: How to debug examples?
 
-**A**: 使用 Bun 的调试功能：
+**A**: Use Bun's debugging features:
 ```bash
 bun --inspect-brk examples/basic-app.ts
 ```
 
 ---
 
-## 📖 进一步学习
+## 📖 Further Learning
 
-- 📚 [API 文档](../docs/api.md)
-- 🎓 [使用指南](../docs/guide.md)
-- 🏆 [最佳实践](../docs/best-practices.md)
-- 🐛 [故障排查](../docs/troubleshooting.md)
-- 🔒 [错误处理](../docs/error-handling.md)
+- 📚 [API Documentation](../docs/api.md)
+- 🎓 [User Guide](../docs/guide.md)
+- 🏆 [Best Practices](../docs/best-practices.md)
+- 🐛 [Troubleshooting](../docs/troubleshooting.md)
+- 🔒 [Error Handling](../docs/error-handling.md)
+- 🔑 [Symbol + Interface Pattern](../docs/symbol-interface-pattern.md)
 
 ---
 
-## 🤝 贡献示例
+## 🤝 Contributing Examples
 
-欢迎贡献更多示例！提交前请确保：
+We welcome more examples! Before submitting, ensure:
 
-1. ✅ 代码遵循项目规范（查看 `.cursor/rules/code-style.mdc`）
-2. ✅ 添加清晰的注释（中英文）
-3. ✅ 在本 README 中添加索引
-4. ✅ 测试示例可正常运行
+1. ✅ Code follows project conventions (see `.cursor/rules/code-style.mdc`)
+2. ✅ Clear comments added (English)
+3. ✅ Add index entry in this README
+4. ✅ Test that examples run correctly
 
 ---
 

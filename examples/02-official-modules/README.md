@@ -1,66 +1,68 @@
-# 官方模块示例
+# Official Modules Examples
 
-本目录包含 Bun Server Framework 官方模块的完整示例，帮助你快速集成各种开箱即用的功能。
+[中文](./README_ZH.md) | **English**
 
-## 📚 模块分类
+This directory contains examples for Bun Server Framework's official modules - ready-to-use functionality out of the box.
 
-### 🔐 认证与安全
+## 📚 Module Categories
 
-| 文件 | 模块 | 核心功能 | 难度 | 端口 |
-|------|------|---------|------|------|
-| `auth-app.ts` | SecurityModule | JWT + OAuth2 认证、权限控制 | ⭐⭐⭐ | 3000 |
-| `session-app.ts` | SessionModule | Session 管理、Cookie 处理 | ⭐⭐ | 3400 |
+### 🔐 Authentication & Security
 
-### 📊 数据与缓存
+| File | Module | Key Features | Port |
+|------|--------|--------------|------|
+| `auth-app.ts` | SecurityModule | JWT + OAuth2, RBAC | 3000 |
+| `session-app.ts` | SessionModule | Session management | 3400 |
 
-| 文件 | 模块 | 核心功能 | 难度 | 端口 |
-|------|------|---------|------|------|
-| `database-app.ts` | DatabaseModule | SQLite 连接、查询、健康检查 | ⭐⭐ | 3000 |
-| `orm-app.ts` | DatabaseModule (ORM) | Entity、Repository 模式 | ⭐⭐⭐ | 3000 |
-| `cache-app.ts` | CacheModule | 缓存装饰器、手动缓存 | ⭐⭐ | 3200 |
-| `transaction-app.ts` | DatabaseModule (事务) | `@Transactional` 装饰器 | ⭐⭐⭐ | 3000 |
+### 📊 Data & Caching
 
-### ⚙️ 后台任务
+| File | Module | Key Features | Port |
+|------|--------|--------------|------|
+| `database-app.ts` | DatabaseModule | SQLite, queries, health checks | 3000 |
+| `orm-app.ts` | DatabaseModule (ORM) | Entity + Repository pattern | 3000 |
+| `cache-app.ts` | CacheModule | Cache decorators | 3200 |
+| `transaction-app.ts` | DatabaseModule (TX) | `@Transactional` decorator | 3000 |
 
-| 文件 | 模块 | 核心功能 | 难度 | 端口 |
-|------|------|---------|------|------|
-| `queue-app.ts` | QueueModule | 任务队列、Cron 定时任务 | ⭐⭐⭐ | 3300 |
+### ⚙️ Background Tasks
 
-### 📈 监控与限流
+| File | Module | Key Features | Port |
+|------|--------|--------------|------|
+| `queue-app.ts` | QueueModule | Task queues, Cron jobs | 3300 |
 
-| 文件 | 模块 | 核心功能 | 难度 | 端口 |
-|------|------|---------|------|------|
-| `metrics-rate-limit-app.ts` | MetricsModule + RateLimitModule | Prometheus 指标、API 限流 | ⭐⭐⭐ | 3000 |
+### 📈 Monitoring & Rate Limiting
+
+| File | Module | Key Features | Port |
+|------|--------|--------------|------|
+| `metrics-rate-limit-app.ts` | MetricsModule + RateLimitModule | Prometheus, API throttling | 3000 |
 
 ---
 
-## 🔐 认证与安全
+## 🔐 Authentication & Security
 
 ### SecurityModule (auth-app.ts)
 
-**功能**：完整的认证授权解决方案
+**Features**: Complete authentication and authorization solution
 
-**特性**：
-- ✅ JWT 访问令牌和刷新令牌
-- ✅ OAuth2 授权码模式
-- ✅ 基于角色的访问控制（RBAC）
-- ✅ `@Auth()` 装饰器保护路由
-- ✅ 包含完整的 Web UI 演示
+**Highlights**:
+- ✅ JWT access and refresh tokens
+- ✅ OAuth2 authorization code flow
+- ✅ Role-based access control (RBAC)
+- ✅ `@Auth()` decorator for route protection
+- ✅ Includes complete Web UI demo
 
-**快速开始**：
+**Quick Start**:
 ```bash
 bun run examples/02-official-modules/auth-app.ts
 ```
 
-访问 http://localhost:3000 查看 Web UI 演示
+Visit http://localhost:3000 for Web UI demo
 
-**配置示例**：
+**Configuration**:
 ```typescript
 SecurityModule.forRoot({
   jwt: {
     secret: 'your-secret-key',
-    accessTokenExpiresIn: 3600,     // 1 小时
-    refreshTokenExpiresIn: 86400 * 7, // 7 天
+    accessTokenExpiresIn: 3600,     // 1 hour
+    refreshTokenExpiresIn: 86400 * 7, // 7 days
   },
   oauth2Clients: [{
     clientId: 'my-client',
@@ -69,13 +71,13 @@ SecurityModule.forRoot({
     grantTypes: ['authorization_code', 'refresh_token'],
   }],
   excludePaths: ['/api/users/login', '/api/users/public'],
-  defaultAuthRequired: false,  // 通过 @Auth() 装饰器控制
+  defaultAuthRequired: false,  // Control via @Auth() decorator
 })
 ```
 
-**使用示例**：
+**Usage**:
 ```typescript
-// 登录获取 Token
+// Login to get token
 @POST('/login')
 public async login(@Body() body: { username: string; password: string }) {
   const user = await this.userService.validateCredentials(...);
@@ -87,17 +89,17 @@ public async login(@Body() body: { username: string; password: string }) {
   return { accessToken };
 }
 
-// 保护路由
+// Protected route
 @GET('/me')
-@Auth()  // 需要认证
+@Auth()  // Requires authentication
 public getMe() {
   const securityContext = SecurityContextHolder.getContext();
   return securityContext.getPrincipal();
 }
 
-// 基于角色的访问控制
+// Role-based access control
 @GET('/')
-@Auth({ roles: ['admin'] })  // 需要 admin 角色
+@Auth({ roles: ['admin'] })  // Requires admin role
 public getAllUsers() {
   return { users: [...] };
 }
@@ -107,45 +109,45 @@ public getAllUsers() {
 
 ### SessionModule (session-app.ts)
 
-**功能**：Session 管理和 Cookie 处理
+**Features**: Session management and Cookie handling
 
-**特性**：
-- ✅ Session 创建和销毁
-- ✅ Session 数据存储
-- ✅ 自动 Cookie 管理
-- ✅ Rolling Session（访问时自动续期）
+**Highlights**:
+- ✅ Session creation and destruction
+- ✅ Session data storage
+- ✅ Automatic Cookie management
+- ✅ Rolling sessions (auto-renewal on access)
 
-**快速开始**：
+**Quick Start**:
 ```bash
 bun run examples/02-official-modules/session-app.ts
 ```
 
-**配置示例**：
+**Configuration**:
 ```typescript
 SessionModule.forRoot({
-  name: 'sessionId',    // Cookie 名称
-  maxAge: 86400000,     // 24 小时
-  rolling: true,        // 每次访问时更新过期时间
+  name: 'sessionId',    // Cookie name
+  maxAge: 86400000,     // 24 hours
+  rolling: true,        // Renew on each access
   cookie: {
-    secure: false,      // 开发环境 false，生产环境 true
-    httpOnly: true,     // 防止 JavaScript 访问
+    secure: false,      // false for dev, true for production
+    httpOnly: true,     // Prevent JavaScript access
     path: '/',
     sameSite: 'lax',
   },
 })
 ```
 
-**使用示例**：
+**Usage**:
 ```typescript
-// 登录创建 Session
+// Login creates session
 @POST('/login')
 public async login(@Body() body: { username: string; password: string }) {
   const user = await this.authService.login(body.username, body.password);
-  // SessionService 会自动设置 Cookie
+  // SessionService automatically sets cookie
   return { message: 'Login successful', user };
 }
 
-// 使用 @Session() 注入当前 Session
+// Inject current session with @Session()
 @GET('/me')
 public async getCurrentUser(@Session() session: SessionType | undefined) {
   if (!session) {
@@ -157,7 +159,7 @@ public async getCurrentUser(@Session() session: SessionType | undefined) {
   };
 }
 
-// 操作 Session 数据
+// Manipulate session data
 @POST('/cart/add')
 public async addToCart(
   @Session() session: SessionType,
@@ -170,30 +172,25 @@ public async addToCart(
 
 ---
 
-## 📊 数据与缓存
+## 📊 Data & Caching
 
 ### DatabaseModule (database-app.ts)
 
-**功能**：数据库连接和查询
+**Features**: Database connection and queries
 
-**特性**：
-- ✅ 支持 SQLite、PostgreSQL、MySQL
-- ✅ 连接池管理
-- ✅ 参数化查询（防 SQL 注入）
-- ✅ 健康检查集成
+**Highlights**:
+- ✅ Supports SQLite, PostgreSQL, MySQL
+- ✅ Connection pool management
+- ✅ Parameterized queries (SQL injection prevention)
+- ✅ Health check integration
 
-**快速开始**：
-```bash
-bun run examples/02-official-modules/database-app.ts
-```
-
-**配置示例**：
+**Configuration**:
 ```typescript
 DatabaseModule.forRoot({
   database: {
     type: 'sqlite',
     config: {
-      path: './data.db',  // 或 ':memory:' 使用内存数据库
+      path: './data.db',  // or ':memory:' for in-memory
     },
   },
   pool: {
@@ -204,7 +201,7 @@ DatabaseModule.forRoot({
 })
 ```
 
-**使用示例**：
+**Usage**:
 ```typescript
 @Injectable()
 class UserService {
@@ -214,7 +211,7 @@ class UserService {
   ) {}
 
   async createUser(name: string, email: string) {
-    // 参数化查询
+    // Parameterized query
     this.database.query(
       'INSERT INTO users (name, email) VALUES (?, ?)',
       [name, email]
@@ -231,111 +228,44 @@ class UserService {
 
 ---
 
-### DatabaseModule ORM (orm-app.ts)
-
-**功能**：Entity + Repository 模式
-
-**特性**：
-- ✅ `@Entity` 和 `@Column` 装饰器
-- ✅ `BaseRepository` CRUD 操作
-- ✅ 自定义 Repository 方法
-- ✅ 类型安全的查询
-
-**快速开始**：
-```bash
-bun run examples/02-official-modules/orm-app.ts
-```
-
-**使用示例**：
-```typescript
-// 1. 定义实体
-@Entity('users')
-class User {
-  @PrimaryKey()
-  @Column({ type: 'INTEGER', autoIncrement: true })
-  public id!: number;
-
-  @Column({ type: 'TEXT', nullable: false })
-  public name!: string;
-
-  @Column({ type: 'TEXT', nullable: false })
-  public email!: string;
-}
-
-// 2. 定义 Repository
-@Repository('users', 'id')
-class UserRepository extends BaseRepository<User> {
-  protected tableName = 'users';
-  protected primaryKey = 'id';
-
-  // 自定义查询方法
-  async findByEmail(email: string): Promise<User | null> {
-    const sql = `SELECT * FROM ${this.tableName} WHERE email = ?`;
-    const result = await this.executeQuery<User>(sql, [email]);
-    return result[0] ?? null;
-  }
-}
-
-// 3. 在服务中使用
-@Injectable()
-class UserService {
-  constructor(private readonly userRepository: UserRepository) {}
-
-  async createUser(name: string, email: string) {
-    return await this.userRepository.create({ name, email });
-  }
-
-  async getAllUsers() {
-    return await this.userRepository.findAll();
-  }
-}
-```
-
----
-
 ### CacheModule (cache-app.ts)
 
-**功能**：缓存管理
+**Features**: Cache management
 
-**特性**：
-- ✅ `@Cacheable` 自动缓存方法结果
-- ✅ `@CacheEvict` 清除缓存
-- ✅ `@CachePut` 更新缓存
-- ✅ 手动缓存操作（`CacheService`）
-- ✅ TTL 支持
+**Highlights**:
+- ✅ `@Cacheable` auto-caches method results
+- ✅ `@CacheEvict` clears cache
+- ✅ `@CachePut` updates cache
+- ✅ Manual cache operations (`CacheService`)
+- ✅ TTL support
 
-**快速开始**：
-```bash
-bun run examples/02-official-modules/cache-app.ts
-```
-
-**配置示例**：
+**Configuration**:
 ```typescript
 CacheModule.forRoot({
-  defaultTtl: 60000,  // 默认 60 秒
-  keyPrefix: 'app:',  // 键前缀
+  defaultTtl: 60000,  // Default 60 seconds
+  keyPrefix: 'app:',  // Key prefix
 })
 ```
 
-**使用示例**：
+**Usage**:
 ```typescript
-// 装饰器方式
+// Decorator approach
 @Injectable()
 class UserService {
-  // 缓存方法结果
+  // Cache method result
   @Cacheable({ key: 'user:{id}', ttl: 60000 })
   async findUser(id: string) {
     console.log('Fetching from database...');
     return await this.users.get(id);
   }
 
-  // 清除缓存
+  // Clear cache
   @CacheEvict({ key: 'user:{id}' })
   async updateUser(id: string, data: User) {
     return await this.users.set(id, data);
   }
 
-  // 更新缓存
+  // Update cache
   @CachePut({ key: 'user:{id}', ttl: 60000 })
   async createUser(name: string) {
     const id = crypto.randomUUID();
@@ -345,7 +275,7 @@ class UserService {
   }
 }
 
-// 手动方式
+// Manual approach
 @Injectable()
 class ProductService {
   constructor(
@@ -354,14 +284,14 @@ class ProductService {
   ) {}
 
   async getProduct(id: string) {
-    // 使用 getOrSet 自动处理缓存
+    // Auto-handle caching with getOrSet
     return await this.cache.getOrSet(
       `product:${id}`,
       async () => {
-        // 缓存不存在时执行
+        // Execute if cache doesn't exist
         return await this.fetchFromDatabase(id);
       },
-      30000  // TTL: 30 秒
+      30000  // TTL: 30 seconds
     );
   }
 }
@@ -369,33 +299,28 @@ class ProductService {
 
 ---
 
-## ⚙️ 后台任务
+## ⚙️ Background Tasks
 
 ### QueueModule (queue-app.ts)
 
-**功能**：任务队列和定时任务
+**Features**: Task queues and scheduled jobs
 
-**特性**：
-- ✅ 异步任务处理
-- ✅ 任务优先级
-- ✅ Cron 定时任务
-- ✅ 任务处理器注册
+**Highlights**:
+- ✅ Async task processing
+- ✅ Task priorities
+- ✅ Cron scheduled jobs
+- ✅ Job handler registration
 
-**快速开始**：
-```bash
-bun run examples/02-official-modules/queue-app.ts
-```
-
-**配置示例**：
+**Configuration**:
 ```typescript
 QueueModule.forRoot({
   defaultQueue: 'default',
-  enableWorker: true,   // 启用工作进程
-  concurrency: 3,       // 并发处理 3 个任务
+  enableWorker: true,   // Enable worker process
+  concurrency: 3,       // Process 3 tasks concurrently
 })
 ```
 
-**使用示例**：
+**Usage**:
 ```typescript
 @Injectable()
 class NotificationService {
@@ -407,7 +332,7 @@ class NotificationService {
   }
 
   async registerHandlers() {
-    // 注册任务处理器
+    // Register job handler
     await this.queue.registerHandler<{ to: string; subject: string }>(
       'send-email',
       async (job) => {
@@ -416,15 +341,15 @@ class NotificationService {
     );
   }
 
-  // 添加任务到队列
+  // Add job to queue
   async queueEmail(to: string, subject: string) {
     return await this.queue.add('send-email', { to, subject }, {
-      priority: 10,  // 高优先级
+      priority: 10,  // High priority
     });
   }
 }
 
-// Cron 定时任务
+// Cron scheduled jobs
 @Injectable()
 class ScheduledTaskService {
   constructor(@Inject(QUEUE_SERVICE_TOKEN) private readonly queue: QueueService) {
@@ -432,14 +357,14 @@ class ScheduledTaskService {
   }
 
   async registerCronJobs() {
-    // 每天午夜执行
+    // Run daily at midnight
     await this.queue.registerCron(
       'daily-report',
       async () => {
         console.log('Generating daily report...');
       },
       {
-        pattern: '0 0 * * *',  // 分 时 日 月 周
+        pattern: '0 0 * * *',  // min hour day month weekday
         runOnInit: false,
       }
     );
@@ -447,55 +372,55 @@ class ScheduledTaskService {
 }
 ```
 
-**Cron 表达式说明**：
+**Cron expression guide**:
 ```
-┌───────────── 分钟 (0 - 59)
-│ ┌───────────── 小时 (0 - 23)
-│ │ ┌───────────── 日期 (1 - 31)
-│ │ │ ┌───────────── 月份 (1 - 12)
-│ │ │ │ ┌───────────── 星期 (0 - 7, 0 和 7 都是周日)
+┌───────────── minute (0 - 59)
+│ ┌───────────── hour (0 - 23)
+│ │ ┌───────────── day of month (1 - 31)
+│ │ │ ┌───────────── month (1 - 12)
+│ │ │ │ ┌───────────── day of week (0 - 7, 0 and 7 = Sunday)
 │ │ │ │ │
 * * * * *
 
-常用示例：
-'0 0 * * *'     - 每天午夜
-'0 * * * *'     - 每小时
-'*/15 * * * *'  - 每 15 分钟
-'0 9 * * 1-5'   - 工作日上午 9 点
+Common examples:
+'0 0 * * *'     - Daily at midnight
+'0 * * * *'     - Every hour
+'*/15 * * * *'  - Every 15 minutes
+'0 9 * * 1-5'   - Weekdays at 9 AM
 ```
 
 ---
 
-## 🔧 常见问题
+## 🔧 Common Questions
 
-### Q1: SecurityModule 的 `excludePaths` 为什么不能用 '/'？
+### Q1: Why can't SecurityModule's `excludePaths` use '/'?
 
-**A**: `excludePaths` 使用前缀匹配，'/' 会匹配所有路径，导致认证中间件完全失效。应该明确列出需要排除的路径：
+**A**: `excludePaths` uses prefix matching. '/' matches all paths, disabling auth middleware completely. List paths explicitly:
 ```typescript
 excludePaths: ['/api/users/login', '/api/users/public', '/callback']
 ```
 
-### Q2: Session 中间件注册顺序重要吗？
+### Q2: Does Session middleware registration order matter?
 
-**A**: 非常重要！必须先注册模块，再注册中间件：
+**A**: Yes! Must register module before middleware:
 ```typescript
-// ✅ 正确
+// ✅ Correct
 app.registerModule(SessionModule);
 const container = app.getContainer();
 app.use(createSessionMiddleware(container));
 
-// ❌ 错误：容器中还没有 SessionService
+// ❌ Wrong: SessionService not in container yet
 app.use(createSessionMiddleware(container));
 app.registerModule(SessionModule);
 ```
 
-### Q3: 缓存装饰器的 `key` 参数如何使用动态值？
+### Q3: How to use dynamic values in cache decorator `key`?
 
-**A**: 使用 `{参数名}` 占位符：
+**A**: Use `{paramName}` placeholders:
 ```typescript
 @Cacheable({ key: 'user:{id}', ttl: 60000 })
 async findUser(id: string) {
-  // key 会自动替换为 'user:123'
+  // key auto-replaced to 'user:123'
 }
 
 @Cacheable({ key: 'product:{category}:{id}' })
@@ -504,27 +429,13 @@ async findProduct(category: string, id: string) {
 }
 ```
 
-### Q4: 队列任务处理失败怎么办？
+## 📖 Related Documentation
 
-**A**: 可以配置重试策略（功能待实现），当前建议在处理器中添加错误处理：
-```typescript
-await this.queue.registerHandler('risky-task', async (job) => {
-  try {
-    await this.doRiskyOperation(job.data);
-  } catch (error) {
-    console.error('Task failed:', error);
-    // 可以选择重新入队或记录到死信队列
-  }
-});
-```
+- 📚 [API Documentation](../../docs/api.md)
+- 🎓 [User Guide](../../docs/guide.md)
+- 🏆 [Best Practices](../../docs/best-practices.md)
+- 🐛 [Troubleshooting](../../docs/troubleshooting.md)
 
-## 📖 相关文档
+## ⬅️ Back
 
-- 📚 [API 文档](../../docs/api.md)
-- 🎓 [使用指南](../../docs/guide.md)
-- 🏆 [最佳实践](../../docs/best-practices.md)
-- 🐛 [故障排查](../../docs/troubleshooting.md)
-
-## ⬅️ 返回
-
-[← 返回示例索引](../README.md)
+[← Back to Examples Index](../README.md)

@@ -1,81 +1,83 @@
-# 核心功能示例
+# Core Features Examples
 
-本目录包含 Bun Server Framework 核心功能的示例代码，帮助你深入理解框架的核心机制。
+[中文](./README_ZH.md) | **English**
 
-## 📚 示例列表
+This directory contains examples demonstrating Bun Server Framework's core features and internal mechanics.
 
-| 文件 | 说明 | 核心概念 | 难度 | 端口 |
-|------|------|----------|------|------|
-| `basic-app.ts` | 综合示例：DI + Logger + Swagger + Config | 依赖注入、模块系统、日志、API 文档 | ⭐⭐ | 3100 |
-| `multi-module-app.ts` | 模块系统：模块间依赖、导入导出 | 模块依赖、服务共享、模块组织 | ⭐⭐⭐ | 3300 |
-| `basic-router.ts` | 底层路由：直接使用 RouteRegistry | 路由注册、路径参数、Context | ⭐⭐ | 3000 |
-| `context-scope-app.ts` | 请求作用域：ContextService 和 Scoped 生命周期 | Scoped 生命周期、ContextService | ⭐⭐⭐ | 3500 |
-| `full-app.ts` | 完整功能：验证、上传、静态文件、WebSocket | 中间件、文件上传、WebSocket | ⭐⭐⭐ | 3200 |
+## 📚 Examples
 
-## 🎯 学习路径
+| File | Description | Difficulty | Port |
+|------|-------------|------------|------|
+| `basic-app.ts` | Comprehensive example: DI + Logger + Swagger + Config | ⭐⭐ | 3100 |
+| `multi-module-app.ts` | Module system: dependencies, imports/exports | ⭐⭐⭐ | 3300 |
+| `basic-router.ts` | Low-level routing: using RouteRegistry directly | ⭐⭐ | 3000 |
+| `context-scope-app.ts` | Request scoping: ContextService and Scoped lifecycle | ⭐⭐⭐ | 3500 |
+| `full-app.ts` | Full features: validation, uploads, static files, WebSocket | ⭐⭐⭐ | 3200 |
 
-### 1. 基础入门
-从 `basic-app.ts` 开始，了解：
-- ✅ 依赖注入基础（`@Injectable`、构造函数注入）
-- ✅ 模块系统（`@Module`、imports/providers/exports）
-- ✅ 日志集成（LoggerModule）
-- ✅ API 文档（SwaggerModule）
-- ✅ 配置管理（ConfigModule）
+## 🎯 Learning Path
 
-**运行**：
+### 1. Basic Introduction
+Start with `basic-app.ts` to learn:
+- ✅ Dependency injection basics (`@Injectable`, constructor injection)
+- ✅ Module system (`@Module`, imports/providers/exports)
+- ✅ Logger integration (LoggerModule)
+- ✅ API documentation (SwaggerModule)
+- ✅ Configuration management (ConfigModule)
+
+**Run**:
 ```bash
 bun run examples/01-core-features/basic-app.ts
 ```
 
-**访问**：
+**Access**:
 - API: http://localhost:3100/api/users
 - Swagger UI: http://localhost:3100/swagger
 
-### 2. 模块系统深入
-学习 `multi-module-app.ts`：
-- ✅ 模块间依赖（UserModule → ProductModule → OrderModule）
-- ✅ 服务导入导出
-- ✅ 跨模块依赖注入
-- ✅ 模块组织最佳实践
+### 2. Module System Deep Dive
+Learn `multi-module-app.ts`:
+- ✅ Module dependencies (UserModule → ProductModule → OrderModule)
+- ✅ Service imports and exports
+- ✅ Cross-module dependency injection
+- ✅ Module organization best practices
 
-**运行**：
+**Run**:
 ```bash
 bun run examples/01-core-features/multi-module-app.ts
 ```
 
-**测试**：
+**Test**:
 ```bash
-# 创建订单（依赖 User 和 Product）
+# Create order (depends on User and Product)
 curl -X POST http://localhost:3300/api/orders \
   -H "Content-Type: application/json" \
   -d '{"userId":"1","productId":"1","quantity":2}'
 ```
 
-### 3. 底层路由机制
-学习 `basic-router.ts`：
-- ✅ 直接使用 RouteRegistry
-- ✅ 手动注册路由
-- ✅ Context 对象使用
-- ✅ 无装饰器的路由定义
+### 3. Low-level Routing
+Learn `basic-router.ts`:
+- ✅ Direct RouteRegistry usage
+- ✅ Manual route registration
+- ✅ Context object usage
+- ✅ Decorator-free route definition
 
-**适合场景**：需要动态注册路由、或不想使用装饰器
+**Use case**: Dynamic route registration or avoiding decorators
 
-### 4. 请求作用域
-学习 `context-scope-app.ts`：
-- ✅ `Lifecycle.Scoped` 生命周期
-- ✅ ContextService 的使用
-- ✅ 请求级别的依赖隔离
-- ✅ `@ContextParam()` 装饰器
+### 4. Request Scoping
+Learn `context-scope-app.ts`:
+- ✅ `Lifecycle.Scoped` lifecycle
+- ✅ ContextService usage
+- ✅ Request-level dependency isolation
+- ✅ `@ContextParam()` decorator
 
-**关键概念**：
+**Key concept**:
 ```typescript
-// Scoped 服务：每个请求一个实例
+// Scoped service: one instance per request
 @Injectable({ lifecycle: Lifecycle.Scoped })
 class RequestIdService {
   public readonly requestId: string = crypto.randomUUID();
 }
 
-// 在服务层访问当前请求的 Context
+// Access current request Context in service layer
 @Injectable()
 class UserAgentService {
   constructor(
@@ -89,44 +91,44 @@ class UserAgentService {
 }
 ```
 
-### 5. 完整功能集成
-学习 `full-app.ts`：
-- ✅ 中间件（CORS、日志、文件上传、静态文件）
-- ✅ 输入验证（`@Validate` 装饰器）
-- ✅ 文件上传处理
-- ✅ WebSocket 集成
+### 5. Full Feature Integration
+Learn `full-app.ts`:
+- ✅ Middleware (CORS, logging, file upload, static files)
+- ✅ Input validation (`@Validate` decorator)
+- ✅ File upload handling
+- ✅ WebSocket integration
 
-**功能演示**：
+**Feature demo**:
 ```bash
-# 文件上传
+# File upload
 curl -X POST http://localhost:3200/api/files/upload \
   -F "file=@/path/to/file.txt"
 
-# WebSocket 聊天
-# 使用 WebSocket 客户端连接 ws://localhost:3200/ws/chat
+# WebSocket chat
+# Connect using WebSocket client to ws://localhost:3200/ws/chat
 ```
 
-## 💡 核心概念详解
+## 💡 Core Concepts
 
-### 依赖注入（DI）
+### Dependency Injection (DI)
 
-**基本用法**：
+**Basic usage**:
 ```typescript
-// 1. 定义服务
+// 1. Define service
 @Injectable()
 class UserService {
   findAll() { return []; }
 }
 
-// 2. 注入服务
+// 2. Inject service
 @Controller('/users')
 class UserController {
   constructor(
-    private readonly userService: UserService  // 自动注入
+    private readonly userService: UserService  // Auto-injected
   ) {}
 }
 
-// 3. 注册到容器
+// 3. Register in container
 @Module({
   providers: [UserService],
   controllers: [UserController],
@@ -134,47 +136,47 @@ class UserController {
 class UserModule {}
 ```
 
-**Symbol + Interface 模式**：
+**Symbol + Interface pattern**:
 ```typescript
-// 定义接口和同名 Symbol
+// Define interface and Symbol with same name
 interface UserService {
   findAll(): Promise<User[]>;
 }
 const UserService = Symbol('UserService');
 
-// 实现类
+// Implementation
 @Injectable()
 class UserServiceImpl implements UserService {
   async findAll() { return []; }
 }
 
-// 模块配置
+// Module configuration
 @Module({
   providers: [{
-    provide: UserService,      // Symbol Token
-    useClass: UserServiceImpl, // 实现类
+    provide: UserService,      // Symbol token
+    useClass: UserServiceImpl, // Implementation
   }],
 })
 ```
 
-详见：[Symbol + Interface 模式详解](../../docs/symbol-interface-pattern.md)
+See: [Symbol + Interface Pattern Guide](../../docs/symbol-interface-pattern.md)
 
-### 模块系统
+### Module System
 
-**模块组织**：
+**Module organization**:
 ```typescript
 @Module({
-  imports: [SharedModule],     // 导入其他模块
-  controllers: [UserController], // 控制器
-  providers: [UserService],     // 服务
-  exports: [UserService],       // 导出服务供其他模块使用
+  imports: [SharedModule],     // Import other modules
+  controllers: [UserController], // Controllers
+  providers: [UserService],     // Services
+  exports: [UserService],       // Export for other modules
 })
 class UserModule {}
 ```
 
-**模块依赖**：
+**Module dependencies**:
 ```typescript
-// OrderModule 依赖 UserModule 和 ProductModule
+// OrderModule depends on UserModule and ProductModule
 @Module({
   imports: [UserModule, ProductModule],
   controllers: [OrderController],
@@ -183,35 +185,35 @@ class UserModule {}
 class OrderModule {}
 ```
 
-### 中间件
+### Middleware
 
-**全局中间件**：
+**Global middleware**:
 ```typescript
 app.use(createLoggerMiddleware({ prefix: '[App]' }));
 app.use(createCorsMiddleware({ origin: '*' }));
 ```
 
-**控制器级中间件**：
+**Controller-level middleware**:
 ```typescript
 @Controller('/api')
 @UseMiddleware(authMiddleware)
 class ApiController {}
 ```
 
-**方法级中间件**：
+**Method-level middleware**:
 ```typescript
 @GET('/admin')
 @UseMiddleware(adminOnlyMiddleware)
 public admin() {}
 ```
 
-### 生命周期
+### Lifecycle
 
-| 生命周期 | 说明 | 使用场景 |
-|---------|------|---------|
-| `Singleton` | 单例（默认） | 无状态服务、配置、工具类 |
-| `Transient` | 每次创建新实例 | 有状态服务、临时对象 |
-| `Scoped` | 请求作用域 | 请求级别的数据隔离 |
+| Lifecycle | Description | Use Cases |
+|-----------|-------------|-----------|
+| `Singleton` | Single instance (default) | Stateless services, config, utilities |
+| `Transient` | New instance each time | Stateful services, temporary objects |
+| `Scoped` | Request-scoped | Request-level data isolation |
 
 ```typescript
 @Injectable({ lifecycle: Lifecycle.Scoped })
@@ -220,49 +222,49 @@ class RequestLogger {
 }
 ```
 
-## 🔧 常见问题
+## 🔧 Common Questions
 
-### Q1: 模块间如何共享服务？
+### Q1: How to share services between modules?
 
-**A**: 使用 `exports` 导出服务：
+**A**: Use `exports` to export services:
 ```typescript
-// UserModule 导出 UserService
+// UserModule exports UserService
 @Module({
   providers: [UserService],
   exports: [UserService],
 })
 class UserModule {}
 
-// OrderModule 导入 UserModule
+// OrderModule imports UserModule
 @Module({
-  imports: [UserModule],  // 现在可以注入 UserService
+  imports: [UserModule],  // Now can inject UserService
   controllers: [OrderController],
 })
 class OrderModule {}
 ```
 
-### Q2: Scoped 生命周期如何工作？
+### Q2: How does Scoped lifecycle work?
 
-**A**: 每个请求创建新的服务实例，请求结束后自动销毁：
+**A**: Creates new service instance per request, auto-destroyed after request:
 ```typescript
 @Injectable({ lifecycle: Lifecycle.Scoped })
 class RequestIdService {
   readonly id = crypto.randomUUID();
 }
 
-// 同一请求内多次注入，返回同一个实例
-// 不同请求，返回不同实例
+// Same request, multiple injections → same instance
+// Different requests → different instances
 ```
 
-### Q3: 如何访问当前请求的 Context？
+### Q3: How to access current request Context?
 
-**A**: 三种方式：
+**A**: Three methods:
 ```typescript
-// 1. 参数注入
+// 1. Parameter injection
 @GET('/:id')
 public getUser(@ContextParam() context: Context) {}
 
-// 2. ContextService（推荐在服务层使用）
+// 2. ContextService (recommended in service layer)
 @Injectable()
 class UserService {
   constructor(
@@ -275,20 +277,20 @@ class UserService {
   }
 }
 
-// 3. 中间件中直接访问
+// 3. Direct access in middleware
 async (ctx: Context, next: NextFunction) => {
   console.log(ctx.path);
   return await next();
 }
 ```
 
-## 📖 进一步学习
+## 📖 Further Reading
 
-- 📚 [API 文档](../../docs/api.md)
-- 🎓 [使用指南](../../docs/guide.md)
-- 🏆 [最佳实践](../../docs/best-practices.md)
-- 🔑 [Symbol + Interface 模式](../../docs/symbol-interface-pattern.md)
+- 📚 [API Documentation](../../docs/api.md)
+- 🎓 [User Guide](../../docs/guide.md)
+- 🏆 [Best Practices](../../docs/best-practices.md)
+- 🔑 [Symbol + Interface Pattern](../../docs/symbol-interface-pattern.md)
 
-## ⬅️ 返回
+## ⬅️ Back
 
-[← 返回示例索引](../README.md)
+[← Back to Examples Index](../README.md)
