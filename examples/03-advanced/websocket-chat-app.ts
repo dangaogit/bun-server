@@ -40,12 +40,15 @@ interface User {
 }
 
 interface ChatMessage {
-  type: 'join' | 'leave' | 'message' | 'private' | 'users' | 'error';
+  type: 'join' | 'leave' | 'message' | 'private' | 'users' | 'error' | 'welcome';
   from?: string;
+  fromId?: string;  // 发送者的 userId
   to?: string;
   room?: string;
   content?: string;
   users?: User[];
+  userId?: string;      // 当前用户的 userId
+  username?: string;    // 当前用户的 username
   timestamp: number;
 }
 
@@ -59,7 +62,7 @@ interface RoomInfo {
 @Injectable()
 class ChatService {
   // 存储所有连接：userId -> WebSocket
-  private readonly connections = new Map<string, ServerWebSocket<WebSocketConnectionData>>();
+  private readonly connections = new Map<string, ServerWebSocket<ChatWebSocketData>>();
   
   // 存储用户信息：userId -> User
   private readonly users = new Map<string, User>();
@@ -70,7 +73,7 @@ class ChatService {
   /**
    * 用户上线
    */
-  public userOnline(userId: string, username: string, ws: ServerWebSocket<WebSocketConnectionData>) {
+  public userOnline(userId: string, username: string, ws: ServerWebSocket<ChatWebSocketData>) {
     this.connections.set(userId, ws);
     this.users.set(userId, {
       id: userId,
@@ -218,6 +221,13 @@ class ChatService {
   }
 
   /**
+   * 获取用户信息
+   */
+  public getUser(userId: string): User | undefined {
+    return this.users.get(userId);
+  }
+
+  /**
    * 发送消息给特定用户
    */
   public sendToUser(userId: string, message: ChatMessage) {
@@ -230,6 +240,11 @@ class ChatService {
 
 // ==================== WebSocket Gateway ====================
 
+// 扩展 WebSocketConnectionData 以存储用户 ID
+interface ChatWebSocketData extends WebSocketConnectionData {
+  userId?: string;
+}
+
 @WebSocketGateway('/ws/chat')
 class ChatGateway {
   public constructor(private readonly chatService: ChatService) {}
@@ -238,16 +253,22 @@ class ChatGateway {
    * 连接建立
    */
   @OnOpen
-  public handleOpen(ws: ServerWebSocket<WebSocketConnectionData>) {
-    // 从连接数据中获取用户信息（实际应用中应该从查询参数或认证 token 中获取）
-    const userId = ws.data.connectionId;  // 使用连接 ID 作为临时用户 ID
-    const username = `User${userId.substring(0, 6)}`;
+  public handleOpen(ws: ServerWebSocket<ChatWebSocketData>) {
+    // 生成唯一用户 ID（实际应用中应该从查询参数或认证 token 中获取）
+    // 例如：ws.data.query?.get('userId') 或从 JWT token 解析
+    const userId = crypto.randomUUID();
+    const username = ws.data.query?.get('username') || `User${userId.substring(0, 6)}`;
+    
+    // 存储用户 ID 到连接数据
+    ws.data.userId = userId;
     
     this.chatService.userOnline(userId, username, ws);
 
-    // 发送欢迎消息
+    // 发送欢迎消息，包含用户信息
     ws.send(JSON.stringify({
-      type: 'join',
+      type: 'welcome',
+      userId,
+      username,
       content: `Welcome ${username}! You are now connected.`,
       timestamp: Date.now(),
     }));
@@ -258,10 +279,18 @@ class ChatGateway {
    */
   @OnMessage
   public handleMessage(
-    ws: ServerWebSocket<WebSocketConnectionData>,
+    ws: ServerWebSocket<ChatWebSocketData>,
     message: string,
   ) {
-    const userId = ws.data.connectionId;
+    const userId = ws.data.userId;
+    if (!userId) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        content: 'User ID not found',
+        timestamp: Date.now(),
+      }));
+      return;
+    }
     
     try {
       const data = JSON.parse(message);
@@ -307,9 +336,11 @@ class ChatGateway {
    * 连接关闭
    */
   @OnClose
-  public handleClose(ws: ServerWebSocket<WebSocketConnectionData>) {
-    const userId = ws.data.connectionId;
-    this.chatService.userOffline(userId);
+  public handleClose(ws: ServerWebSocket<ChatWebSocketData>) {
+    const userId = ws.data.userId;
+    if (userId) {
+      this.chatService.userOffline(userId);
+    }
   }
 
   // ==================== 消息处理器 ====================
@@ -317,7 +348,7 @@ class ChatGateway {
   private handleJoinRoom(
     userId: string,
     roomName: string,
-    ws: ServerWebSocket<WebSocketConnectionData>,
+    ws: ServerWebSocket<ChatWebSocketData>,
   ) {
     const success = this.chatService.joinRoom(userId, roomName);
     
@@ -342,7 +373,7 @@ class ChatGateway {
   private handleLeaveRoom(
     userId: string,
     roomName: string,
-    ws: ServerWebSocket<WebSocketConnectionData>,
+    ws: ServerWebSocket<ChatWebSocketData>,
   ) {
     const success = this.chatService.leaveRoom(userId, roomName);
     
@@ -359,32 +390,37 @@ class ChatGateway {
     userId: string,
     roomName: string,
     content: string,
-    ws: ServerWebSocket<WebSocketConnectionData>,
+    ws: ServerWebSocket<ChatWebSocketData>,
   ) {
-    // 广播消息到房间
-    this.chatService.broadcastToRoom(roomName, {
-      type: 'message',
-      from: userId,
+    const user = this.chatService.getUser(userId);
+    if (!user) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        content: 'User not found',
+        timestamp: Date.now(),
+      }));
+      return;
+    }
+
+    const message = {
+      type: 'message' as const,
+      from: user.username,  // 使用 username 而不是 userId
+      fromId: userId,       // 添加 userId 用于前端识别自己的消息
       room: roomName,
       content,
       timestamp: Date.now(),
-    });
-    
-    // 确认发送成功（回显给发送者）
-    ws.send(JSON.stringify({
-      type: 'message',
-      from: userId,
-      room: roomName,
-      content,
-      timestamp: Date.now(),
-    }));
+    };
+
+    // 广播消息到房间（包括发送者）
+    // 前端会根据 fromId 判断是否是自己的消息
+    this.chatService.broadcastToRoom(roomName, message);
   }
 
   private handlePrivateMessage(
     fromUserId: string,
     toUserId: string,
     content: string,
-    ws: ServerWebSocket<WebSocketConnectionData>,
+    ws: ServerWebSocket<ChatWebSocketData>,
   ) {
     const success = this.chatService.sendPrivateMessage(fromUserId, toUserId, content);
     
@@ -400,7 +436,7 @@ class ChatGateway {
   private handleGetUsers(
     userId: string,
     roomName: string | undefined,
-    ws: ServerWebSocket<WebSocketConnectionData>,
+    ws: ServerWebSocket<ChatWebSocketData>,
   ) {
     const users = roomName
       ? this.chatService.getRoomUsers(roomName)
@@ -454,6 +490,19 @@ class FrontendController {
     .status {
       font-size: 14px;
       opacity: 0.9;
+    }
+    .reset-user {
+      display: inline-block;
+      margin-left: 10px;
+      padding: 2px 8px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.2s;
+    }
+    .reset-user:hover {
+      background: rgba(255,255,255,0.3);
     }
     .container {
       flex: 1;
@@ -613,6 +662,7 @@ class FrontendController {
   <div class="header">
     <h1>💬 WebSocket 聊天室</h1>
     <div class="status" id="status">连接中...</div>
+    <div class="status" id="userInfo" style="margin-top: 5px; font-size: 13px;"></div>
   </div>
 
   <div class="container">
@@ -644,10 +694,19 @@ class FrontendController {
   <script>
     let ws;
     let currentRoom = null;
-    let userId = null;
+    let currentUserId = null;
+    let currentUsername = null;
 
     function connect() {
-      ws = new WebSocket(\`ws://\${location.host}/ws/chat\`);
+      // 从 localStorage 恢复用户名，或生成新的
+      let savedUsername = localStorage.getItem('chat_username');
+      if (!savedUsername) {
+        savedUsername = 'User' + Math.random().toString(36).substring(2, 8);
+        localStorage.setItem('chat_username', savedUsername);
+      }
+      
+      // 将用户名作为查询参数传递
+      ws = new WebSocket(\`ws://\${location.host}/ws/chat?username=\${savedUsername}\`);
       
       ws.onopen = () => {
         document.getElementById('status').textContent = '✅ 已连接';
@@ -674,6 +733,20 @@ class FrontendController {
       const messagesDiv = document.getElementById('messages');
       
       switch (message.type) {
+        case 'welcome':
+          // 保存当前用户信息
+          currentUserId = message.userId;
+          currentUsername = message.username;
+          localStorage.setItem('chat_userId', currentUserId);
+          localStorage.setItem('chat_username', currentUsername);
+          
+          // 显示用户信息（包含重置按钮）
+          document.getElementById('userInfo').innerHTML = 
+            \`👤 当前用户: \${currentUsername} <span class="reset-user" onclick="resetUser()" title="重置用户身份">🔄 重置</span>\`;
+          
+          addSystemMessage(message.content);
+          break;
+        
         case 'join':
         case 'leave':
           addSystemMessage(message.content);
@@ -705,7 +778,10 @@ class FrontendController {
     function addChatMessage(message) {
       const messagesDiv = document.getElementById('messages');
       const div = document.createElement('div');
-      div.className = 'message';
+      
+      // 判断是否是自己发送的消息
+      const isOwn = message.fromId === currentUserId;
+      div.className = isOwn ? 'message own' : 'message';
       
       div.innerHTML = \`
         <div class="message-content">
@@ -722,12 +798,16 @@ class FrontendController {
 
     function updateUserList(users) {
       const userList = document.getElementById('userList');
-      userList.innerHTML = users.map(user => \`
-        <li class="user-item">
-          <img src="\${user.avatar}" class="user-avatar" alt="\${user.username}">
-          <span class="user-name">\${user.username}</span>
-        </li>
-      \`).join('');
+      userList.innerHTML = users.map(user => {
+        const isSelf = user.id === currentUserId;
+        const selfBadge = isSelf ? ' <span style="color:#667eea;font-weight:bold;">(你)</span>' : '';
+        return \`
+          <li class="user-item" style="\${isSelf ? 'background:#f0f4ff;' : ''}">
+            <img src="\${user.avatar}" class="user-avatar" alt="\${user.username}">
+            <span class="user-name">\${user.username}\${selfBadge}</span>
+          </li>
+        \`;
+      }).join('');
     }
 
     function joinRoom() {
@@ -751,6 +831,14 @@ class FrontendController {
       currentRoom = room;
       document.getElementById('messages').innerHTML = '';
       addSystemMessage(\`已加入房间: \${room}\`);
+      
+      // 请求用户列表
+      setTimeout(() => {
+        ws.send(JSON.stringify({
+          action: 'get_users',
+          room: room
+        }));
+      }, 100);
     }
 
     function sendMessage() {
@@ -768,11 +856,30 @@ class FrontendController {
       input.value = '';
     }
 
+    // 重置用户身份
+    function resetUser() {
+      if (confirm('确定要重置用户身份吗？这将断开当前连接并生成新的用户名。')) {
+        localStorage.removeItem('chat_userId');
+        localStorage.removeItem('chat_username');
+        location.reload();
+      }
+    }
+
+    // 页面加载时尝试恢复之前的用户信息
+    const savedUserId = localStorage.getItem('chat_userId');
+    const savedUsername = localStorage.getItem('chat_username');
+    if (savedUserId && savedUsername) {
+      currentUserId = savedUserId;
+      currentUsername = savedUsername;
+      document.getElementById('userInfo').innerHTML = 
+        \`👤 当前用户: \${savedUsername} <span class="reset-user" onclick="resetUser()" title="重置用户身份">🔄 重置</span>\`;
+    }
+
     // 启动连接
     connect();
     
     // 自动加入默认房间
-    setTimeout(() => joinRoom(), 500);
+    setTimeout(() => joinRoom(), 800);
   </script>
 </body>
 </html>
