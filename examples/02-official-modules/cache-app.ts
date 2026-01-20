@@ -1,9 +1,41 @@
+/**
+ * Cache Module Example - 缓存模块示例
+ * 
+ * 演示功能：
+ * 1. CacheService 手动缓存（推荐方式）
+ * 2. getOrSet 自动缓存模式
+ * 3. 缓存清除和更新
+ * 4. TTL（过期时间）配置
+ * 
+ * 注意：@Cacheable、@CacheEvict、@CachePut 装饰器目前是未实现的功能
+ * （只有装饰器定义，没有拦截器实现），所以本示例使用 CacheService 手动缓存
+ * 
+ * 运行方式：
+ *   bun run examples/02-official-modules/cache-app.ts
+ * 
+ * 测试缓存行为：
+ *   # 1. 第一次请求（缓存未命中，会打印 "Fetching from database..."）
+ *   curl http://localhost:3200/api/users/1
+ * 
+ *   # 2. 第二次请求（缓存命中，不会打印日志）
+ *   curl http://localhost:3200/api/users/1
+ * 
+ *   # 3. 更新用户（清除缓存）
+ *   curl -X PUT http://localhost:3200/api/users/1 \
+ *     -H "Content-Type: application/json" \
+ *     -d '{"name":"Alice Updated","email":"alice@example.com"}'
+ * 
+ *   # 4. 再次请求（缓存已清除，会重新查询）
+ *   curl http://localhost:3200/api/users/1
+ * 
+ *   # 5. 测试产品缓存
+ *   curl http://localhost:3200/api/products/123/cached
+ *   curl http://localhost:3200/api/products/123/cached  # 第二次应该命中缓存
+ */
+
 import {
   Application,
   Body,
-  Cacheable,
-  CacheEvict,
-  CachePut,
   CACHE_SERVICE_TOKEN,
   CacheModule,
   CacheService,
@@ -22,7 +54,10 @@ import {
 } from '@dangao/bun-server';
 
 /**
- * 用户服务 - 演示缓存装饰器的使用
+ * 用户服务 - 演示使用 CacheService 进行缓存
+ * 
+ * 注意：@Cacheable、@CacheEvict、@CachePut 装饰器目前是未实现的功能
+ * （只有装饰器定义，没有拦截器实现），所以这里使用 CacheService 手动缓存
  */
 @Injectable()
 class UserService {
@@ -31,23 +66,30 @@ class UserService {
     ['2', { id: '2', name: 'Bob', email: 'bob@example.com' }],
   ]);
 
+  public constructor(
+    @Inject(CACHE_SERVICE_TOKEN) private readonly cache: CacheService,
+  ) {}
+
   /**
-   * 使用 @Cacheable 装饰器缓存方法结果
-   * 当方法被调用时，会先检查缓存，如果缓存存在则直接返回，否则执行方法并缓存结果
+   * 查找用户（使用缓存）
    */
-  @Cacheable({ key: 'user:{id}', ttl: 60000 }) // 缓存 60 秒
   public async findUser(id: string): Promise<{ id: string; name: string; email: string } | undefined> {
-    console.log(`[UserService] Fetching user ${id} from database...`);
-    // 模拟数据库查询延迟
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    return this.users.get(id);
+    // 使用 getOrSet 自动处理缓存
+    return await this.cache.getOrSet(
+      `user:${id}`,
+      async () => {
+        console.log(`[UserService] Fetching user ${id} from database...`);
+        // 模拟数据库查询延迟
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return this.users.get(id);
+      },
+      60000, // TTL: 60 秒
+    );
   }
 
   /**
-   * 使用 @CacheEvict 装饰器清除缓存
-   * 当方法执行后，会清除指定的缓存
+   * 更新用户（清除缓存）
    */
-  @CacheEvict({ key: 'user:{id}' })
   public async updateUser(
     id: string,
     name: string,
@@ -56,14 +98,16 @@ class UserService {
     console.log(`[UserService] Updating user ${id}...`);
     const user = { id, name, email };
     this.users.set(id, user);
+    
+    // 清除缓存
+    await this.cache.delete(`user:${id}`);
+    
     return user;
   }
 
   /**
-   * 使用 @CachePut 装饰器更新缓存
-   * 当方法执行后，会将结果更新到缓存中
+   * 创建用户（更新缓存）
    */
-  @CachePut({ key: 'user:{id}', ttl: 60000 })
   public async createUser(
     name: string,
     email: string,
@@ -72,16 +116,24 @@ class UserService {
     const id = String(this.users.size + 1);
     const user = { id, name, email };
     this.users.set(id, user);
+    
+    // 更新缓存
+    await this.cache.set(`user:${id}`, user, 60000);
+    
     return user;
   }
 
   /**
-   * 清除所有用户缓存
+   * 删除用户（清除所有用户缓存）
    */
-  @CacheEvict({ allEntries: true, keyPrefix: 'user:' })
   public async deleteUser(id: string): Promise<boolean> {
     console.log(`[UserService] Deleting user ${id}...`);
-    return this.users.delete(id);
+    const deleted = this.users.delete(id);
+    
+    // 清除缓存（简单起见，这里只清除单个用户的缓存）
+    await this.cache.delete(`user:${id}`);
+    
+    return deleted;
   }
 }
 
@@ -241,10 +293,27 @@ app.listen(port);
 
 console.log(`🚀 Cache Example Server running on http://localhost:${port}`);
 console.log(`\n📝 Example endpoints:`);
-console.log(`  GET  /api/users/:id          - Get user (cached)`);
+console.log(`  GET  /api/users/:id          - Get user (cached with getOrSet)`);
 console.log(`  POST /api/users               - Create user (updates cache)`);
 console.log(`  PUT  /api/users/:id           - Update user (evicts cache)`);
 console.log(`  DELETE /api/users/:id         - Delete user (evicts cache)`);
-console.log(`  GET  /api/products/:id        - Get product (manual cache)`);
+console.log(`  GET  /api/products/:id        - Get product (manual cache check)`);
 console.log(`  GET  /api/products/:id/cached - Get product (getOrSet)`);
 console.log(`  DELETE /api/products/:id/cache - Clear product cache`);
+
+console.log(`\n🧪 Test cache behavior:`);
+console.log(`  # 1. First request (cache miss, see "Fetching from database...")`);
+console.log(`  curl http://localhost:${port}/api/users/1`);
+console.log(`\n  # 2. Second request (cache hit, no "Fetching..." log)`);
+console.log(`  curl http://localhost:${port}/api/users/1`);
+console.log(`\n  # 3. Update user (evicts cache)`);
+console.log(`  curl -X PUT http://localhost:${port}/api/users/1 \\`);
+console.log(`    -H "Content-Type: application/json" \\`);
+console.log(`    -d '{"name":"Alice Updated","email":"alice@example.com"}'`);
+console.log(`\n  # 4. Request again (cache miss after eviction)`);
+console.log(`  curl http://localhost:${port}/api/users/1`);
+
+console.log(`\n💡 Watch the console for cache behavior:`);
+console.log(`  - "Fetching from database..." = cache miss`);
+console.log(`  - No log = cache hit`);
+console.log(`  - "Cache hit for product..." = manual cache hit`);
