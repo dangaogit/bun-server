@@ -319,35 +319,11 @@ CacheModule.forRoot({
 })
 ```
 
+**注意**：`@Cacheable`、`@CacheEvict`、`@CachePut` 装饰器目前是未实现的功能（只有装饰器定义，没有拦截器实现），所以使用 `CacheService` 手动缓存。
+
 **使用示例**：
 ```typescript
-// 装饰器方式
-@Injectable()
-class UserService {
-  // 缓存方法结果
-  @Cacheable({ key: 'user:{id}', ttl: 60000 })
-  async findUser(id: string) {
-    console.log('Fetching from database...');
-    return await this.users.get(id);
-  }
-
-  // 清除缓存
-  @CacheEvict({ key: 'user:{id}' })
-  async updateUser(id: string, data: User) {
-    return await this.users.set(id, data);
-  }
-
-  // 更新缓存
-  @CachePut({ key: 'user:{id}', ttl: 60000 })
-  async createUser(name: string) {
-    const id = crypto.randomUUID();
-    const user = { id, name };
-    this.users.set(id, user);
-    return user;
-  }
-}
-
-// 手动方式
+// 推荐：使用 CacheService 的 getOrSet
 @Injectable()
 class ProductService {
   constructor(

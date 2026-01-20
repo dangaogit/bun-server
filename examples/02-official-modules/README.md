@@ -247,35 +247,11 @@ CacheModule.forRoot({
 })
 ```
 
+**Note**: `@Cacheable`, `@CacheEvict`, `@CachePut` decorators are currently unimplemented (decorators exist but no interceptor). Use `CacheService` for manual caching.
+
 **Usage**:
 ```typescript
-// Decorator approach
-@Injectable()
-class UserService {
-  // Cache method result
-  @Cacheable({ key: 'user:{id}', ttl: 60000 })
-  async findUser(id: string) {
-    console.log('Fetching from database...');
-    return await this.users.get(id);
-  }
-
-  // Clear cache
-  @CacheEvict({ key: 'user:{id}' })
-  async updateUser(id: string, data: User) {
-    return await this.users.set(id, data);
-  }
-
-  // Update cache
-  @CachePut({ key: 'user:{id}', ttl: 60000 })
-  async createUser(name: string) {
-    const id = crypto.randomUUID();
-    const user = { id, name };
-    this.users.set(id, user);
-    return user;
-  }
-}
-
-// Manual approach
+// Recommended: CacheService with getOrSet
 @Injectable()
 class ProductService {
   constructor(

@@ -56,8 +56,11 @@ import {
 /**
  * 用户服务 - 演示使用 CacheService 进行缓存
  * 
- * 注意：@Cacheable、@CacheEvict、@CachePut 装饰器目前是未实现的功能
- * （只有装饰器定义，没有拦截器实现），所以这里使用 CacheService 手动缓存
+ * ⚠️ 注意：@Cacheable、@CacheEvict、@CachePut 装饰器目前是未实现的功能
+ * 原因：只有装饰器定义，没有对应的拦截器实现来执行缓存逻辑
+ * 
+ * 当前推荐方式：使用 CacheService 手动缓存（如下所示）
+ * 未来计划：实现缓存装饰器的拦截器支持
  */
 @Injectable()
 class UserService {
