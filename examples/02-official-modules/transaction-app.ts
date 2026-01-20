@@ -56,13 +56,27 @@ class AccountRepository extends BaseRepository<Account> {
 // 账户服务
 @Injectable()
 class AccountService {
+  private initialized = false;
+
   public constructor(private readonly accountRepository: AccountRepository) {}
 
   /**
-   * 初始化数据库表
+   * 确保数据库表已初始化（懒初始化）
    */
-  public async initialize(): Promise<void> {
+  private async ensureInitialized(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+
     const db = this.accountRepository['databaseService'] as DatabaseService;
+
+    // 确保数据库连接已建立
+    const connection = db.getConnection();
+    if (!connection) {
+      await db.initialize();
+    }
+
+    // 创建账户表
     db.query(`
       CREATE TABLE IF NOT EXISTS accounts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,6 +84,7 @@ class AccountService {
         balance REAL NOT NULL DEFAULT 0
       )
     `);
+    this.initialized = true;
   }
 
   /**
@@ -77,6 +92,7 @@ class AccountService {
    */
   @Transactional()
   public async createAccount(name: string, initialBalance: number): Promise<Account> {
+    await this.ensureInitialized();
     return await this.accountRepository.create({ name, balance: initialBalance });
   }
 
@@ -89,6 +105,7 @@ class AccountService {
     toId: number,
     amount: number,
   ): Promise<void> {
+    await this.ensureInitialized();
     const fromAccount = await this.accountRepository.findById(fromId);
     const toAccount = await this.accountRepository.findById(toId);
 
@@ -110,6 +127,7 @@ class AccountService {
   public async batchTransfer(
     transfers: Array<{ fromId: number; toId: number; amount: number }>,
   ): Promise<void> {
+    await this.ensureInitialized();
     for (const transfer of transfers) {
       // 每个转账都在嵌套事务中执行
       await this.transferMoneyInNestedTransaction(
@@ -140,6 +158,7 @@ class AccountService {
     name: string,
     initialBalance: number,
   ): Promise<Account> {
+    await this.ensureInitialized();
     return await this.accountRepository.create({ name, balance: initialBalance });
   }
 
@@ -148,6 +167,7 @@ class AccountService {
    */
   @Transactional({ readOnly: true })
   public async getAccountBalance(id: number): Promise<number> {
+    await this.ensureInitialized();
     const account = await this.accountRepository.findById(id);
     return account?.balance ?? 0;
   }
@@ -157,6 +177,7 @@ class AccountService {
    */
   @Transactional({ isolationLevel: IsolationLevel.READ_COMMITTED })
   public async updateAccountWithIsolation(id: number, balance: number): Promise<Account> {
+    await this.ensureInitialized();
     return await this.accountRepository.update(id, { balance });
   }
 }
@@ -235,13 +256,6 @@ class AccountController {
   }
 }
 
-// 应用模块
-@Module({
-  controllers: [AccountController],
-  providers: [AccountService, AccountRepository],
-})
-class AppModule {}
-
 // 配置数据库模块
 DatabaseModule.forRoot({
   database: {
@@ -253,24 +267,24 @@ DatabaseModule.forRoot({
   enableHealthCheck: true,
 });
 
+// 应用模块
+@Module({
+  imports: [DatabaseModule],
+  controllers: [AccountController],
+  providers: [AccountService, AccountRepository],
+})
+class AppModule {}
+
 // 创建应用
 const app = new Application({
   port: 3000,
 });
 
 // 注册模块
-app.registerModule(DatabaseModule);
 app.registerModule(AppModule);
 
-// 启动应用并初始化数据库
-(async () => {
-  await app.listen();
-
-  // 初始化数据库表
-  const container = app.getContainer();
-  const accountService = container.resolve<AccountService>(AccountService);
-  await accountService.initialize();
-
+// 启动应用
+app.listen().then(() => {
   console.log('🚀 Server started on http://localhost:3000');
   console.log('💰 Accounts API: http://localhost:3000/api/accounts');
   console.log('\n示例请求:');
@@ -282,4 +296,4 @@ app.registerModule(AppModule);
   console.log('     Body: { "fromId": 1, "toId": 2, "amount": 100 }');
   console.log('\n  3. 查询余额:');
   console.log('     GET http://localhost:3000/api/accounts/1/balance');
-})();
+});
