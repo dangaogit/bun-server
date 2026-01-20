@@ -245,8 +245,12 @@ export class ControllerRegistry {
       // 如果方法路径为空，返回基础路径
       return base === '/' ? '/' : base;
     }
-    
-    // 组合路径
+
+    // 组合路径：如果 base 是 '/'，直接返回 '/' + method，避免 '//method'
+    if (base === '/') {
+      return '/' + method;
+    }
+
     return base + '/' + method;
   }
 

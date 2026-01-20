@@ -203,5 +203,78 @@ describe('Controller Path Combination', () => {
     const rootResponse = await fetch(`http://localhost:${port}/`);
     expect(rootResponse.status).toBe(404);
   });
+
+  test('should correctly combine root controller "/" with method path "/health"', async () => {
+    // 这是 metrics-rate-limit-app.ts 示例中的场景
+    // @Controller('/') + @GET('/health') 应该映射到 /health，而不是 //health
+    @Controller('/')
+    class HealthController {
+      @GET('/health')
+      public health() {
+        return { status: 'ok' };
+      }
+
+      @GET('/')
+      public index() {
+        return { message: 'index' };
+      }
+    }
+
+    app.registerController(HealthController);
+    await app.listen();
+
+    // /health 应该正常访问（修复前会得到 404，因为注册的路径是 //health）
+    const healthResponse = await fetch(`http://localhost:${port}/health`);
+    expect(healthResponse.status).toBe(200);
+    const healthData = await healthResponse.json();
+    expect(healthData.status).toBe('ok');
+
+    // / 应该正常访问
+    const rootResponse = await fetch(`http://localhost:${port}/`);
+    expect(rootResponse.status).toBe(200);
+    const rootData = await rootResponse.json();
+    expect(rootData.message).toBe('index');
+
+    // //health 不应该被访问到（或者应该重定向/返回 404）
+    // 注：大多数 HTTP 服务器会规范化 //health 为 /health，所以这里可能返回 200
+  });
+
+  test('should correctly combine root controller "/" with multiple method paths', async () => {
+    @Controller('/')
+    class RootController {
+      @GET('/api/status')
+      public status() {
+        return { status: 'running' };
+      }
+
+      @GET('/api/info')
+      public info() {
+        return { info: 'test' };
+      }
+
+      @POST('/api/data')
+      public data() {
+        return { received: true };
+      }
+    }
+
+    app.registerController(RootController);
+    await app.listen();
+
+    // 所有路径都应该正常工作
+    const statusResponse = await fetch(`http://localhost:${port}/api/status`);
+    expect(statusResponse.status).toBe(200);
+    expect((await statusResponse.json()).status).toBe('running');
+
+    const infoResponse = await fetch(`http://localhost:${port}/api/info`);
+    expect(infoResponse.status).toBe(200);
+    expect((await infoResponse.json()).info).toBe('test');
+
+    const dataResponse = await fetch(`http://localhost:${port}/api/data`, {
+      method: 'POST',
+    });
+    expect(dataResponse.status).toBe(200);
+    expect((await dataResponse.json()).received).toBe(true);
+  });
 });
 
