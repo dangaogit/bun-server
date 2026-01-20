@@ -1,5 +1,10 @@
 /**
  * 基础路由使用示例
+ * 
+ * 演示如何使用底层 RouteRegistry 直接注册路由（无装饰器方式）
+ * 
+ * 注意：必须在创建 Application 之后注册路由，
+ * 因为 Application 构造函数会清空 RouteRegistry
  */
 import {
   Application,
@@ -10,7 +15,25 @@ import {
 } from '@dangao/bun-server';
 import type { Context } from '@dangao/bun-server';
 
-// 获取路由注册表
+// 启动应用
+ConfigModule.forRoot({
+  defaultConfig: {
+    app: {
+      port: 3000,
+    },
+  },
+});
+
+// 先创建 Application
+const app = new Application();
+app.registerModule(ConfigModule);
+
+const config = app
+  .getContainer()
+  .resolve<ConfigService>(CONFIG_SERVICE_TOKEN);
+const port = config.get<number>('app.port', 3000) ?? 3000;
+
+// 在创建 Application 之后获取路由注册表
 const registry = RouteRegistry.getInstance();
 
 // 注册路由
@@ -37,23 +60,7 @@ registry.delete('/api/users/:id', (ctx: Context) => {
   return ctx.createResponse({ message: `Delete user ${id}` });
 });
 
-// 启动应用
-ConfigModule.forRoot({
-  defaultConfig: {
-    app: {
-      port: 3000,
-    },
-  },
-});
-
-const app = new Application();
-app.registerModule(ConfigModule);
-
-const config = app
-  .getContainer()
-  .resolve<ConfigService>(CONFIG_SERVICE_TOKEN);
-const port = config.get<number>('app.port', 3000) ?? 3000;
-
+// 启动服务器
 app.listen(port);
 
 console.log(`Server running at http://localhost:${port}`);
