@@ -1,3 +1,44 @@
+/**
+ * Full Features Example - 完整功能示例
+ * 
+ * 演示功能：
+ * 1. 多个中间件组合（Logger, CORS, FileUpload, StaticFile）
+ * 2. 输入验证装饰器（@Validate, IsEmail, MinLength）
+ * 3. 控制器级中间件（@UseMiddleware）
+ * 4. 文件上传处理
+ * 5. 静态文件服务
+ * 6. WebSocket 集成
+ * 7. ConfigModule 配置管理
+ * 
+ * 运行方式：
+ *   bun run examples/01-core-features/full-app.ts
+ * 
+ * 测试：
+ *   # 1. 测试搜索接口（带验证）
+ *   curl http://localhost:3200/api/search?q=test
+ *   curl http://localhost:3200/api/search?q=a   # 验证失败（最少 2 个字符）
+ * 
+ *   # 2. 测试邮件订阅（需要认证 + 邮件验证）
+ *   curl -X POST http://localhost:3200/api/newsletter/subscribe \
+ *     -H "Authorization: demo-token" \
+ *     -H "Content-Type: application/json" \
+ *     -d '{"email":"test@example.com"}'
+ * 
+ *   # 3. 测试文件上传
+ *   echo "test content" > /tmp/test.txt
+ *   curl -X POST http://localhost:3200/api/files/upload \
+ *     -F "file=@/tmp/test.txt"
+ * 
+ *   # 4. 测试静态文件
+ *   curl http://localhost:3200/assets/test.txt
+ * 
+ *   # 5. 测试 WebSocket
+ *   # 使用 websocat: websocat ws://localhost:3200/ws/chat
+ *   # 或使用浏览器控制台：
+ *   # ws = new WebSocket('ws://localhost:3200/ws/chat')
+ *   # ws.onmessage = (e) => console.log(e.data)
+ *   # ws.send('Hello')
+ */
 
 import {
   Application,
@@ -159,3 +200,56 @@ app.registerController(SearchController);
 app.registerWebSocketGateway(ChatGateway);
 
 app.listen(port);
+
+// ==================== 测试说明 ====================
+
+console.log(`\n🚀 Server running at http://localhost:${port}\n`);
+
+console.log('📋 Available features:');
+console.log('  ✅ Logger middleware (request logging)');
+console.log('  ✅ CORS middleware (origin: *)');
+console.log('  ✅ File upload middleware (max 5MB)');
+console.log('  ✅ Static file middleware (/assets)');
+console.log('  ✅ Input validation (@Validate decorators)');
+console.log('  ✅ Controller-level middleware (@UseMiddleware)');
+console.log('  ✅ WebSocket support\n');
+
+console.log('🧪 Test commands:\n');
+
+console.log('1️⃣  Search API (with validation):');
+console.log(`   curl http://localhost:${port}/api/search?q=test`);
+console.log(`   curl http://localhost:${port}/api/search?q=a   # ❌ Validation error (min 2 chars)\n`);
+
+console.log('2️⃣  Newsletter API (requires auth + email validation):');
+console.log(`   curl -X POST http://localhost:${port}/api/newsletter/subscribe \\`);
+console.log(`     -H "Authorization: demo-token" \\`);
+console.log(`     -H "Content-Type: application/json" \\`);
+console.log(`     -d '{"email":"test@example.com"}'\n`);
+console.log(`   # Without auth token: 401 Unauthorized`);
+console.log(`   # Invalid email format: Validation error\n`);
+
+console.log('3️⃣  File Upload:');
+console.log(`   echo "test content" > /tmp/test.txt`);
+console.log(`   curl -X POST http://localhost:${port}/api/files/upload \\`);
+console.log(`     -F "file=@/tmp/test.txt"\n`);
+
+console.log('4️⃣  Static Files:');
+console.log(`   # First, create public directory and test file:`);
+console.log(`   mkdir -p ${staticRoot}`);
+console.log(`   echo "Hello from static file" > ${staticRoot}/test.txt`);
+console.log(`   curl http://localhost:${port}${staticPrefix}/test.txt\n`);
+
+console.log('5️⃣  WebSocket Chat:');
+console.log(`   # Using websocat (install: brew install websocat):`);
+console.log(`   websocat ws://localhost:${port}/ws/chat`);
+console.log(`   # Then type messages and press Enter\n`);
+console.log(`   # Or use browser console:`);
+console.log(`   ws = new WebSocket('ws://localhost:${port}/ws/chat')`);
+console.log(`   ws.onmessage = (e) => console.log('Received:', e.data)`);
+console.log(`   ws.send('Hello from browser')\n`);
+
+console.log('💡 Tips:');
+console.log(`   - Check console for request logs (Logger middleware)`);
+console.log(`   - Upload files are available at: /api/files/download/:name`);
+console.log(`   - Static files are served from: ${staticRoot}`);
+console.log(`   - CORS is enabled for all origins\n`);
