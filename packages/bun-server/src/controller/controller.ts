@@ -234,12 +234,32 @@ export class ControllerRegistry {
    * @param basePath - 基础路径
    * @param methodPath - 方法路径
    * @returns 组合后的路径
+   *
+   * 路径规范化规则：
+   * - [/ + /api/base] -> /api/base
+   * - [// + /api/base] -> /api/base
+   * - [/api + /base] -> /api/base
+   * - [/api/ + base] -> /api/base
+   * - [/api/base + ""] -> /api/base
+   * - [/api/base + /] -> /api/base
    */
   private combinePaths(basePath: string, methodPath: string): string {
-    // 规范化路径：确保 basePath 以 / 开头，不以 / 结尾
-    const base = basePath.replace(/\/$/, '').replace(/^\/?/, '/');
-    // methodPath 移除前导斜杠
-    const method = methodPath.replace(/^\//, '');
+    // 规范化 basePath：
+    // 1. 移除所有末尾斜杠
+    // 2. 确保以单个 / 开头
+    // 3. 合并多个连续斜杠为单个斜杠
+    let base = basePath
+      .replace(/\/+$/, '')    // 移除末尾所有斜杠
+      .replace(/^\/+/, '/')   // 确保开头只有一个斜杠
+      .replace(/\/+/g, '/');  // 合并多个连续斜杠
+
+    // 如果 base 为空，设为 /
+    if (!base) {
+      base = '/';
+    }
+
+    // 规范化 methodPath：移除前导斜杠
+    const method = methodPath.replace(/^\/+/, '');
 
     if (!method) {
       // 如果方法路径为空，返回基础路径
