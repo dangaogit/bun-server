@@ -49,15 +49,29 @@ HealthModule.forRoot({
 // 用户服务
 @Injectable()
 class UserService {
+  private initialized = false;
+
   public constructor(
     @Inject(DATABASE_SERVICE_TOKEN)
     private readonly database: DatabaseService,
   ) {}
 
   /**
-   * 初始化数据库表
+   * 确保数据库表已初始化（懒初始化）
    */
-  public async initialize(): Promise<void> {
+  private async ensureInitialized(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+
+    // 确保数据库连接已建立
+    // 注意：由于 DatabaseExtension 的初始化可能在模块注册时未完成，
+    // 我们在这里检查并手动初始化连接
+    const connection = this.database.getConnection();
+    if (!connection) {
+      await this.database.initialize();
+    }
+
     // 创建用户表
     this.database.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -67,17 +81,19 @@ class UserService {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    this.initialized = true;
   }
 
   /**
    * 创建用户
    */
   public async createUser(name: string, email: string): Promise<number> {
+    await this.ensureInitialized();
     this.database.query('INSERT INTO users (name, email) VALUES (?, ?)', [
       name,
       email,
     ]);
-    
+
     // 获取最后插入的 ID
     const result = this.database.query<{ id: number }>(
       'SELECT last_insert_rowid() as id',
@@ -91,6 +107,7 @@ class UserService {
   public async getAllUsers(): Promise<
     Array<{ id: number; name: string; email: string; created_at: string }>
   > {
+    await this.ensureInitialized();
     return this.database.query(
       'SELECT id, name, email, created_at FROM users ORDER BY id',
     );
@@ -105,13 +122,14 @@ class UserService {
     email: string;
     created_at: string;
   } | null> {
+    await this.ensureInitialized();
     const result = this.database.query<{
       id: number;
       name: string;
       email: string;
       created_at: string;
     }>('SELECT id, name, email, created_at FROM users WHERE id = ?', [id]);
-    
+
     return result[0] ?? null;
   }
 
@@ -124,6 +142,7 @@ class UserService {
     email: string;
     created_at: string;
   } | null> {
+    await this.ensureInitialized();
     const result = this.database.query<{
       id: number;
       name: string;
@@ -132,7 +151,7 @@ class UserService {
     }>('SELECT id, name, email, created_at FROM users WHERE email = ?', [
       email,
     ]);
-    
+
     return result[0] ?? null;
   }
 }
@@ -208,8 +227,10 @@ class UserController {
 
 // 应用模块
 @Module({
+  imports: [DatabaseModule, HealthModule],
   controllers: [UserController],
   providers: [UserService],
+  exports: [UserService], // 导出 UserService 以便在应用启动时访问
 })
 class AppModule {}
 
@@ -219,22 +240,16 @@ const app = new Application({
 });
 
 // 注册模块
-app.registerModule(DatabaseModule);
-app.registerModule(HealthModule);
 app.registerModule(AppModule);
 
-// 启动应用并初始化数据库
-(async () => {
-  await app.listen();
-  
-  // 初始化数据库表
-  const userService = app.getContainer().resolve<UserService>(UserService);
-  await userService.initialize();
-  
+// 启动应用
+app.listen().then(() => {
   console.log('🚀 Server started on http://localhost:3000');
   console.log('📊 Health check: http://localhost:3000/health');
   console.log('👥 Users API: http://localhost:3000/api/users');
   console.log('\n示例请求:');
+  console.log('  GET  http://localhost:3000/api/users');
+  console.log('  GET  http://localhost:3000/api/users/1');
   console.log('  POST http://localhost:3000/api/users');
-  console.log('  Body: { "name": "Alice", "email": "alice@example.com" }');
-})();
+  console.log('       Body: { "name": "Alice", "email": "alice@example.com" }');
+});
