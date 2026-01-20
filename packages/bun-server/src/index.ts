@@ -254,10 +254,17 @@ export {
   Cacheable,
   CacheEvict,
   CachePut,
+  EnableCacheProxy,
+  CacheServiceProxy,
+  CachePostProcessor,
+  CacheableInterceptor,
+  CacheEvictInterceptor,
+  CachePutInterceptor,
   MemoryCacheStore,
   RedisCacheStore,
   CACHE_SERVICE_TOKEN,
   CACHE_OPTIONS_TOKEN,
+  CACHE_POST_PROCESSOR_TOKEN,
 } from './cache';
 export type {
   CacheModuleOptions,

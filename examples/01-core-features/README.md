@@ -98,15 +98,46 @@ Learn `full-app.ts`:
 - ✅ File upload handling
 - ✅ WebSocket integration
 
-**Feature demo**:
+**Run**:
 ```bash
-# File upload
-curl -X POST http://localhost:3200/api/files/upload \
-  -F "file=@/path/to/file.txt"
-
-# WebSocket chat
-# Connect using WebSocket client to ws://localhost:3200/ws/chat
+bun run examples/01-core-features/full-app.ts
 ```
+
+**Test**:
+```bash
+# 1. Search API (with validation)
+curl http://localhost:3200/api/search?q=test
+curl http://localhost:3200/api/search?q=a   # Validation error (min 2 chars)
+
+# 2. Newsletter API (requires auth + email validation)
+curl -X POST http://localhost:3200/api/newsletter/subscribe \
+  -H "Authorization: demo-token" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com"}'
+
+# 3. File Upload
+echo "test content" > /tmp/test.txt
+curl -X POST http://localhost:3200/api/files/upload \
+  -F "file=@/tmp/test.txt"
+
+# 4. Static Files (first create directory and file)
+mkdir -p ./public
+echo "Hello from static file" > ./public/test.txt
+curl http://localhost:3200/assets/test.txt
+
+# 5. WebSocket Chat
+# Using websocat: websocat ws://localhost:3200/ws/chat
+# Or browser console:
+ws = new WebSocket('ws://localhost:3200/ws/chat')
+ws.onmessage = (e) => console.log('Received:', e.data)
+ws.send('Hello')
+```
+
+**Key Features**:
+- **Middleware Pipeline**: Multiple middleware working together
+- **Validation**: Declarative input validation with decorators
+- **File Handling**: Upload and static file serving
+- **Config-driven**: All settings from ConfigModule
 
 ## 💡 Core Concepts
 

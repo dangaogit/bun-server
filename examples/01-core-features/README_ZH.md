@@ -98,15 +98,46 @@ class UserAgentService {
 - ✅ 文件上传处理
 - ✅ WebSocket 集成
 
-**功能演示**：
+**运行**：
 ```bash
-# 文件上传
-curl -X POST http://localhost:3200/api/files/upload \
-  -F "file=@/path/to/file.txt"
-
-# WebSocket 聊天
-# 使用 WebSocket 客户端连接 ws://localhost:3200/ws/chat
+bun run examples/01-core-features/full-app.ts
 ```
+
+**测试**：
+```bash
+# 1. 搜索接口（带验证）
+curl http://localhost:3200/api/search?q=test
+curl http://localhost:3200/api/search?q=a   # 验证失败（最少 2 个字符）
+
+# 2. 邮件订阅（需要认证 + 邮件验证）
+curl -X POST http://localhost:3200/api/newsletter/subscribe \
+  -H "Authorization: demo-token" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com"}'
+
+# 3. 文件上传
+echo "test content" > /tmp/test.txt
+curl -X POST http://localhost:3200/api/files/upload \
+  -F "file=@/tmp/test.txt"
+
+# 4. 静态文件（先创建目录和文件）
+mkdir -p ./public
+echo "Hello from static file" > ./public/test.txt
+curl http://localhost:3200/assets/test.txt
+
+# 5. WebSocket 聊天
+# 使用 websocat: websocat ws://localhost:3200/ws/chat
+# 或使用浏览器控制台：
+ws = new WebSocket('ws://localhost:3200/ws/chat')
+ws.onmessage = (e) => console.log('收到:', e.data)
+ws.send('Hello')
+```
+
+**核心特性**：
+- **中间件管道**：多个中间件协同工作
+- **验证**：声明式输入验证
+- **文件处理**：上传和静态文件服务
+- **配置驱动**：所有设置来自 ConfigModule
 
 ## 💡 核心概念详解
 

@@ -80,6 +80,8 @@ class UserRepository extends BaseRepository<User> {
 // 用户服务
 @Injectable()
 class UserService {
+  private initialized = false;
+
   public constructor(
     private readonly userRepository: UserRepository,
     @Inject(DATABASE_SERVICE_TOKEN)
@@ -87,10 +89,20 @@ class UserService {
   ) {}
 
   /**
-   * 初始化数据库表
+   * 确保数据库表已初始化（懒初始化）
    */
-  public async initialize(): Promise<void> {
-    // 直接使用注入的 DatabaseService，避免访问 Repository 的私有属性
+  private async ensureInitialized(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+
+    // 确保数据库连接已建立
+    const connection = this.databaseService.getConnection();
+    if (!connection) {
+      await this.databaseService.initialize();
+    }
+
+    // 创建用户表
     this.databaseService.query(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,12 +112,15 @@ class UserService {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    this.initialized = true;
   }
 
   /**
    * 创建用户
    */
   public async createUser(data: { name: string; email: string; bio?: string }): Promise<User> {
+    await this.ensureInitialized();
+
     // 检查邮箱是否已存在
     const existing = await this.userRepository.findByEmail(data.email);
     if (existing) {
@@ -119,6 +134,7 @@ class UserService {
    * 获取所有用户
    */
   public async getAllUsers(): Promise<User[]> {
+    await this.ensureInitialized();
     return await this.userRepository.findAll();
   }
 
@@ -126,6 +142,7 @@ class UserService {
    * 根据 ID 获取用户
    */
   public async getUserById(id: number): Promise<User | null> {
+    await this.ensureInitialized();
     return await this.userRepository.findById(id);
   }
 
@@ -133,6 +150,7 @@ class UserService {
    * 更新用户
    */
   public async updateUser(id: number, data: Partial<User>): Promise<User> {
+    await this.ensureInitialized();
     return await this.userRepository.update(id, data);
   }
 
@@ -140,6 +158,7 @@ class UserService {
    * 删除用户
    */
   public async deleteUser(id: number): Promise<boolean> {
+    await this.ensureInitialized();
     return await this.userRepository.delete(id);
   }
 
@@ -147,6 +166,7 @@ class UserService {
    * 搜索用户
    */
   public async searchUsers(keyword: string): Promise<User[]> {
+    await this.ensureInitialized();
     return await this.userRepository.searchByName(keyword);
   }
 }
@@ -275,13 +295,6 @@ class UserController {
   }
 }
 
-// 应用模块
-@Module({
-  controllers: [UserController],
-  providers: [UserService, UserRepository],
-})
-class AppModule {}
-
 // 配置数据库模块
 DatabaseModule.forRoot({
   database: {
@@ -298,25 +311,24 @@ HealthModule.forRoot({
   indicators: [],
 });
 
+// 应用模块
+@Module({
+  imports: [DatabaseModule, HealthModule],
+  controllers: [UserController],
+  providers: [UserService, UserRepository],
+})
+class AppModule {}
+
 // 创建应用
 const app = new Application({
   port: 3000,
 });
 
 // 注册模块
-app.registerModule(DatabaseModule);
-app.registerModule(HealthModule);
 app.registerModule(AppModule);
 
-// 启动应用并初始化数据库
-(async () => {
-  await app.listen();
-
-  // 初始化数据库表
-  const container = app.getContainer();
-  const userService = container.resolve<UserService>(UserService);
-  await userService.initialize();
-
+// 启动应用
+app.listen().then(() => {
   console.log('🚀 Server started on http://localhost:3000');
   console.log('📊 Health check: http://localhost:3000/health');
   console.log('👥 Users API: http://localhost:3000/api/users');
@@ -324,4 +336,4 @@ app.registerModule(AppModule);
   console.log('  POST http://localhost:3000/api/users');
   console.log('  Body: { "name": "Alice", "email": "alice@example.com", "bio": "Developer" }');
   console.log('  GET  http://localhost:3000/api/users/search?q=Alice');
-})();
+});

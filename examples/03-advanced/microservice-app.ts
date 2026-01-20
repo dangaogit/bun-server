@@ -286,6 +286,25 @@ app.registerModule(MyModule);
 
 // 启动应用
 app.listen(3000).then(() => {
-  console.log('Microservice app started on http://localhost:3000');
+  console.log('🚀 Microservice app started on http://localhost:3000');
+  console.log('');
+  console.log('⚠️  注意: 此示例需要运行 Nacos 服务器才能正常工作');
+  console.log('   Nacos 下载: https://nacos.io/download/nacos-server/');
+  console.log('   默认地址: http://localhost:8848');
+  console.log('');
+  console.log('📡 API 端点:');
+  console.log('   GET  /api/config    - 配置中心示例（获取配置、监听变更）');
+  console.log('   POST /api/register  - 服务注册示例（注册服务、查询实例）');
+  console.log('   GET  /api/call      - 服务调用示例（负载均衡、熔断、限流）');
+  console.log('');
+  console.log('📋 测试命令:');
+  console.log('   curl http://localhost:3000/api/config');
+  console.log('   curl -X POST http://localhost:3000/api/register');
+  console.log('   curl http://localhost:3000/api/call');
+  console.log('');
+  console.log('📖 功能说明:');
+  console.log('   - ConfigCenter: 配置中心，支持动态配置获取和监听');
+  console.log('   - ServiceRegistry: 服务注册中心，支持服务注册/发现');
+  console.log('   - ServiceClient: 服务调用客户端，支持负载均衡、熔断、限流、重试');
 });
 
