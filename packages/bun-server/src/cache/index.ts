@@ -1,4 +1,4 @@
-export { CacheModule } from './cache-module';
+export { CacheModule, CACHE_POST_PROCESSOR_TOKEN } from './cache-module';
 export { CacheService } from './service';
 export {
   Cacheable,
@@ -25,3 +25,18 @@ export type {
   CacheModuleOptions,
   RedisCacheStoreOptions,
 } from './types';
+export {
+  CacheServiceProxy,
+  CachePostProcessor,
+  EnableCacheProxy,
+  isCacheProxyEnabled,
+  CACHE_PROXY_ENABLED_KEY,
+} from './service-proxy';
+export {
+  CacheableInterceptor,
+  CacheEvictInterceptor,
+  CachePutInterceptor,
+  CACHEABLE_INTERCEPTOR_KEY,
+  CACHE_EVICT_INTERCEPTOR_KEY,
+  CACHE_PUT_INTERCEPTOR_KEY,
+} from './interceptors';

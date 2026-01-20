@@ -1,6 +1,8 @@
 import "reflect-metadata";
 import {
   type DependencyMetadata,
+  type InstancePostProcessor,
+  INSTANCE_POST_PROCESSOR_TOKEN,
   Lifecycle,
   type ProviderConfig,
 } from "./types";
@@ -60,6 +62,11 @@ export class Container {
   >();
 
   /**
+   * 实例后处理器列表
+   */
+  private readonly postProcessors: InstancePostProcessor[] = [];
+
+  /**
    * 注册提供者
    * @param token - 提供者标识符（类构造函数或 token）
    * @param config - 提供者配置
@@ -110,6 +117,45 @@ export class Container {
     this.providers.set(tokenKey, {
       lifecycle: Lifecycle.Singleton,
     });
+  }
+
+  /**
+   * 注册实例后处理器
+   * @param processor - 后处理器实例
+   */
+  public registerPostProcessor(processor: InstancePostProcessor): void {
+    this.postProcessors.push(processor);
+    // 按优先级排序（数字越小优先级越高）
+    this.postProcessors.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+  }
+
+  /**
+   * 应用所有后处理器（包括父容器的后处理器）
+   * @param instance - 原始实例
+   * @param constructor - 构造函数
+   * @param originContainer - 原始调用容器（用于后处理器解析依赖）
+   * @returns 处理后的实例
+   */
+  private applyPostProcessors<T>(
+    instance: T,
+    constructor: Constructor<T>,
+    originContainer?: Container,
+  ): T {
+    // 使用原始容器或当前容器
+    const containerForProcessors = originContainer ?? this;
+    let result = instance;
+
+    // 先应用父容器的后处理器
+    if (this.parent) {
+      result = (this.parent as Container).applyPostProcessors(result, constructor, containerForProcessors);
+    }
+
+    // 再应用本容器的后处理器
+    // 传递原始调用容器，而不是当前容器
+    for (const processor of this.postProcessors) {
+      result = processor.postProcess(result, constructor, containerForProcessors);
+    }
+    return result;
   }
 
   /**
@@ -321,16 +367,19 @@ export class Container {
   private instantiate<T>(constructor: Constructor<T>): T {
     const plan = this.getDependencyPlan(constructor);
 
+    let instance: T;
     if (plan.paramLength === 0) {
-      return new constructor();
+      instance = new constructor();
+    } else {
+      const dependencies = new Array(plan.paramLength);
+      for (let index = 0; index < plan.paramLength; index++) {
+        dependencies[index] = this.resolveFromPlan(constructor, plan, index);
+      }
+      instance = new constructor(...dependencies);
     }
 
-    const dependencies = new Array(plan.paramLength);
-    for (let index = 0; index < plan.paramLength; index++) {
-      dependencies[index] = this.resolveFromPlan(constructor, plan, index);
-    }
-
-    return new constructor(...dependencies);
+    // 应用后处理器
+    return this.applyPostProcessors(instance, constructor);
   }
 
   /**
@@ -356,6 +405,7 @@ export class Container {
     this.singletons.clear();
     this.typeToToken.clear();
     this.dependencyPlans.clear();
+    this.postProcessors.length = 0;
     // scopedInstances 使用 WeakMap，当 Context 对象被 GC 时会自动清理
   }
 

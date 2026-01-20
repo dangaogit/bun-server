@@ -16,6 +16,7 @@ import { InterceptorRegistry, INTERCEPTOR_REGISTRY_TOKEN } from '../interceptor'
 import { CONFIG_SERVICE_TOKEN } from '../config/types';
 import { ConfigService } from '../config/service';
 import { ConfigModule } from '../config/config-module';
+import { CacheModule, CACHE_POST_PROCESSOR_TOKEN } from '../cache';
 import { LoggerManager } from '@dangao/logsmith';
 
 /**
@@ -285,7 +286,8 @@ export class Application {
    */
   public registerModule(moduleClass: ModuleClass): void {
     const registry = ModuleRegistry.getInstance();
-    registry.register(moduleClass, this.getContainer());
+    const container = this.getContainer();
+    registry.register(moduleClass, container);
     
     // 注册模块的扩展和中间件
     const extensions = registry.getModuleExtensions(moduleClass);
@@ -296,6 +298,28 @@ export class Application {
     const middlewares = registry.getModuleMiddlewares(moduleClass);
     for (const middleware of middlewares) {
       this.use(middleware);
+    }
+
+    // 检测并注册缓存后处理器
+    // CacheModule.getPostProcessor() 会在 forRoot() 被调用后返回后处理器
+    this.registerCachePostProcessorIfNeeded(container);
+  }
+
+  /**
+   * 检测并注册缓存后处理器
+   * @param container - DI 容器
+   */
+  private registerCachePostProcessorIfNeeded(container: ReturnType<typeof this.getContainer>): void {
+    // 直接从 CacheModule 获取后处理器
+    // 如果 CacheModule.forRoot() 被调用过，后处理器就会存在
+    const postProcessor = CacheModule.getPostProcessor();
+    if (postProcessor) {
+      // 检查是否已经注册过（避免重复注册）
+      // @ts-expect-error - 访问私有属性
+      const existingProcessors = container.postProcessors as unknown[];
+      if (!existingProcessors.includes(postProcessor)) {
+        container.registerPostProcessor(postProcessor);
+      }
     }
   }
 
