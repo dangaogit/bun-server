@@ -699,7 +699,126 @@ SecurityModule.forRoot({
 
 For detailed documentation, see [Guards](./guards.md).
 
-## 17. Testing Recommendations
+## 17. Global Modules
+
+Global modules allow you to share providers across all modules without explicit imports. This is useful for commonly used services like configuration, logging, or caching.
+
+### Creating a Global Module
+
+Use the `@Global()` decorator to mark a module as global:
+
+```ts
+import { Global, Injectable, Module } from "@dangao/bun-server";
+
+const CONFIG_TOKEN = Symbol("config");
+
+@Injectable()
+class ConfigService {
+  public get(key: string): string {
+    return `config:${key}`;
+  }
+}
+
+@Global()
+@Module({
+  providers: [
+    {
+      provide: CONFIG_TOKEN,
+      useClass: ConfigService,
+    },
+  ],
+  exports: [CONFIG_TOKEN],
+})
+class GlobalConfigModule {}
+```
+
+### Using Global Module Exports
+
+Other modules can use the exported providers without importing the global module:
+
+```ts
+@Injectable()
+class UserService {
+  public constructor(
+    @Inject(CONFIG_TOKEN) private readonly config: ConfigService,
+  ) {}
+
+  public getAppName(): string {
+    return this.config.get("app.name");
+  }
+}
+
+// UserModule does NOT need to import GlobalConfigModule
+@Module({
+  providers: [UserService],
+})
+class UserModule {}
+```
+
+### Registering Global Modules
+
+Global modules must be registered with the application, typically in your root module:
+
+```ts
+@Module({
+  imports: [
+    GlobalConfigModule, // Register the global module once
+    GlobalLoggerModule,
+    UserModule, // UserModule can use ConfigService without importing it
+    ProductModule,
+  ],
+})
+class AppModule {}
+
+const app = new Application();
+app.registerModule(AppModule);
+```
+
+### Key Points
+
+- **Single Registration**: Global modules only need to be registered once (usually in the root module)
+- **Automatic Availability**: Exports from global modules are available to all other modules
+- **Singleton Sharing**: Global module providers maintain singleton behavior across the application
+- **No Import Required**: Other modules don't need to add global modules to their `imports` array
+
+### Use Cases
+
+Global modules are ideal for:
+
+- **Configuration Services**: App-wide configuration access
+- **Logging Services**: Centralized logging
+- **Cache Services**: Shared caching layer
+- **Database Connections**: Shared database access
+- **Event Emitters**: Application-wide event bus
+
+### Example: Multiple Global Modules
+
+```ts
+@Global()
+@Module({
+  providers: [{ provide: LOGGER_TOKEN, useClass: LoggerService }],
+  exports: [LOGGER_TOKEN],
+})
+class GlobalLoggerModule {}
+
+@Global()
+@Module({
+  providers: [{ provide: CACHE_TOKEN, useClass: CacheService }],
+  exports: [CACHE_TOKEN],
+})
+class GlobalCacheModule {}
+
+// App service can use both without explicit imports
+@Injectable()
+class AppService {
+  public constructor(
+    @Inject(LOGGER_TOKEN) private readonly logger: LoggerService,
+    @Inject(CACHE_TOKEN) private readonly cache: CacheService,
+  ) {}
+}
+```
+
+## 18. Testing Recommendations
 
 - Use `tests/utils/test-port.ts` to get auto-incrementing ports, avoiding local
   conflicts.

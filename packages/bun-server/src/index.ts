@@ -25,7 +25,7 @@ export type {
   ControllerMetadata,
 } from './controller';
 export { Container } from './di/container';
-export { Injectable, Inject } from './di/decorators';
+export { Injectable, Inject, Global, isGlobalModule, GLOBAL_MODULE_METADATA_KEY } from './di/decorators';
 export { Lifecycle, type ProviderConfig, type DependencyMetadata } from './di/types';
 export {
   Module,

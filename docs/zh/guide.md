@@ -436,7 +436,126 @@ SecurityModule.forRoot({
 
 详细文档请参阅 [守卫](./guards.md)。
 
-## 10. 测试建议
+## 10. 全局模块
+
+全局模块允许您在所有模块之间共享提供者，无需显式导入。这对于常用的服务（如配置、日志或缓存）非常有用。
+
+### 创建全局模块
+
+使用 `@Global()` 装饰器将模块标记为全局模块：
+
+```ts
+import { Global, Injectable, Module } from "@dangao/bun-server";
+
+const CONFIG_TOKEN = Symbol("config");
+
+@Injectable()
+class ConfigService {
+  public get(key: string): string {
+    return `config:${key}`;
+  }
+}
+
+@Global()
+@Module({
+  providers: [
+    {
+      provide: CONFIG_TOKEN,
+      useClass: ConfigService,
+    },
+  ],
+  exports: [CONFIG_TOKEN],
+})
+class GlobalConfigModule {}
+```
+
+### 使用全局模块导出
+
+其他模块可以使用导出的提供者，无需导入全局模块：
+
+```ts
+@Injectable()
+class UserService {
+  public constructor(
+    @Inject(CONFIG_TOKEN) private readonly config: ConfigService,
+  ) {}
+
+  public getAppName(): string {
+    return this.config.get("app.name");
+  }
+}
+
+// UserModule 不需要导入 GlobalConfigModule
+@Module({
+  providers: [UserService],
+})
+class UserModule {}
+```
+
+### 注册全局模块
+
+全局模块必须在应用中注册，通常在根模块中：
+
+```ts
+@Module({
+  imports: [
+    GlobalConfigModule, // 只需注册一次全局模块
+    GlobalLoggerModule,
+    UserModule, // UserModule 可以使用 ConfigService，无需导入它
+    ProductModule,
+  ],
+})
+class AppModule {}
+
+const app = new Application();
+app.registerModule(AppModule);
+```
+
+### 关键要点
+
+- **单次注册**：全局模块只需要注册一次（通常在根模块中）
+- **自动可用**：全局模块的导出对所有其他模块自动可用
+- **单例共享**：全局模块提供者在整个应用中保持单例行为
+- **无需导入**：其他模块不需要将全局模块添加到其 `imports` 数组中
+
+### 使用场景
+
+全局模块非常适合：
+
+- **配置服务**：全应用范围的配置访问
+- **日志服务**：集中式日志记录
+- **缓存服务**：共享缓存层
+- **数据库连接**：共享数据库访问
+- **事件发射器**：应用范围的事件总线
+
+### 示例：多个全局模块
+
+```ts
+@Global()
+@Module({
+  providers: [{ provide: LOGGER_TOKEN, useClass: LoggerService }],
+  exports: [LOGGER_TOKEN],
+})
+class GlobalLoggerModule {}
+
+@Global()
+@Module({
+  providers: [{ provide: CACHE_TOKEN, useClass: CacheService }],
+  exports: [CACHE_TOKEN],
+})
+class GlobalCacheModule {}
+
+// AppService 可以使用两者，无需显式导入
+@Injectable()
+class AppService {
+  public constructor(
+    @Inject(LOGGER_TOKEN) private readonly logger: LoggerService,
+    @Inject(CACHE_TOKEN) private readonly cache: CacheService,
+  ) {}
+}
+```
+
+## 11. 测试建议
 
 - 使用 `tests/utils/test-port.ts` 获取自增端口，避免本地冲突。
 - 在 `afterEach` 钩子中调用 `RouteRegistry.getInstance().clear()` 和
