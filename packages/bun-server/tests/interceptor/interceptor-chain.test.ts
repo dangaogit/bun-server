@@ -1,199 +1,251 @@
+import { describe, expect, test, beforeEach } from 'bun:test';
 import 'reflect-metadata';
-import { describe, expect, test } from 'bun:test';
-import { InterceptorChain } from '../../src/interceptor';
-import type { Interceptor } from '../../src/interceptor';
+
+import { InterceptorChain } from '../../src/interceptor/interceptor-chain';
+import type { Interceptor } from '../../src/interceptor/types';
 import { Container } from '../../src/di/container';
 import { Context } from '../../src/core/context';
 
 describe('InterceptorChain', () => {
-  test('should execute method directly when no interceptors', async () => {
-    const container = new Container();
-    const target = {};
-    const propertyKey = 'testMethod';
-    const originalMethod = () => 'result';
+  let container: Container;
+  let context: Context;
 
-    const result = await InterceptorChain.execute(
-      [],
-      target,
-      propertyKey,
-      originalMethod,
-      [],
-      container,
-    );
-
-    expect(result).toBe('result');
+  beforeEach(() => {
+    container = new Container();
+    const request = new Request('http://localhost/test');
+    context = new Context(request, container);
   });
 
-  test('should execute single interceptor', async () => {
-    const container = new Container();
-    const target = {};
-    const propertyKey = 'testMethod';
-    const originalMethod = () => 'result';
-    let executed = false;
+  describe('execute', () => {
+    test('should execute original method when no interceptors', async () => {
+      let methodCalled = false;
+      const originalMethod = () => {
+        methodCalled = true;
+        return 'result';
+      };
 
-    const interceptor: Interceptor = {
-      async execute(target, propertyKey, originalMethod, args, container, context) {
-        executed = true;
-        return await Promise.resolve(originalMethod.apply(target, args));
-      },
-    };
+      const result = await InterceptorChain.execute(
+        [],
+        {},
+        'testMethod',
+        originalMethod,
+        [],
+        container,
+        context,
+      );
 
-    const result = await InterceptorChain.execute(
-      [interceptor],
-      target,
-      propertyKey,
-      originalMethod,
-      [],
-      container,
-    );
+      expect(methodCalled).toBe(true);
+      expect(result).toBe('result');
+    });
 
-    expect(executed).toBe(true);
-    expect(result).toBe('result');
-  });
+    test('should execute single interceptor', async () => {
+      const calls: string[] = [];
 
-  test('should execute multiple interceptors in order', async () => {
-    const container = new Container();
-    const target = {};
-    const propertyKey = 'testMethod';
-    const originalMethod = () => 'result';
-    const executionOrder: string[] = [];
+      const interceptor: Interceptor = {
+        priority: 0,
+        execute: async (target, propertyKey, next, args, container, context) => {
+          calls.push('before');
+          const result = await next();
+          calls.push('after');
+          return result;
+        },
+      };
 
-    const interceptor1: Interceptor = {
-      async execute(target, propertyKey, originalMethod, args, container, context) {
-        executionOrder.push('interceptor1-before');
-        const result = await Promise.resolve(originalMethod.apply(target, args));
-        executionOrder.push('interceptor1-after');
-        return result;
-      },
-    };
+      const result = await InterceptorChain.execute(
+        [interceptor],
+        {},
+        'testMethod',
+        () => {
+          calls.push('method');
+          return 'result';
+        },
+        [],
+        container,
+        context,
+      );
 
-    const interceptor2: Interceptor = {
-      async execute(target, propertyKey, originalMethod, args, container, context) {
-        executionOrder.push('interceptor2-before');
-        const result = await Promise.resolve(originalMethod.apply(target, args));
-        executionOrder.push('interceptor2-after');
-        return result;
-      },
-    };
+      expect(calls).toEqual(['before', 'method', 'after']);
+      expect(result).toBe('result');
+    });
 
-    const result = await InterceptorChain.execute(
-      [interceptor1, interceptor2],
-      target,
-      propertyKey,
-      originalMethod,
-      [],
-      container,
-    );
+    test('should execute interceptors in order', async () => {
+      const calls: number[] = [];
 
-    expect(result).toBe('result');
-    // 执行顺序：interceptor1 -> interceptor2 -> method -> interceptor2 -> interceptor1
-    expect(executionOrder).toEqual([
-      'interceptor1-before',
-      'interceptor2-before',
-      'interceptor2-after',
-      'interceptor1-after',
-    ]);
-  });
+      const interceptor1: Interceptor = {
+        priority: 1,
+        execute: async (target, propertyKey, next) => {
+          calls.push(1);
+          const result = await next();
+          calls.push(-1);
+          return result;
+        },
+      };
 
-  test('should handle async method', async () => {
-    const container = new Container();
-    const target = {};
-    const propertyKey = 'testMethod';
-    const originalMethod = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      return 'async-result';
-    };
+      const interceptor2: Interceptor = {
+        priority: 2,
+        execute: async (target, propertyKey, next) => {
+          calls.push(2);
+          const result = await next();
+          calls.push(-2);
+          return result;
+        },
+      };
 
-    const interceptor: Interceptor = {
-      async execute(target, propertyKey, originalMethod, args, container, context) {
-        return await Promise.resolve(originalMethod.apply(target, args));
-      },
-    };
+      await InterceptorChain.execute(
+        [interceptor1, interceptor2],
+        {},
+        'testMethod',
+        () => {
+          calls.push(0);
+          return 'result';
+        },
+        [],
+        container,
+        context,
+      );
 
-    const result = await InterceptorChain.execute(
-      [interceptor],
-      target,
-      propertyKey,
-      originalMethod,
-      [],
-      container,
-    );
+      expect(calls).toEqual([1, 2, 0, -2, -1]);
+    });
 
-    expect(result).toBe('async-result');
-  });
+    test('should allow interceptor to modify return value', async () => {
+      const interceptor: Interceptor = {
+        priority: 0,
+        execute: async (target, propertyKey, next) => {
+          const result = await next();
+          return `modified-${result}`;
+        },
+      };
 
-  test('should propagate errors', async () => {
-    const container = new Container();
-    const target = {};
-    const propertyKey = 'testMethod';
-    const originalMethod = () => {
-      throw new Error('test error');
-    };
+      const result = await InterceptorChain.execute(
+        [interceptor],
+        {},
+        'testMethod',
+        () => 'original',
+        [],
+        container,
+        context,
+      );
 
-    const interceptor: Interceptor = {
-      async execute(target, propertyKey, originalMethod, args, container, context) {
-        return await Promise.resolve(originalMethod.apply(target, args));
-      },
-    };
+      expect(result).toBe('modified-original');
+    });
 
-    await expect(
-      InterceptorChain.execute([interceptor], target, propertyKey, originalMethod, [], container),
-    ).rejects.toThrow('test error');
-  });
+    test('should pass arguments to interceptors', async () => {
+      let receivedArgs: unknown[] = [];
 
-  test('should pass context to interceptors', async () => {
-    const container = new Container();
-    const target = {};
-    const propertyKey = 'testMethod';
-    const originalMethod = () => 'result';
-    const context = new Context(new Request('http://localhost/test'));
-    let receivedContext: Context | undefined;
+      const interceptor: Interceptor = {
+        priority: 0,
+        execute: async (target, propertyKey, next, args) => {
+          receivedArgs = args;
+          return await next();
+        },
+      };
 
-    const interceptor: Interceptor = {
-      async execute(target, propertyKey, originalMethod, args, container, ctx) {
-        receivedContext = ctx;
-        return await Promise.resolve(originalMethod.apply(target, args));
-      },
-    };
+      await InterceptorChain.execute(
+        [interceptor],
+        {},
+        'testMethod',
+        (a: number, b: string) => `${a}-${b}`,
+        [42, 'hello'],
+        container,
+        context,
+      );
 
-    await InterceptorChain.execute(
-      [interceptor],
-      target,
-      propertyKey,
-      originalMethod,
-      [],
-      container,
-      context,
-    );
+      expect(receivedArgs).toEqual([42, 'hello']);
+    });
 
-    expect(receivedContext).toBe(context);
-  });
+    test('should handle async original method', async () => {
+      const interceptor: Interceptor = {
+        priority: 0,
+        execute: async (target, propertyKey, next) => {
+          return await next();
+        },
+      };
 
-  test('should pass args to interceptors', async () => {
-    const container = new Container();
-    const target = {};
-    const propertyKey = 'testMethod';
-    const originalMethod = (a: string, b: number) => `${a}-${b}`;
-    let receivedArgs: unknown[] = [];
+      const result = await InterceptorChain.execute(
+        [interceptor],
+        {},
+        'testMethod',
+        async () => {
+          await new Promise((r) => setTimeout(r, 10));
+          return 'async-result';
+        },
+        [],
+        container,
+        context,
+      );
 
-    const interceptor: Interceptor = {
-      async execute(target, propertyKey, originalMethod, args, container, context) {
-        receivedArgs = args;
-        return await Promise.resolve(originalMethod.apply(target, args));
-      },
-    };
+      expect(result).toBe('async-result');
+    });
 
-    const result = await InterceptorChain.execute(
-      [interceptor],
-      target,
-      propertyKey,
-      originalMethod,
-      ['test', 123],
-      container,
-    );
+    test('should propagate errors from original method', async () => {
+      const interceptor: Interceptor = {
+        priority: 0,
+        execute: async (target, propertyKey, next) => {
+          return await next();
+        },
+      };
 
-    expect(receivedArgs).toEqual(['test', 123]);
-    expect(result).toBe('test-123');
+      await expect(
+        InterceptorChain.execute(
+          [interceptor],
+          {},
+          'testMethod',
+          () => {
+            throw new Error('Method error');
+          },
+          [],
+          container,
+          context,
+        ),
+      ).rejects.toThrow('Method error');
+    });
+
+    test('should propagate errors from interceptor', async () => {
+      const interceptor: Interceptor = {
+        priority: 0,
+        execute: async () => {
+          throw new Error('Interceptor error');
+        },
+      };
+
+      await expect(
+        InterceptorChain.execute(
+          [interceptor],
+          {},
+          'testMethod',
+          () => 'result',
+          [],
+          container,
+          context,
+        ),
+      ).rejects.toThrow('Interceptor error');
+    });
+
+    test('should allow interceptor to modify arguments', async () => {
+      let finalArgs: unknown[] = [];
+
+      const interceptor: Interceptor = {
+        priority: 0,
+        execute: async (target, propertyKey, next, args) => {
+          // Modify arguments by calling next with new args
+          return await next(...['modified', 42]);
+        },
+      };
+
+      const result = await InterceptorChain.execute(
+        [interceptor],
+        {},
+        'testMethod',
+        (...args: unknown[]) => {
+          finalArgs = args;
+          return 'done';
+        },
+        ['original', 0],
+        container,
+        context,
+      );
+
+      expect(finalArgs).toEqual(['modified', 42]);
+    });
   });
 });
-
