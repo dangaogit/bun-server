@@ -80,7 +80,11 @@ const app = new Application({ port });
 app.registerModule(AppModule);
 await app.listen(port);
 
-console.log(`Server running on http://localhost:${port}`);
-console.log(`Try: curl 'http://localhost:${port}/api/context/echo/123?name=alice' -H 'User-Agent: demo'`);
+console.log(`🚀 Server running on http://localhost:${port}`);
+console.log(`\n📝 Available endpoints:`);
+console.log(`  GET /api/context/echo/:id - Echo request info with context`);
+console.log(`\n🧪 Try it with curl:`);
+console.log(`  curl 'http://localhost:${port}/api/context/echo/123?name=alice' \\`);
+console.log(`       -H 'User-Agent: demo'`);
 
 

@@ -294,16 +294,19 @@ console.log(`  GET  /api/products/:id        - Get product (manual cache)`);
 console.log(`  GET  /api/products/:id/cached - Get product (CacheService.getOrSet)`);
 console.log(`  DELETE /api/products/:id/cache - Clear product cache`);
 
-console.log(`\n🧪 Test @Cacheable decorator:`);
+console.log(`\n🧪 Try it with curl:`);
 console.log(`  # 1. First request (cache miss, see "Fetching from database...")`);
 console.log(`  curl http://localhost:${port}/api/users/1`);
-console.log(`\n  # 2. Second request (cache hit, no "Fetching..." log)`);
+console.log(``);
+console.log(`  # 2. Second request (cache hit, no "Fetching..." log)`);
 console.log(`  curl http://localhost:${port}/api/users/1`);
-console.log(`\n  # 3. Update user (@CacheEvict clears cache)`);
+console.log(``);
+console.log(`  # 3. Update user (@CacheEvict clears cache)`);
 console.log(`  curl -X PUT http://localhost:${port}/api/users/1 \\`);
-console.log(`    -H "Content-Type: application/json" \\`);
-console.log(`    -d '{"name":"Alice Updated","email":"alice@example.com"}'`);
-console.log(`\n  # 4. Request again (cache miss after eviction)`);
+console.log(`       -H "Content-Type: application/json" \\`);
+console.log(`       -d '{"name":"Alice Updated","email":"alice@example.com"}'`);
+console.log(``);
+console.log(`  # 4. Request again (cache miss after eviction)`);
 console.log(`  curl http://localhost:${port}/api/users/1`);
 
 console.log(`\n💡 Watch the console for cache behavior:`);

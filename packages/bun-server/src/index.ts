@@ -504,4 +504,26 @@ export {
   type ServiceInstanceHealth,
   type MonitoringOptions,
 } from './microservice';
+// Events 模块
+export {
+  EventModule,
+  EventEmitterService,
+  EventListenerScanner,
+  OnEvent,
+  getOnEventMetadata,
+  isEventListenerClass,
+  EVENT_EMITTER_TOKEN,
+  EVENT_OPTIONS_TOKEN,
+  EVENT_LISTENER_SCANNER_TOKEN,
+  ON_EVENT_METADATA_KEY,
+  EVENT_LISTENER_CLASS_METADATA_KEY,
+  type EventEmitter,
+  type EventListener,
+  type EventMetadata,
+  type EventModuleOptions,
+  type ListenerOptions,
+  type OnEventMethodMetadata,
+  type OnEventOptions,
+  type RegisteredListener,
+} from './events';
 

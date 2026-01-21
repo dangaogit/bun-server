@@ -63,11 +63,30 @@ registry.delete('/api/users/:id', (ctx: Context) => {
 // 启动服务器
 app.listen(port);
 
-console.log(`Server running at http://localhost:${port}`);
-console.log('Try:');
-console.log(`  GET    http://localhost:${port}/api/users`);
-console.log(`  GET    http://localhost:${port}/api/users/123`);
-console.log(`  POST   http://localhost:${port}/api/users`);
-console.log(`  PUT    http://localhost:${port}/api/users/123`);
-console.log(`  DELETE http://localhost:${port}/api/users/123`);
+console.log(`🚀 Server running at http://localhost:${port}`);
+console.log(`\n📝 Available endpoints:`);
+console.log(`  GET    /api/users     - Get all users`);
+console.log(`  GET    /api/users/:id - Get user by ID`);
+console.log(`  POST   /api/users     - Create user`);
+console.log(`  PUT    /api/users/:id - Update user`);
+console.log(`  DELETE /api/users/:id - Delete user`);
+console.log(`\n🧪 Try it with curl:`);
+console.log(`  # Get all users`);
+console.log(`  curl http://localhost:${port}/api/users`);
+console.log(``);
+console.log(`  # Get user by ID`);
+console.log(`  curl http://localhost:${port}/api/users/123`);
+console.log(``);
+console.log(`  # Create user`);
+console.log(`  curl -X POST http://localhost:${port}/api/users \\`);
+console.log(`       -H "Content-Type: application/json" \\`);
+console.log(`       -d '{"message":"Create user"}'`);
+console.log(``);
+console.log(`  # Update user`);
+console.log(`  curl -X PUT http://localhost:${port}/api/users/123 \\`);
+console.log(`       -H "Content-Type: application/json" \\`);
+console.log(`       -d '{"message":"Update user"}'`);
+console.log(``);
+console.log(`  # Delete user`);
+console.log(`  curl -X DELETE http://localhost:${port}/api/users/123`);
 

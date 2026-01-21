@@ -281,25 +281,22 @@ app.registerModule(AppModule);
 const port = 3000;
 app.listen(port);
 
-console.log(`
-========================================
-  Global Module Demo App
-========================================
-
-Server running at http://localhost:${port}
-
-Available endpoints:
-  GET /                    - Home (list all endpoints)
-  GET /users               - List all users
-  GET /users/:id           - Get user by ID
-  GET /users/app-info      - Get app info (from global ConfigService)
-  GET /products            - List all products
-  GET /products/environment - Get current environment
-
-Key points:
-  - GlobalConfigModule and GlobalLoggerModule are marked with @Global()
-  - UserModule and ProductModule don't import these global modules
-  - Yet they can inject ConfigService and LoggerService directly
-
-Press Ctrl+C to stop the server.
-`);
+console.log(`🚀 Global Module Demo App running on http://localhost:${port}`);
+console.log(`\n📝 Available endpoints:`);
+console.log(`  GET /                     - Home (list all endpoints)`);
+console.log(`  GET /users                - List all users`);
+console.log(`  GET /users/:id            - Get user by ID`);
+console.log(`  GET /users/app-info       - Get app info (from global ConfigService)`);
+console.log(`  GET /products             - List all products`);
+console.log(`  GET /products/environment - Get current environment`);
+console.log(`\n🧪 Try it with curl:`);
+console.log(`  curl http://localhost:${port}/`);
+console.log(`  curl http://localhost:${port}/users`);
+console.log(`  curl http://localhost:${port}/users/1`);
+console.log(`  curl http://localhost:${port}/users/app-info`);
+console.log(`  curl http://localhost:${port}/products`);
+console.log(`  curl http://localhost:${port}/products/environment`);
+console.log(`\n💡 Key concepts:`);
+console.log(`  - GlobalConfigModule and GlobalLoggerModule are marked with @Global()`);
+console.log(`  - UserModule and ProductModule don't import these global modules`);
+console.log(`  - Yet they can inject ConfigService and LoggerService directly`);

@@ -699,7 +699,117 @@ SecurityModule.forRoot({
 
 For detailed documentation, see [Guards](./guards.md).
 
-## 17. Global Modules
+## 17. Event System
+
+The Event Module provides a powerful event-driven architecture for building loosely coupled applications.
+
+### Basic Usage
+
+```ts
+import {
+  EventModule,
+  Injectable,
+  Inject,
+  OnEvent,
+  EVENT_EMITTER_TOKEN,
+} from "@dangao/bun-server";
+import type { EventEmitter } from "@dangao/bun-server";
+
+// Define events
+const USER_CREATED = Symbol("user.created");
+
+interface UserCreatedEvent {
+  userId: string;
+  email: string;
+}
+
+// Service that publishes events
+@Injectable()
+class UserService {
+  public constructor(
+    @Inject(EVENT_EMITTER_TOKEN) private readonly eventEmitter: EventEmitter,
+  ) {}
+
+  public async createUser(email: string) {
+    const userId = "user-123";
+
+    // Publish event
+    this.eventEmitter.emit<UserCreatedEvent>(USER_CREATED, {
+      userId,
+      email,
+    });
+
+    return { userId, email };
+  }
+}
+
+// Service that listens to events
+@Injectable()
+class NotificationService {
+  @OnEvent(USER_CREATED)
+  public handleUserCreated(payload: UserCreatedEvent) {
+    console.log(`Welcome email sent to ${payload.email}`);
+  }
+
+  @OnEvent(USER_CREATED, { async: true, priority: 10 })
+  public async trackUserCreation(payload: UserCreatedEvent) {
+    await this.analytics.track("user_created", payload);
+  }
+}
+```
+
+### Module Configuration
+
+```ts
+EventModule.forRoot({
+  wildcard: true, // Enable wildcard matching
+  maxListeners: 20, // Max listeners per event
+  onError: (error, event, payload) => {
+    console.error(`Error in event ${String(event)}:`, error);
+  },
+});
+
+// Register listener classes
+EventModule.registerListeners([NotificationService, AnalyticsService]);
+
+@Module({
+  imports: [EventModule],
+  providers: [UserService, NotificationService, AnalyticsService],
+})
+class AppModule {}
+
+const app = new Application();
+app.registerModule(AppModule);
+
+// Initialize event listeners after module registration
+EventModule.initializeListeners(app.getContainer());
+```
+
+### Wildcard Events
+
+```ts
+// Match any user event: user.created, user.updated, user.deleted
+@OnEvent("user.*")
+handleAnyUserEvent(payload: unknown) {}
+
+// Match nested events: order.created, order.item.added, order.payment.completed
+@OnEvent("order.**")
+handleAllOrderEvents(payload: unknown) {}
+```
+
+### Async Event Publishing
+
+```ts
+// Fire and forget (async listeners are triggered but not awaited)
+this.eventEmitter.emit("order.created", orderData);
+
+// Wait for all listeners to complete
+await this.eventEmitter.emitAsync("order.created", orderData);
+```
+
+For detailed documentation, see [Event System](./events.md).
+
+## 18. Global Modules
 
 Global modules allow you to share providers across all modules without explicit imports. This is useful for commonly used services like configuration, logging, or caching.
 
@@ -818,7 +928,7 @@ class AppService {
 }
 ```
 
-## 18. Testing Recommendations
+## 19. Testing Recommendations
 
 - Use `tests/utils/test-port.ts` to get auto-incrementing ports, avoiding local
   conflicts.

@@ -214,42 +214,40 @@ console.log('  ✅ Input validation (@Validate decorators)');
 console.log('  ✅ Controller-level middleware (@UseMiddleware)');
 console.log('  ✅ WebSocket support\n');
 
-console.log('🧪 Test commands:\n');
+console.log('🧪 Try it with curl:\n');
 
-console.log('1️⃣  Search API (with validation):');
-console.log(`   curl http://localhost:${port}/api/search?q=test`);
-console.log(`   curl http://localhost:${port}/api/search?q=a   # ❌ Validation error (min 2 chars)\n`);
+console.log('  # 1. Search API (with validation)');
+console.log(`  curl http://localhost:${port}/api/search?q=test`);
+console.log(`  curl http://localhost:${port}/api/search?q=a   # Validation error (min 2 chars)\n`);
 
-console.log('2️⃣  Newsletter API (requires auth + email validation):');
-console.log(`   curl -X POST http://localhost:${port}/api/newsletter/subscribe \\`);
-console.log(`     -H "Authorization: demo-token" \\`);
-console.log(`     -H "Content-Type: application/json" \\`);
-console.log(`     -d '{"email":"test@example.com"}'\n`);
-console.log(`   # Without auth token: 401 Unauthorized`);
-console.log(`   # Invalid email format: Validation error\n`);
+console.log('  # 2. Newsletter API (requires auth + email validation)');
+console.log(`  curl -X POST http://localhost:${port}/api/newsletter/subscribe \\`);
+console.log(`       -H "Authorization: demo-token" \\`);
+console.log(`       -H "Content-Type: application/json" \\`);
+console.log(`       -d '{"email":"test@example.com"}'`);
+console.log(`  # Without auth token: 401 Unauthorized`);
+console.log(`  # Invalid email format: Validation error\n`);
 
-console.log('3️⃣  File Upload:');
-console.log(`   echo "test content" > /tmp/test.txt`);
-console.log(`   curl -X POST http://localhost:${port}/api/files/upload \\`);
-console.log(`     -F "file=@/tmp/test.txt"\n`);
+console.log('  # 3. File Upload');
+console.log(`  echo "test content" > /tmp/test.txt`);
+console.log(`  curl -X POST http://localhost:${port}/api/files/upload \\`);
+console.log(`       -F "file=@/tmp/test.txt"\n`);
 
-console.log('4️⃣  Static Files:');
-console.log(`   # First, create public directory and test file:`);
-console.log(`   mkdir -p ${staticRoot}`);
-console.log(`   echo "Hello from static file" > ${staticRoot}/test.txt`);
-console.log(`   curl http://localhost:${port}${staticPrefix}/test.txt\n`);
+console.log('  # 4. Static Files');
+console.log(`  mkdir -p ${staticRoot}`);
+console.log(`  echo "Hello from static file" > ${staticRoot}/test.txt`);
+console.log(`  curl http://localhost:${port}${staticPrefix}/test.txt\n`);
 
-console.log('5️⃣  WebSocket Chat:');
-console.log(`   # Using websocat (install: brew install websocat):`);
-console.log(`   websocat ws://localhost:${port}/ws/chat`);
-console.log(`   # Then type messages and press Enter\n`);
-console.log(`   # Or use browser console:`);
-console.log(`   ws = new WebSocket('ws://localhost:${port}/ws/chat')`);
-console.log(`   ws.onmessage = (e) => console.log('Received:', e.data)`);
-console.log(`   ws.send('Hello from browser')\n`);
+console.log('  # 5. WebSocket Chat');
+console.log(`  # Using websocat (install: brew install websocat):`);
+console.log(`  websocat ws://localhost:${port}/ws/chat`);
+console.log(`  # Or use browser console:`);
+console.log(`  ws = new WebSocket('ws://localhost:${port}/ws/chat')`);
+console.log(`  ws.onmessage = (e) => console.log('Received:', e.data)`);
+console.log(`  ws.send('Hello from browser')\n`);
 
 console.log('💡 Tips:');
-console.log(`   - Check console for request logs (Logger middleware)`);
-console.log(`   - Upload files are available at: /api/files/download/:name`);
-console.log(`   - Static files are served from: ${staticRoot}`);
-console.log(`   - CORS is enabled for all origins\n`);
+console.log(`  - Check console for request logs (Logger middleware)`);
+console.log(`  - Upload files are available at: /api/files/download/:name`);
+console.log(`  - Static files are served from: ${staticRoot}`);
+console.log(`  - CORS is enabled for all origins`);

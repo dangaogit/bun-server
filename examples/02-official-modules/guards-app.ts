@@ -293,51 +293,42 @@ async function generateTestTokens() {
 // ============================================
 
 app.listen().then(async () => {
-  console.log('\n🚀 Guards Demo Server started at http://localhost:3000\n');
+  console.log('\n🚀 Guards Demo Server started at http://localhost:3000');
 
   const tokens = await generateTestTokens();
 
-  console.log('📋 Test Endpoints:\n');
+  console.log('\n🧪 Try it with curl:\n');
 
-  console.log('1. Public (No guards):');
-  console.log('   curl http://localhost:3000/api/public/health\n');
+  console.log('  # 1. Public (No guards)');
+  console.log('  curl http://localhost:3000/api/public/health\n');
 
-  console.log('2. External API (API Key guard):');
-  console.log(
-    '   curl -H "x-api-key: secret-api-key-123" http://localhost:3000/api/external/data\n',
-  );
+  console.log('  # 2. External API (API Key guard)');
+  console.log('  curl -H "x-api-key: secret-api-key-123" http://localhost:3000/api/external/data\n');
 
-  console.log('3. Protected External (API Key + IP whitelist):');
-  console.log(
-    '   curl -H "x-api-key: secret-api-key-123" http://localhost:3000/api/external/protected\n',
-  );
+  console.log('  # 3. Protected External (API Key + IP whitelist)');
+  console.log('  curl -H "x-api-key: secret-api-key-123" http://localhost:3000/api/external/protected\n');
 
-  console.log('4. User Profile (Auth required):');
-  console.log(
-    `   curl -H "Authorization: Bearer ${tokens.userToken}" http://localhost:3000/api/users/profile\n`,
-  );
+  console.log('  # 4. User Profile (Auth required)');
+  console.log(`  curl -H "Authorization: Bearer ${tokens.userToken}" \\`);
+  console.log('       http://localhost:3000/api/users/profile\n');
 
-  console.log('5. Admin Dashboard (Auth + admin role):');
-  console.log(
-    `   curl -H "Authorization: Bearer ${tokens.adminToken}" http://localhost:3000/api/admin/dashboard\n`,
-  );
+  console.log('  # 5. Admin Dashboard (Auth + admin role)');
+  console.log(`  curl -H "Authorization: Bearer ${tokens.adminToken}" \\`);
+  console.log('       http://localhost:3000/api/admin/dashboard\n');
 
-  console.log('6. Admin Users List (Auth + admin OR moderator role):');
-  console.log(
-    `   curl -H "Authorization: Bearer ${tokens.moderatorToken}" http://localhost:3000/api/admin/users\n`,
-  );
+  console.log('  # 6. Admin Users List (Auth + admin OR moderator role)');
+  console.log(`  curl -H "Authorization: Bearer ${tokens.moderatorToken}" \\`);
+  console.log('       http://localhost:3000/api/admin/users\n');
 
-  console.log('7. Super Admin Only (Auth + superadmin role):');
-  console.log(
-    `   curl -H "Authorization: Bearer ${tokens.superAdminToken}" http://localhost:3000/api/admin/super\n`,
-  );
+  console.log('  # 7. Super Admin Only (Auth + superadmin role)');
+  console.log(`  curl -H "Authorization: Bearer ${tokens.superAdminToken}" \\`);
+  console.log('       http://localhost:3000/api/admin/super\n');
 
-  console.log('8. Premium Features (Auth + active premium subscription):');
-  console.log(
-    `   curl -H "Authorization: Bearer ${tokens.userToken}" http://localhost:3000/api/premium/features\n`,
-  );
+  console.log('  # 8. Premium Features (Auth + active premium subscription)');
+  console.log(`  curl -H "Authorization: Bearer ${tokens.userToken}" \\`);
+  console.log('       http://localhost:3000/api/premium/features\n');
 
   console.log('📝 Test tokens generated for different roles.');
-  console.log('   Use the Authorization header with Bearer token to test protected endpoints.\n');
+  console.log('   Use the Authorization header with Bearer token to test protected endpoints.');
 });
 

@@ -31,4 +31,5 @@ app.registerController(HelloController);
 app.listen();
 
 console.log('🚀 Server running on http://localhost:3000');
-console.log('📝 Try: curl http://localhost:3000');
+console.log('\n🧪 Try it with curl:');
+console.log('  curl http://localhost:3000');

@@ -27,6 +27,7 @@ This directory contains examples for Bun Server Framework's official modules - r
 | File | Module | Key Features | Port |
 |------|--------|--------------|------|
 | `queue-app.ts` | QueueModule | Task queues, Cron jobs | 3300 |
+| `events-app.ts` | EventModule | Event-driven architecture | 3400 |
 
 ### 📈 Monitoring & Rate Limiting
 
@@ -363,6 +364,103 @@ Common examples:
 '0 * * * *'     - Every hour
 '*/15 * * * *'  - Every 15 minutes
 '0 9 * * 1-5'   - Weekdays at 9 AM
+```
+
+---
+
+### EventModule (events-app.ts)
+
+**Features**: Event-driven architecture for loosely coupled applications
+
+**Highlights**:
+- ✅ `@OnEvent()` decorator for event listeners
+- ✅ Symbol and string event names
+- ✅ Event priorities
+- ✅ Async event handling
+- ✅ Wildcard event matching (`user.*`, `order.**`)
+
+**Quick Start**:
+```bash
+bun run examples/02-official-modules/events-app.ts
+```
+
+**Configuration**:
+```typescript
+EventModule.forRoot({
+  wildcard: true,       // Enable wildcard matching
+  maxListeners: 20,     // Max listeners per event
+  onError: (error, event, payload) => {
+    console.error(`Error in event ${String(event)}:`, error);
+  },
+});
+
+// Register listener classes
+EventModule.registerListeners([NotificationService, AnalyticsService]);
+
+// Initialize after module registration
+EventModule.initializeListeners(app.getContainer());
+```
+
+**Usage**:
+```typescript
+// Define event
+const USER_CREATED = Symbol('user.created');
+
+interface UserCreatedEvent {
+  userId: string;
+  email: string;
+}
+
+// Publish events
+@Injectable()
+class UserService {
+  constructor(
+    @Inject(EVENT_EMITTER_TOKEN) private eventEmitter: EventEmitter
+  ) {}
+
+  async createUser(email: string) {
+    const userId = 'user-123';
+    
+    // Fire and forget
+    this.eventEmitter.emit<UserCreatedEvent>(USER_CREATED, {
+      userId,
+      email,
+    });
+    
+    // Or wait for all listeners
+    await this.eventEmitter.emitAsync(USER_CREATED, { userId, email });
+    
+    return { userId, email };
+  }
+}
+
+// Listen to events
+@Injectable()
+class NotificationService {
+  @OnEvent(USER_CREATED)
+  handleUserCreated(payload: UserCreatedEvent) {
+    console.log(`Welcome email sent to ${payload.email}`);
+  }
+
+  @OnEvent(USER_CREATED, { async: true, priority: 10 })
+  async trackUserCreation(payload: UserCreatedEvent) {
+    await this.analytics.track('user_created', payload);
+  }
+}
+
+// Wildcard listeners
+@Injectable()
+class AuditService {
+  @OnEvent('user.*')  // Matches user.created, user.updated, user.deleted
+  auditUserEvents(payload: unknown) {
+    console.log('User event:', payload);
+  }
+
+  @OnEvent('order.**')  // Matches order.created, order.item.added, etc.
+  auditOrderEvents(payload: unknown) {
+    console.log('Order event:', payload);
+  }
+}
 ```
 
 ---

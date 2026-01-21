@@ -436,7 +436,117 @@ SecurityModule.forRoot({
 
 详细文档请参阅 [守卫](./guards.md)。
 
-## 10. 全局模块
+## 10. 事件系统
+
+事件模块提供了强大的事件驱动架构，用于构建松耦合的应用。
+
+### 基本用法
+
+```ts
+import {
+  EventModule,
+  Injectable,
+  Inject,
+  OnEvent,
+  EVENT_EMITTER_TOKEN,
+} from "@dangao/bun-server";
+import type { EventEmitter } from "@dangao/bun-server";
+
+// 定义事件
+const USER_CREATED = Symbol("user.created");
+
+interface UserCreatedEvent {
+  userId: string;
+  email: string;
+}
+
+// 发布事件的服务
+@Injectable()
+class UserService {
+  public constructor(
+    @Inject(EVENT_EMITTER_TOKEN) private readonly eventEmitter: EventEmitter,
+  ) {}
+
+  public async createUser(email: string) {
+    const userId = "user-123";
+
+    // 发布事件
+    this.eventEmitter.emit<UserCreatedEvent>(USER_CREATED, {
+      userId,
+      email,
+    });
+
+    return { userId, email };
+  }
+}
+
+// 监听事件的服务
+@Injectable()
+class NotificationService {
+  @OnEvent(USER_CREATED)
+  public handleUserCreated(payload: UserCreatedEvent) {
+    console.log(`欢迎邮件已发送至 ${payload.email}`);
+  }
+
+  @OnEvent(USER_CREATED, { async: true, priority: 10 })
+  public async trackUserCreation(payload: UserCreatedEvent) {
+    await this.analytics.track("user_created", payload);
+  }
+}
+```
+
+### 模块配置
+
+```ts
+EventModule.forRoot({
+  wildcard: true, // 启用通配符匹配
+  maxListeners: 20, // 每个事件的最大监听器数量
+  onError: (error, event, payload) => {
+    console.error(`事件 ${String(event)} 发生错误:`, error);
+  },
+});
+
+// 注册监听器类
+EventModule.registerListeners([NotificationService, AnalyticsService]);
+
+@Module({
+  imports: [EventModule],
+  providers: [UserService, NotificationService, AnalyticsService],
+})
+class AppModule {}
+
+const app = new Application();
+app.registerModule(AppModule);
+
+// 模块注册后初始化事件监听器
+EventModule.initializeListeners(app.getContainer());
+```
+
+### 通配符事件
+
+```ts
+// 匹配任何用户事件: user.created, user.updated, user.deleted
+@OnEvent("user.*")
+handleAnyUserEvent(payload: unknown) {}
+
+// 匹配嵌套事件: order.created, order.item.added, order.payment.completed
+@OnEvent("order.**")
+handleAllOrderEvents(payload: unknown) {}
+```
+
+### 异步事件发布
+
+```ts
+// 触发即忘（异步监听器被触发但不等待）
+this.eventEmitter.emit("order.created", orderData);
+
+// 等待所有监听器完成
+await this.eventEmitter.emitAsync("order.created", orderData);
+```
+
+详细文档请参阅 [事件系统](./events.md)。
+
+## 11. 全局模块
 
 全局模块允许您在所有模块之间共享提供者，无需显式导入。这对于常用的服务（如配置、日志或缓存）非常有用。
 
@@ -555,7 +665,7 @@ class AppService {
 }
 ```
 
-## 11. 测试建议
+## 12. 测试建议
 
 - 使用 `tests/utils/test-port.ts` 获取自增端口，避免本地冲突。
 - 在 `afterEach` 钩子中调用 `RouteRegistry.getInstance().clear()` 和

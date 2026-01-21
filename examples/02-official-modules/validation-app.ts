@@ -447,3 +447,28 @@ console.log(`
 ║     GET /api/demo/multi?tags=a,b,c                              ║
 ╚════════════════════════════════════════════════════════════════╝
 `);
+
+console.log(`🧪 Try it with curl:`);
+console.log(`  # 1. Parameter validation`);
+console.log(`  curl "http://localhost:3000/api/users/search?email=test@example.com"`);
+console.log(``);
+console.log(`  # 2. Create user (class validation)`);
+console.log(`  curl -X POST http://localhost:3000/api/users \\`);
+console.log(`       -H "Content-Type: application/json" \\`);
+console.log(`       -d '{"username":"john_doe","email":"john@example.com","password":"password123","phone":"13812345678","age":25,"role":"user"}'`);
+console.log(``);
+console.log(`  # 3. Create order (nested validation)`);
+console.log(`  curl -X POST http://localhost:3000/api/orders \\`);
+console.log(`       -H "Content-Type: application/json" \\`);
+console.log(`       -d '{"userId":"550e8400-e29b-41d4-a716-446655440000","shippingAddress":{"city":"北京","street":"朝阳区建国路1号"},"items":[{"productId":"P001","name":"商品A","price":99.9,"quantity":2}]}'`);
+console.log(``);
+console.log(`  # 4. Advanced validation`);
+console.log(`  curl -X POST http://localhost:3000/api/advanced \\`);
+console.log(`       -H "Content-Type: application/json" \\`);
+console.log(`       -d '{"accountType":"premium","creditCard":"4532015112830366","email":"  TEST@Example.COM  ","percentage":"75","tags":["tech","news"]}'`);
+console.log(``);
+console.log(`  # 5. Custom validator`);
+console.log(`  curl "http://localhost:3000/api/demo/custom?code=PRD-001&count=10"`);
+console.log(``);
+console.log(`  # 6. Multi validation`);
+console.log(`  curl "http://localhost:3000/api/demo/multi?tags=a,b,c"`);

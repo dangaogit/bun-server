@@ -27,6 +27,7 @@
 | 文件 | 模块 | 核心功能 | 难度 | 端口 |
 |------|------|---------|------|------|
 | `queue-app.ts` | QueueModule | 任务队列、Cron 定时任务 | ⭐⭐⭐ | 3300 |
+| `events-app.ts` | EventModule | 事件驱动架构 | ⭐⭐ | 3400 |
 
 ### 📈 监控与限流
 
@@ -440,6 +441,103 @@ class ScheduledTaskService {
 '0 * * * *'     - 每小时
 '*/15 * * * *'  - 每 15 分钟
 '0 9 * * 1-5'   - 工作日上午 9 点
+```
+
+---
+
+### EventModule (events-app.ts)
+
+**功能**：事件驱动架构，构建松耦合应用
+
+**特性**：
+- ✅ `@OnEvent()` 装饰器注册事件监听器
+- ✅ 支持 Symbol 和字符串事件名
+- ✅ 事件优先级
+- ✅ 异步事件处理
+- ✅ 通配符事件匹配（`user.*`、`order.**`）
+
+**快速开始**：
+```bash
+bun run examples/02-official-modules/events-app.ts
+```
+
+**配置示例**：
+```typescript
+EventModule.forRoot({
+  wildcard: true,       // 启用通配符匹配
+  maxListeners: 20,     // 每个事件的最大监听器数量
+  onError: (error, event, payload) => {
+    console.error(`事件 ${String(event)} 发生错误:`, error);
+  },
+});
+
+// 注册监听器类
+EventModule.registerListeners([NotificationService, AnalyticsService]);
+
+// 模块注册后初始化监听器
+EventModule.initializeListeners(app.getContainer());
+```
+
+**使用示例**：
+```typescript
+// 定义事件
+const USER_CREATED = Symbol('user.created');
+
+interface UserCreatedEvent {
+  userId: string;
+  email: string;
+}
+
+// 发布事件
+@Injectable()
+class UserService {
+  constructor(
+    @Inject(EVENT_EMITTER_TOKEN) private eventEmitter: EventEmitter
+  ) {}
+
+  async createUser(email: string) {
+    const userId = 'user-123';
+    
+    // 触发即忘
+    this.eventEmitter.emit<UserCreatedEvent>(USER_CREATED, {
+      userId,
+      email,
+    });
+    
+    // 或等待所有监听器完成
+    await this.eventEmitter.emitAsync(USER_CREATED, { userId, email });
+    
+    return { userId, email };
+  }
+}
+
+// 监听事件
+@Injectable()
+class NotificationService {
+  @OnEvent(USER_CREATED)
+  handleUserCreated(payload: UserCreatedEvent) {
+    console.log(`欢迎邮件已发送至 ${payload.email}`);
+  }
+
+  @OnEvent(USER_CREATED, { async: true, priority: 10 })
+  async trackUserCreation(payload: UserCreatedEvent) {
+    await this.analytics.track('user_created', payload);
+  }
+}
+
+// 通配符监听器
+@Injectable()
+class AuditService {
+  @OnEvent('user.*')  // 匹配 user.created、user.updated、user.deleted
+  auditUserEvents(payload: unknown) {
+    console.log('用户事件:', payload);
+  }
+
+  @OnEvent('order.**')  // 匹配 order.created、order.item.added 等
+  auditOrderEvents(payload: unknown) {
+    console.log('订单事件:', payload);
+  }
+}
 ```
 
 ---
