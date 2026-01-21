@@ -60,6 +60,60 @@ packages/bun-server/
 └── examples/              # 示例代码
 ```
 
+## 请求生命周期
+
+框架处理 HTTP 请求的完整流程：
+
+```
+HTTP Request
+    ↓
+┌─────────────────────────────────────┐
+│         Middleware Pipeline         │  ← 全局 → 模块 → 控制器 → 方法
+│  (Logger, CORS, RateLimit, etc.)    │
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
+│         Security Filter             │  ← 认证/授权检查
+│   (JWT, OAuth2, Role Check)         │
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
+│         Router Matching             │  ← 路由匹配
+│   (Path, Method, Params)            │
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
+│       Interceptors (Pre)            │  ← 全局 → 控制器 → 方法
+│   (Cache, Log, Permission)          │
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
+│       Parameter Binding             │  ← @Body, @Query, @Param, @Header
+│       + Validation                  │  ← @Validate, IsString, IsEmail...
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
+│       Controller Method             │  ← 业务逻辑执行
+│   (with DI injected services)       │
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
+│       Interceptors (Post)           │  ← 方法 → 控制器 → 全局
+│   (Response Transform)              │
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
+│       Exception Filter              │  ← 异常捕获和处理
+│   (HttpException, ValidationError)  │
+└─────────────────────────────────────┘
+    ↓
+HTTP Response
+```
+
+**执行顺序**：中间件 → 安全 → 路由 → 拦截器(前置) → 验证 → 处理器 → 拦截器(后置) → 异常过滤器
+
+详细文档：`docs/request-lifecycle.md`
+
 ## 核心架构模式
 
 ### 1. 模块系统（Module System）
@@ -253,16 +307,55 @@ class UserController {
 
 ```
 Application
-  ├── ModuleRegistry
-  │   ├── ConfigModule (基础配置)
-  │   ├── LoggerModule (日志)
-  │   ├── SwaggerModule (API 文档)
-  │   ├── SecurityModule (安全认证)
-  │   │   └── auth/ (JWT, OAuth2 实现)
-  │   ├── HealthModule (健康检查)
-  │   └── UserModule (业务模块示例)
-  └── ControllerRegistry
-      └── 所有模块的控制器
+    │
+    ├── ModuleRegistry
+    │   │
+    │   ├── ConfigModule (配置管理)
+    │   ├── LoggerModule (日志)
+    │   ├── SecurityModule (安全认证)
+    │   │   └── auth/ (JWT, OAuth2)
+    │   ├── SwaggerModule (API 文档)
+    │   ├── CacheModule (缓存)
+    │   ├── DatabaseModule (数据库)
+    │   │   └── ORM (Entity, Repository, Transaction)
+    │   ├── QueueModule (队列)
+    │   ├── SessionModule (会话)
+    │   ├── MetricsModule (指标)
+    │   ├── HealthModule (健康检查)
+    │   └── Microservice/ (微服务)
+    │       ├── ConfigCenterModule
+    │       ├── ServiceRegistryModule
+    │       ├── ServiceClient
+    │       ├── Governance (熔断/限流/重试)
+    │       └── Tracing (链路追踪)
+    │
+    ├── ControllerRegistry
+    │   └── 所有模块的控制器
+    │
+    ├── WebSocketGatewayRegistry
+    │   └── WebSocket 网关
+    │
+    └── InterceptorRegistry
+        └── 拦截器注册表
+```
+
+## DI 容器架构
+
+```
+Container
+    │
+    ├── providers (Map<token, ProviderConfig>)
+    │   ├── Singleton (单例，全局共享)
+    │   ├── Transient (瞬态，每次解析创建新实例)
+    │   └── Scoped (请求作用域，每个请求独立)
+    │
+    ├── singletons (缓存单例实例)
+    │
+    ├── scopedInstances (WeakMap，请求级实例缓存)
+    │
+    ├── dependencyPlans (依赖解析计划缓存)
+    │
+    └── postProcessors (实例后处理器)
 ```
 
 ## 测试结构

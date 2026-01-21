@@ -2,6 +2,16 @@
 
 Covers key steps for building Bun Server applications from scratch.
 
+## Request Lifecycle Overview
+
+Before diving into implementation details, it's helpful to understand how Bun Server processes requests:
+
+```
+HTTP Request → Middleware → Security → Router → Interceptors(Pre) → Validation → Handler → Interceptors(Post) → Exception Filter → HTTP Response
+```
+
+For detailed lifecycle documentation, see [Request Lifecycle](./request-lifecycle.md).
+
 ## 1. Initialize Application
 
 ```ts
