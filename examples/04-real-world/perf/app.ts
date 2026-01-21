@@ -30,6 +30,11 @@ app.registerController(PerfController);
 app.listen(port);
 const actualPort = app.getServer()?.getServer()?.port ?? port;
 
-console.log(`Perf example ready at http://localhost:${actualPort}/api/ping`);
-console.log(`Use wrk: wrk -t4 -c64 -d30s http://localhost:${actualPort}/api/ping`);
+console.log(`🚀 Perf example ready at http://localhost:${actualPort}`);
+console.log(`\n📝 Available endpoints:`);
+console.log(`  GET /api/ping - Simple ping endpoint`);
+console.log(`\n🧪 Try it with curl:`);
+console.log(`  curl http://localhost:${actualPort}/api/ping`);
+console.log(`\n📊 Benchmark with wrk:`);
+console.log(`  wrk -t4 -c64 -d30s http://localhost:${actualPort}/api/ping`);
 

@@ -2,11 +2,15 @@ import { Module, MODULE_METADATA_KEY } from '../di/module';
 import { AuthenticationManager } from './authentication-manager';
 import { JwtAuthenticationProvider } from './providers/jwt-provider';
 import { OAuth2AuthenticationProvider } from './providers/oauth2-provider';
-import { createSecurityFilter } from './filter';
+import { createSecurityFilter, getGuardRegistry, registerReflector } from './filter';
 import { JWTUtil } from '../auth/jwt';
 import { OAuth2Service } from '../auth/oauth2';
 import { OAuth2Controller, OAUTH2_SERVICE_TOKEN, JWT_UTIL_TOKEN } from '../auth/controller';
 import type { JWTConfig, OAuth2Client, UserInfo } from '../auth/types';
+import type { GuardType } from './guards/types';
+import { GUARD_REGISTRY_TOKEN } from './guards/types';
+import { GuardRegistry } from './guards/guard-registry';
+import { Reflector, REFLECTOR_TOKEN } from './guards/reflector';
 
 /**
  * 安全模块配置
@@ -45,7 +49,16 @@ export interface SecurityModuleConfig {
    * @default false
    */
   defaultAuthRequired?: boolean;
+  /**
+   * 全局守卫列表
+   */
+  globalGuards?: GuardType[];
 }
+
+/**
+ * 内部存储：容器引用和守卫注册表
+ */
+let _guardRegistry: GuardRegistry | null = null;
 
 /**
  * 安全模块
@@ -82,7 +95,23 @@ export class SecurityModule {
       new OAuth2AuthenticationProvider(oauth2Service, jwtUtil),
     );
 
-    // 创建安全过滤器
+    // 创建守卫注册表（每次 forRoot 都创建新实例，避免测试间污染）
+    const guardRegistry = new GuardRegistry();
+    // 清理旧的 registry（如果存在）
+    if (_guardRegistry) {
+      _guardRegistry.clearGlobalGuards();
+    }
+    _guardRegistry = guardRegistry;
+
+    // 添加全局守卫
+    if (config.globalGuards && config.globalGuards.length > 0) {
+      guardRegistry.addGlobalGuards(...config.globalGuards);
+    }
+
+    // 创建 Reflector
+    const reflector = new Reflector();
+
+    // 创建安全过滤器（暂时不传 container，将在模块注册时更新）
     const securityFilter = createSecurityFilter({
       authenticationManager,
       excludePaths: [
@@ -92,6 +121,7 @@ export class SecurityModule {
           : []),
       ],
       defaultAuthRequired: config.defaultAuthRequired ?? false,
+      guardRegistry,
     });
 
     const controllers: any[] = [];
@@ -117,6 +147,14 @@ export class SecurityModule {
         provide: AuthenticationManager,
         useValue: authenticationManager,
       },
+      {
+        provide: GUARD_REGISTRY_TOKEN,
+        useValue: guardRegistry,
+      },
+      {
+        provide: REFLECTOR_TOKEN,
+        useValue: reflector,
+      },
     );
 
     // 添加安全过滤器中间件
@@ -135,11 +173,43 @@ export class SecurityModule {
         JWT_UTIL_TOKEN,
         OAUTH2_SERVICE_TOKEN,
         AuthenticationManager,
+        GUARD_REGISTRY_TOKEN,
+        REFLECTOR_TOKEN,
       ],
     };
     Reflect.defineMetadata(MODULE_METADATA_KEY, metadata, SecurityModule);
 
     return SecurityModule;
+  }
+
+  /**
+   * 获取守卫注册表
+   * @returns 守卫注册表实例
+   */
+  public static getGuardRegistry(): GuardRegistry | null {
+    return _guardRegistry;
+  }
+
+  /**
+   * 添加全局守卫
+   * @param guards - 守卫类或实例
+   */
+  public static addGlobalGuards(...guards: GuardType[]): void {
+    if (_guardRegistry) {
+      _guardRegistry.addGlobalGuards(...guards);
+    }
+  }
+
+  /**
+   * 重置模块状态（主要用于测试）
+   */
+  public static reset(): void {
+    if (_guardRegistry) {
+      _guardRegistry.clearGlobalGuards();
+    }
+    _guardRegistry = null;
+    // 清除模块元数据
+    Reflect.deleteMetadata(MODULE_METADATA_KEY, SecurityModule);
   }
 }
 

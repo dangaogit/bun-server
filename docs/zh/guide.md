@@ -2,6 +2,16 @@
 
 涵盖从零开始构建 Bun Server 应用的关键步骤。
 
+## 请求生命周期概览
+
+在深入实现细节之前，了解 Bun Server 如何处理请求会很有帮助：
+
+```
+HTTP 请求 → 中间件 → 安全 → 路由 → 拦截器(前置) → 验证 → 处理器 → 拦截器(后置) → 异常过滤器 → HTTP 响应
+```
+
+详细的生命周期文档请参阅 [请求生命周期](./request-lifecycle.md)。
+
 ## 1. 初始化应用
 
 ```ts
@@ -357,7 +367,305 @@ app.listen();
 
 这种模式特别适合大型项目，可以轻松替换实现而不影响使用方代码。
 
-## 9. 测试建议
+## 9. 守卫（Guards）
+
+守卫提供对路由的细粒度访问控制。它们在中间件之后、拦截器之前执行，决定请求是否应该继续。
+
+### 内置守卫
+
+```ts
+import {
+  AuthGuard,
+  Controller,
+  GET,
+  Roles,
+  RolesGuard,
+  UseGuards,
+} from "@dangao/bun-server";
+
+@Controller("/api/admin")
+@UseGuards(AuthGuard, RolesGuard)
+class AdminController {
+  @GET("/dashboard")
+  @Roles("admin")
+  public dashboard() {
+    return { message: "管理员仪表板" };
+  }
+
+  @GET("/users")
+  @Roles("admin", "moderator") // 任一角色即可访问
+  public listUsers() {
+    return { users: [] };
+  }
+}
+```
+
+### 自定义守卫
+
+```ts
+import { Injectable } from "@dangao/bun-server";
+import type { CanActivate, ExecutionContext } from "@dangao/bun-server";
+
+@Injectable()
+class ApiKeyGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
+    const apiKey = request.getHeader("x-api-key");
+    return apiKey === "valid-api-key";
+  }
+}
+
+@Controller("/api/external")
+@UseGuards(ApiKeyGuard)
+class ExternalApiController {
+  @GET("/data")
+  public getData() {
+    return { data: [] };
+  }
+}
+```
+
+### 全局守卫
+
+```ts
+SecurityModule.forRoot({
+  jwt: { secret: "your-secret" },
+  globalGuards: [AuthGuard], // 应用于所有路由
+});
+```
+
+详细文档请参阅 [守卫](./guards.md)。
+
+## 10. 事件系统
+
+事件模块提供了强大的事件驱动架构，用于构建松耦合的应用。
+
+### 基本用法
+
+```ts
+import {
+  EventModule,
+  Injectable,
+  Inject,
+  OnEvent,
+  EVENT_EMITTER_TOKEN,
+} from "@dangao/bun-server";
+import type { EventEmitter } from "@dangao/bun-server";
+
+// 定义事件
+const USER_CREATED = Symbol("user.created");
+
+interface UserCreatedEvent {
+  userId: string;
+  email: string;
+}
+
+// 发布事件的服务
+@Injectable()
+class UserService {
+  public constructor(
+    @Inject(EVENT_EMITTER_TOKEN) private readonly eventEmitter: EventEmitter,
+  ) {}
+
+  public async createUser(email: string) {
+    const userId = "user-123";
+
+    // 发布事件
+    this.eventEmitter.emit<UserCreatedEvent>(USER_CREATED, {
+      userId,
+      email,
+    });
+
+    return { userId, email };
+  }
+}
+
+// 监听事件的服务
+@Injectable()
+class NotificationService {
+  @OnEvent(USER_CREATED)
+  public handleUserCreated(payload: UserCreatedEvent) {
+    console.log(`欢迎邮件已发送至 ${payload.email}`);
+  }
+
+  @OnEvent(USER_CREATED, { async: true, priority: 10 })
+  public async trackUserCreation(payload: UserCreatedEvent) {
+    await this.analytics.track("user_created", payload);
+  }
+}
+```
+
+### 模块配置
+
+```ts
+EventModule.forRoot({
+  wildcard: true, // 启用通配符匹配
+  maxListeners: 20, // 每个事件的最大监听器数量
+  onError: (error, event, payload) => {
+    console.error(`事件 ${String(event)} 发生错误:`, error);
+  },
+});
+
+// 注册监听器类
+EventModule.registerListeners([NotificationService, AnalyticsService]);
+
+@Module({
+  imports: [EventModule],
+  providers: [UserService, NotificationService, AnalyticsService],
+})
+class AppModule {}
+
+const app = new Application();
+app.registerModule(AppModule);
+
+// 模块注册后初始化事件监听器
+EventModule.initializeListeners(app.getContainer());
+```
+
+### 通配符事件
+
+```ts
+// 匹配任何用户事件: user.created, user.updated, user.deleted
+@OnEvent("user.*")
+handleAnyUserEvent(payload: unknown) {}
+
+// 匹配嵌套事件: order.created, order.item.added, order.payment.completed
+@OnEvent("order.**")
+handleAllOrderEvents(payload: unknown) {}
+```
+
+### 异步事件发布
+
+```ts
+// 触发即忘（异步监听器被触发但不等待）
+this.eventEmitter.emit("order.created", orderData);
+
+// 等待所有监听器完成
+await this.eventEmitter.emitAsync("order.created", orderData);
+```
+
+详细文档请参阅 [事件系统](./events.md)。
+
+## 11. 全局模块
+
+全局模块允许您在所有模块之间共享提供者，无需显式导入。这对于常用的服务（如配置、日志或缓存）非常有用。
+
+### 创建全局模块
+
+使用 `@Global()` 装饰器将模块标记为全局模块：
+
+```ts
+import { Global, Injectable, Module } from "@dangao/bun-server";
+
+const CONFIG_TOKEN = Symbol("config");
+
+@Injectable()
+class ConfigService {
+  public get(key: string): string {
+    return `config:${key}`;
+  }
+}
+
+@Global()
+@Module({
+  providers: [
+    {
+      provide: CONFIG_TOKEN,
+      useClass: ConfigService,
+    },
+  ],
+  exports: [CONFIG_TOKEN],
+})
+class GlobalConfigModule {}
+```
+
+### 使用全局模块导出
+
+其他模块可以使用导出的提供者，无需导入全局模块：
+
+```ts
+@Injectable()
+class UserService {
+  public constructor(
+    @Inject(CONFIG_TOKEN) private readonly config: ConfigService,
+  ) {}
+
+  public getAppName(): string {
+    return this.config.get("app.name");
+  }
+}
+
+// UserModule 不需要导入 GlobalConfigModule
+@Module({
+  providers: [UserService],
+})
+class UserModule {}
+```
+
+### 注册全局模块
+
+全局模块必须在应用中注册，通常在根模块中：
+
+```ts
+@Module({
+  imports: [
+    GlobalConfigModule, // 只需注册一次全局模块
+    GlobalLoggerModule,
+    UserModule, // UserModule 可以使用 ConfigService，无需导入它
+    ProductModule,
+  ],
+})
+class AppModule {}
+
+const app = new Application();
+app.registerModule(AppModule);
+```
+
+### 关键要点
+
+- **单次注册**：全局模块只需要注册一次（通常在根模块中）
+- **自动可用**：全局模块的导出对所有其他模块自动可用
+- **单例共享**：全局模块提供者在整个应用中保持单例行为
+- **无需导入**：其他模块不需要将全局模块添加到其 `imports` 数组中
+
+### 使用场景
+
+全局模块非常适合：
+
+- **配置服务**：全应用范围的配置访问
+- **日志服务**：集中式日志记录
+- **缓存服务**：共享缓存层
+- **数据库连接**：共享数据库访问
+- **事件发射器**：应用范围的事件总线
+
+### 示例：多个全局模块
+
+```ts
+@Global()
+@Module({
+  providers: [{ provide: LOGGER_TOKEN, useClass: LoggerService }],
+  exports: [LOGGER_TOKEN],
+})
+class GlobalLoggerModule {}
+
+@Global()
+@Module({
+  providers: [{ provide: CACHE_TOKEN, useClass: CacheService }],
+  exports: [CACHE_TOKEN],
+})
+class GlobalCacheModule {}
+
+// AppService 可以使用两者，无需显式导入
+@Injectable()
+class AppService {
+  public constructor(
+    @Inject(LOGGER_TOKEN) private readonly logger: LoggerService,
+    @Inject(CACHE_TOKEN) private readonly cache: CacheService,
+  ) {}
+}
+```
+
+## 12. 测试建议
 
 - 使用 `tests/utils/test-port.ts` 获取自增端口，避免本地冲突。
 - 在 `afterEach` 钩子中调用 `RouteRegistry.getInstance().clear()` 和

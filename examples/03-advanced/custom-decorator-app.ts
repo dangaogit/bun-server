@@ -192,9 +192,20 @@ const port = 3000;
 app.listen(port);
 
 console.log(`🚀 Server running on http://localhost:${port}`);
-console.log(`📝 Example endpoints:`);
-console.log(`   GET  http://localhost:${port}/api/users`);
-console.log(`   GET  http://localhost:${port}/api/users/1`);
-console.log(`   POST http://localhost:${port}/api/users`);
+console.log(`\n📝 Available endpoints:`);
+console.log(`  GET  /api/users     - Get all users`);
+console.log(`  GET  /api/users/:id - Get user by ID`);
+console.log(`  POST /api/users     - Create user`);
+console.log(`\n🧪 Try it with curl:`);
+console.log(`  # Get all users`);
+console.log(`  curl http://localhost:${port}/api/users`);
+console.log(``);
+console.log(`  # Get user by ID`);
+console.log(`  curl http://localhost:${port}/api/users/1`);
+console.log(``);
+console.log(`  # Create user`);
+console.log(`  curl -X POST http://localhost:${port}/api/users \\`);
+console.log(`       -H "Content-Type: application/json" \\`);
+console.log(`       -d '{"name":"Charlie","email":"charlie@example.com"}'`);
 console.log(`\n💡 Check the console for timing logs!`);
 

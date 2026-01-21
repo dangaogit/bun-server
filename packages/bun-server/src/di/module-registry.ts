@@ -2,6 +2,7 @@ import { ControllerRegistry } from '../controller/controller';
 import { Container } from './container';
 import { Lifecycle } from './types';
 import { getModuleMetadata, type ModuleClass, type ModuleProvider, type ProviderToken } from './module';
+import { isGlobalModule } from './decorators';
 import type { Constructor } from '@/core/types';
 import type { ApplicationExtension } from '../extensions/types';
 import type { Middleware } from '../middleware';
@@ -14,6 +15,10 @@ interface ModuleRef {
   attachedParents: Set<Container>;
   extensions: ApplicationExtension[];
   middlewares: Middleware[];
+  /**
+   * 是否为全局模块
+   */
+  isGlobal: boolean;
 }
 
 export class ModuleRegistry {
@@ -21,6 +26,10 @@ export class ModuleRegistry {
   private readonly moduleRefs = new Map<ModuleClass, ModuleRef>();
   private readonly processing = new Set<ModuleClass>();
   private rootContainer?: Container;
+  /**
+   * 存储全局模块列表，用于在其他模块注册时自动附加全局 exports
+   */
+  private readonly globalModules = new Set<ModuleClass>();
 
   public static getInstance(): ModuleRegistry {
     if (!ModuleRegistry.instance) {
@@ -43,7 +52,15 @@ export class ModuleRegistry {
   public clear(): void {
     this.moduleRefs.clear();
     this.processing.clear();
+    this.globalModules.clear();
     this.rootContainer = undefined;
+  }
+
+  /**
+   * 获取所有全局模块
+   */
+  public getGlobalModules(): ModuleClass[] {
+    return Array.from(this.globalModules);
   }
 
   private processModule(moduleClass: ModuleClass, parentContainer: Container): ModuleRef {
@@ -69,6 +86,7 @@ export class ModuleRegistry {
       throw new Error('ModuleRegistry is not initialized with a root container');
     }
     const metadata = getModuleMetadata(moduleClass);
+    const isGlobal = isGlobalModule(moduleClass);
     const container = new Container({ parent: this.rootContainer });
     this.registerProviders(container, metadata.providers);
     ref = {
@@ -79,10 +97,31 @@ export class ModuleRegistry {
       attachedParents: new Set<Container>(),
       extensions: metadata.extensions ?? [],
       middlewares: metadata.middlewares ?? [],
+      isGlobal,
     };
     this.registerControllers(ref);
     this.moduleRefs.set(moduleClass, ref);
+
+    // 如果是全局模块，注册到根容器并记录
+    if (isGlobal) {
+      this.globalModules.add(moduleClass);
+      this.registerGlobalExports(ref);
+    }
+
     return ref;
+  }
+
+  /**
+   * 将全局模块的 exports 注册到根容器
+   * 这样所有模块都可以访问全局模块导出的提供者
+   */
+  private registerGlobalExports(moduleRef: ModuleRef): void {
+    if (!this.rootContainer) {
+      return;
+    }
+    for (const exportedToken of moduleRef.metadata.exports) {
+      this.registerExport(this.rootContainer, moduleRef, exportedToken);
+    }
   }
 
   private registerProviders(container: Container, providers: ModuleProvider[]): void {

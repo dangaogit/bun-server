@@ -2,6 +2,16 @@
 
 Covers key steps for building Bun Server applications from scratch.
 
+## Request Lifecycle Overview
+
+Before diving into implementation details, it's helpful to understand how Bun Server processes requests:
+
+```
+HTTP Request → Middleware → Security → Router → Interceptors(Pre) → Validation → Handler → Interceptors(Post) → Exception Filter → HTTP Response
+```
+
+For detailed lifecycle documentation, see [Request Lifecycle](./request-lifecycle.md).
+
 ## 1. Initialize Application
 
 ```ts
@@ -620,7 +630,305 @@ class UserController {
 }
 ```
 
-## 16. Testing Recommendations
+## 16. Guards
+
+Guards provide fine-grained access control for your routes. They execute after middleware and before interceptors, deciding whether a request should proceed.
+
+### Built-in Guards
+
+```ts
+import {
+  AuthGuard,
+  Controller,
+  GET,
+  Roles,
+  RolesGuard,
+  UseGuards,
+} from "@dangao/bun-server";
+
+@Controller("/api/admin")
+@UseGuards(AuthGuard, RolesGuard)
+class AdminController {
+  @GET("/dashboard")
+  @Roles("admin")
+  public dashboard() {
+    return { message: "Admin Dashboard" };
+  }
+
+  @GET("/users")
+  @Roles("admin", "moderator") // Either role grants access
+  public listUsers() {
+    return { users: [] };
+  }
+}
+```
+
+### Custom Guards
+
+```ts
+import { Injectable } from "@dangao/bun-server";
+import type { CanActivate, ExecutionContext } from "@dangao/bun-server";
+
+@Injectable()
+class ApiKeyGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
+    const apiKey = request.getHeader("x-api-key");
+    return apiKey === "valid-api-key";
+  }
+}
+
+@Controller("/api/external")
+@UseGuards(ApiKeyGuard)
+class ExternalApiController {
+  @GET("/data")
+  public getData() {
+    return { data: [] };
+  }
+}
+```
+
+### Global Guards
+
+```ts
+SecurityModule.forRoot({
+  jwt: { secret: "your-secret" },
+  globalGuards: [AuthGuard], // Applied to all routes
+});
+```
+
+For detailed documentation, see [Guards](./guards.md).
+
+## 17. Event System
+
+The Event Module provides a powerful event-driven architecture for building loosely coupled applications.
+
+### Basic Usage
+
+```ts
+import {
+  EventModule,
+  Injectable,
+  Inject,
+  OnEvent,
+  EVENT_EMITTER_TOKEN,
+} from "@dangao/bun-server";
+import type { EventEmitter } from "@dangao/bun-server";
+
+// Define events
+const USER_CREATED = Symbol("user.created");
+
+interface UserCreatedEvent {
+  userId: string;
+  email: string;
+}
+
+// Service that publishes events
+@Injectable()
+class UserService {
+  public constructor(
+    @Inject(EVENT_EMITTER_TOKEN) private readonly eventEmitter: EventEmitter,
+  ) {}
+
+  public async createUser(email: string) {
+    const userId = "user-123";
+
+    // Publish event
+    this.eventEmitter.emit<UserCreatedEvent>(USER_CREATED, {
+      userId,
+      email,
+    });
+
+    return { userId, email };
+  }
+}
+
+// Service that listens to events
+@Injectable()
+class NotificationService {
+  @OnEvent(USER_CREATED)
+  public handleUserCreated(payload: UserCreatedEvent) {
+    console.log(`Welcome email sent to ${payload.email}`);
+  }
+
+  @OnEvent(USER_CREATED, { async: true, priority: 10 })
+  public async trackUserCreation(payload: UserCreatedEvent) {
+    await this.analytics.track("user_created", payload);
+  }
+}
+```
+
+### Module Configuration
+
+```ts
+EventModule.forRoot({
+  wildcard: true, // Enable wildcard matching
+  maxListeners: 20, // Max listeners per event
+  onError: (error, event, payload) => {
+    console.error(`Error in event ${String(event)}:`, error);
+  },
+});
+
+// Register listener classes
+EventModule.registerListeners([NotificationService, AnalyticsService]);
+
+@Module({
+  imports: [EventModule],
+  providers: [UserService, NotificationService, AnalyticsService],
+})
+class AppModule {}
+
+const app = new Application();
+app.registerModule(AppModule);
+
+// Initialize event listeners after module registration
+EventModule.initializeListeners(app.getContainer());
+```
+
+### Wildcard Events
+
+```ts
+// Match any user event: user.created, user.updated, user.deleted
+@OnEvent("user.*")
+handleAnyUserEvent(payload: unknown) {}
+
+// Match nested events: order.created, order.item.added, order.payment.completed
+@OnEvent("order.**")
+handleAllOrderEvents(payload: unknown) {}
+```
+
+### Async Event Publishing
+
+```ts
+// Fire and forget (async listeners are triggered but not awaited)
+this.eventEmitter.emit("order.created", orderData);
+
+// Wait for all listeners to complete
+await this.eventEmitter.emitAsync("order.created", orderData);
+```
+
+For detailed documentation, see [Event System](./events.md).
+
+## 18. Global Modules
+
+Global modules allow you to share providers across all modules without explicit imports. This is useful for commonly used services like configuration, logging, or caching.
+
+### Creating a Global Module
+
+Use the `@Global()` decorator to mark a module as global:
+
+```ts
+import { Global, Injectable, Module } from "@dangao/bun-server";
+
+const CONFIG_TOKEN = Symbol("config");
+
+@Injectable()
+class ConfigService {
+  public get(key: string): string {
+    return `config:${key}`;
+  }
+}
+
+@Global()
+@Module({
+  providers: [
+    {
+      provide: CONFIG_TOKEN,
+      useClass: ConfigService,
+    },
+  ],
+  exports: [CONFIG_TOKEN],
+})
+class GlobalConfigModule {}
+```
+
+### Using Global Module Exports
+
+Other modules can use the exported providers without importing the global module:
+
+```ts
+@Injectable()
+class UserService {
+  public constructor(
+    @Inject(CONFIG_TOKEN) private readonly config: ConfigService,
+  ) {}
+
+  public getAppName(): string {
+    return this.config.get("app.name");
+  }
+}
+
+// UserModule does NOT need to import GlobalConfigModule
+@Module({
+  providers: [UserService],
+})
+class UserModule {}
+```
+
+### Registering Global Modules
+
+Global modules must be registered with the application, typically in your root module:
+
+```ts
+@Module({
+  imports: [
+    GlobalConfigModule, // Register the global module once
+    GlobalLoggerModule,
+    UserModule, // UserModule can use ConfigService without importing it
+    ProductModule,
+  ],
+})
+class AppModule {}
+
+const app = new Application();
+app.registerModule(AppModule);
+```
+
+### Key Points
+
+- **Single Registration**: Global modules only need to be registered once (usually in the root module)
+- **Automatic Availability**: Exports from global modules are available to all other modules
+- **Singleton Sharing**: Global module providers maintain singleton behavior across the application
+- **No Import Required**: Other modules don't need to add global modules to their `imports` array
+
+### Use Cases
+
+Global modules are ideal for:
+
+- **Configuration Services**: App-wide configuration access
+- **Logging Services**: Centralized logging
+- **Cache Services**: Shared caching layer
+- **Database Connections**: Shared database access
+- **Event Emitters**: Application-wide event bus
+
+### Example: Multiple Global Modules
+
+```ts
+@Global()
+@Module({
+  providers: [{ provide: LOGGER_TOKEN, useClass: LoggerService }],
+  exports: [LOGGER_TOKEN],
+})
+class GlobalLoggerModule {}
+
+@Global()
+@Module({
+  providers: [{ provide: CACHE_TOKEN, useClass: CacheService }],
+  exports: [CACHE_TOKEN],
+})
+class GlobalCacheModule {}
+
+// App service can use both without explicit imports
+@Injectable()
+class AppService {
+  public constructor(
+    @Inject(LOGGER_TOKEN) private readonly logger: LoggerService,
+    @Inject(CACHE_TOKEN) private readonly cache: CacheService,
+  ) {}
+}
+```
+
+## 19. Testing Recommendations
 
 - Use `tests/utils/test-port.ts` to get auto-incrementing ports, avoiding local
   conflicts.

@@ -10,6 +10,11 @@ const DEPENDENCY_METADATA_KEY = Symbol("dependency:metadata");
 const INJECTABLE_METADATA_KEY = Symbol("injectable");
 
 /**
+ * 全局模块元数据键
+ */
+export const GLOBAL_MODULE_METADATA_KEY = Symbol("@dangao/bun-server:global-module");
+
+/**
  * 类型引用映射（用于保存构造函数类型，避免 Reflect.defineMetadata 序列化问题）
  */
 const typeReferenceMap = new WeakMap<
@@ -225,4 +230,45 @@ export function getTypeReference(
     return typeRefs.get(String(parameterIndex)) as Constructor<unknown>;
   }
   return undefined as unknown as Constructor<unknown>;
+}
+
+/**
+ * Global 装饰器
+ * 标记模块为全局模块，其导出的提供者可在任何模块中使用，无需显式导入
+ *
+ * @example
+ * ```typescript
+ * @Global()
+ * @Module({
+ *   providers: [ConfigService],
+ *   exports: [ConfigService],
+ * })
+ * class GlobalConfigModule {}
+ *
+ * // 其他模块无需导入 GlobalConfigModule 即可使用 ConfigService
+ * @Module({
+ *   controllers: [UserController],
+ *   providers: [UserService],
+ * })
+ * class UserModule {}
+ *
+ * @Injectable()
+ * class UserService {
+ *   constructor(private readonly config: ConfigService) {}
+ * }
+ * ```
+ */
+export function Global(): ClassDecorator {
+  return (target) => {
+    Reflect.defineMetadata(GLOBAL_MODULE_METADATA_KEY, true, target);
+  };
+}
+
+/**
+ * 检查模块是否为全局模块
+ * @param target - 目标模块类
+ * @returns 是否为全局模块
+ */
+export function isGlobalModule(target: Constructor<unknown>): boolean {
+  return Reflect.getMetadata(GLOBAL_MODULE_METADATA_KEY, target) === true;
 }

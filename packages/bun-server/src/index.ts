@@ -25,7 +25,7 @@ export type {
   ControllerMetadata,
 } from './controller';
 export { Container } from './di/container';
-export { Injectable, Inject } from './di/decorators';
+export { Injectable, Inject, Global, isGlobalModule, GLOBAL_MODULE_METADATA_KEY } from './di/decorators';
 export { Lifecycle, type ProviderConfig, type DependencyMetadata } from './di/types';
 export {
   Module,
@@ -71,15 +71,97 @@ export {
   type RateLimitOptions,
   type RateLimitStore,
 } from './middleware/builtin';
+// Validation 模块
 export {
+  // 基础装饰器
   Validate,
   IsString,
   IsNumber,
   IsEmail,
   IsOptional,
   MinLength,
+  getValidationMetadata,
+  // 类型
+  type ValidationRuleDefinition,
+  type ValidationMetadata,
+  type ClassValidationMetadata,
+  type ValidationOptions,
+  // 验证器
+  validateParameters,
+  // 错误处理
   ValidationError,
   type ValidationIssue,
+  // 对象规则
+  IsObject,
+  IsNotEmpty,
+  IsNotEmptyObject,
+  ValidateNested,
+  type ObjectRuleOptions,
+  type ValidateNestedOptions,
+  // 数组规则
+  IsArray,
+  ArrayMinSize,
+  ArrayMaxSize,
+  ArrayUnique,
+  ArrayContains,
+  ArrayNotContains,
+  ArrayNotEmpty,
+  type ArrayRuleOptions,
+  // 通用规则
+  IsBoolean,
+  IsInt,
+  IsPositive,
+  IsNegative,
+  Min,
+  Max,
+  IsDate,
+  IsUUID,
+  Length,
+  MaxLength,
+  Matches,
+  IsIn,
+  IsNotIn,
+  IsUrl,
+  IsJSON,
+  Equals,
+  NotEquals,
+  IsDefined,
+  IsAlphanumeric,
+  IsAlpha,
+  IsNumberString,
+  type RuleOptions,
+  type UUIDVersion,
+  // 条件和转换规则
+  ValidateIf,
+  Transform,
+  type ConditionalRuleOptions,
+  // 自定义验证器
+  createCustomValidator,
+  createSimpleValidator,
+  createRegexValidator,
+  IsPhoneNumber,
+  IsIdCard,
+  IsIPv4,
+  IsPort,
+  IsPostalCode,
+  IsCreditCard,
+  IsHexColor,
+  IsMacAddress,
+  IsSemVer,
+  IsDivisibleBy,
+  IsBetween,
+  Contains,
+  NotContains,
+  type CustomValidatorOptions,
+  // 类级别验证
+  ValidateClass,
+  Property,
+  NestedProperty,
+  ArrayNestedProperty,
+  validateObject,
+  validateObjectSync,
+  getClassValidationMetadata,
+  isValidateClass,
 } from './validation';
 export {
   HttpException,
@@ -136,6 +218,8 @@ export {
   JwtAuthenticationProvider,
   OAuth2AuthenticationProvider,
   createSecurityFilter,
+  getGuardRegistry,
+  registerReflector,
   type SecurityModuleConfig,
   type SecurityConfig,
   type SecurityContext,
@@ -146,6 +230,32 @@ export {
   type Credentials,
   type AccessDecisionManager,
 } from './security';
+// Guards 子模块
+export {
+  UseGuards,
+  Roles,
+  getGuardsMetadata,
+  getRolesMetadata,
+  AuthGuard,
+  OptionalAuthGuard,
+  RolesGuard,
+  createRolesGuard,
+  GuardRegistry,
+  ExecutionContextImpl,
+  Reflector,
+  GUARDS_METADATA_KEY,
+  GUARD_REGISTRY_TOKEN,
+  ROLES_METADATA_KEY,
+  REFLECTOR_TOKEN,
+  type CanActivate,
+  type ExecutionContext,
+  type HttpArgumentsHost,
+  type WsArgumentsHost,
+  type GuardType,
+  type GuardMetadata,
+  type GuardOptions,
+  type RolesGuardOptions,
+} from './security/guards';
 export {
   ConfigModule,
   ConfigService,
@@ -394,4 +504,26 @@ export {
   type ServiceInstanceHealth,
   type MonitoringOptions,
 } from './microservice';
+// Events 模块
+export {
+  EventModule,
+  EventEmitterService,
+  EventListenerScanner,
+  OnEvent,
+  getOnEventMetadata,
+  isEventListenerClass,
+  EVENT_EMITTER_TOKEN,
+  EVENT_OPTIONS_TOKEN,
+  EVENT_LISTENER_SCANNER_TOKEN,
+  ON_EVENT_METADATA_KEY,
+  EVENT_LISTENER_CLASS_METADATA_KEY,
+  type EventEmitter,
+  type EventListener,
+  type EventMetadata,
+  type EventModuleOptions,
+  type ListenerOptions,
+  type OnEventMethodMetadata,
+  type OnEventOptions,
+  type RegisteredListener,
+} from './events';
 

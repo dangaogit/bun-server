@@ -49,15 +49,116 @@
 
 ## Architecture
 
+### Request Lifecycle
+
+The following diagram shows the complete request processing flow:
+
 ```
-Application (Controllers / Modules / DI)
-          ↓
-    Middleware Pipeline
-          ↓
- Router + Context + Response
-          ↓
-        Bun Runtime
+HTTP Request
+    ↓
+┌─────────────────────────────────────┐
+│         Middleware Pipeline         │  ← Global → Module → Controller → Method
+│  (Logger, CORS, RateLimit, etc.)    │
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
+│         Security Filter             │  ← Authentication / Authorization
+│   (JWT, OAuth2, Role Check)         │
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
+│         Router Matching             │  ← Path, Method, Params
+│   (Static → Dynamic → Wildcard)     │
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
+│       Interceptors (Pre)            │  ← Global → Controller → Method
+│   (Cache, Log, Transform)           │
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
+│       Parameter Binding             │  ← @Body, @Query, @Param, @Header
+│       + Validation                  │  ← @Validate, IsString, IsEmail...
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
+│       Controller Method             │  ← Business Logic Execution
+│   (with DI injected services)       │
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
+│       Interceptors (Post)           │  ← Method → Controller → Global
+│   (Response Transform)              │
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
+│       Exception Filter              │  ← Exception Handling
+│   (HttpException, ValidationError)  │
+└─────────────────────────────────────┘
+    ↓
+HTTP Response
 ```
+
+**Execution Order**: Middleware → Security → Router → Interceptors(Pre) →
+Validation → Handler → Interceptors(Post) → Exception Filter
+
+### Module System
+
+```
+Application
+    │
+    ├── ModuleRegistry
+    │   │
+    │   ├── ConfigModule (Configuration)
+    │   ├── LoggerModule (Logging)
+    │   ├── SecurityModule (Authentication)
+    │   │   └── auth/ (JWT, OAuth2)
+    │   ├── SwaggerModule (API Docs)
+    │   ├── CacheModule (Caching)
+    │   ├── DatabaseModule (Database)
+    │   │   └── ORM (Entity, Repository, Transaction)
+    │   ├── QueueModule (Job Queue)
+    │   ├── SessionModule (Session)
+    │   ├── MetricsModule (Metrics)
+    │   ├── HealthModule (Health Check)
+    │   └── Microservice/
+    │       ├── ConfigCenterModule
+    │       ├── ServiceRegistryModule
+    │       ├── ServiceClient
+    │       ├── Governance (Circuit Breaker/Rate Limit/Retry)
+    │       └── Tracing
+    │
+    ├── ControllerRegistry
+    │   └── All module controllers
+    │
+    ├── WebSocketGatewayRegistry
+    │   └── WebSocket gateways
+    │
+    └── InterceptorRegistry
+        └── Interceptor registry
+```
+
+### DI Container
+
+```
+Container
+    │
+    ├── providers (Map<token, ProviderConfig>)
+    │   ├── Singleton (shared globally)
+    │   ├── Transient (new instance per resolve)
+    │   └── Scoped (per-request instance)
+    │
+    ├── singletons (singleton instance cache)
+    │
+    ├── scopedInstances (WeakMap, request-level cache)
+    │
+    ├── dependencyPlans (dependency resolution plan cache)
+    │
+    └── postProcessors (instance post-processors)
+```
+
+For detailed lifecycle documentation, see
+[Request Lifecycle](./docs/request-lifecycle.md).
 
 ## Getting Started
 
@@ -78,7 +179,10 @@ Application (Controllers / Modules / DI)
 }
 ```
 
-Without these, dependency injection will fail (injected services will be `undefined`). See [Troubleshooting Guide](./docs/troubleshooting.md#-critical-injected-dependencies-are-undefined) for details.
+Without these, dependency injection will fail (injected services will be
+`undefined`). See
+[Troubleshooting Guide](./docs/troubleshooting.md#-critical-injected-dependencies-are-undefined)
+for details.
 
 ### Install
 
@@ -117,14 +221,14 @@ app.listen();
 ### Useful scripts
 
 ```bash
-bun --cwd=packages/@dangao/bun-server test
-bun --cwd=packages/@dangao/bun-server run bench
-bun --cwd=packages/@dangao/bun-server run bench:router
-bun --cwd=packages/@dangao/bun-server run bench:di
+bun --cwd=packages/bun-server test
+bun --cwd=packages/bun-server run bench
+bun --cwd=packages/bun-server run bench:router
+bun --cwd=packages/bun-server run bench:di
 ```
 
 > Running `bun test` from the repo root fails because Bun only scans the current
-> workspace. Use the commands above or `cd packages/@dangao/bun-server` first.
+> workspace. Use the commands above or `cd packages/bun-server` first.
 
 ### Advanced Example: Interface + Symbol + Module
 
@@ -258,7 +362,8 @@ Examples are organized by difficulty and feature category:
   - `02-basic-routing.ts` - HTTP methods and route parameters
   - `03-dependency-injection.ts` - DI basics with services
 
-- **[Core Features](./examples/01-core-features/)** - Deep dive into framework mechanics
+- **[Core Features](./examples/01-core-features/)** - Deep dive into framework
+  mechanics
   - `basic-app.ts` - DI + Logger + Swagger + Config integration
   - `multi-module-app.ts` - Module dependencies and organization
   - `context-scope-app.ts` - Request scoping and ContextService
@@ -283,7 +388,8 @@ Examples are organized by difficulty and feature category:
 
 ### 🔑 Symbol + Interface Pattern
 
-This framework features a unique **Symbol + Interface co-naming pattern** that solves TypeScript's type erasure problem:
+This framework features a unique **Symbol + Interface co-naming pattern** that
+solves TypeScript's type erasure problem:
 
 ```typescript
 // 1. Define interface and Symbol with same name
@@ -312,16 +418,18 @@ constructor(private readonly userService: UserService) {}
 
 **Key**: Import as `import { UserService }` (not `import type { UserService }`).
 
-See [Symbol + Interface Pattern Guide](./docs/symbol-interface-pattern.md) for details.
+See [Symbol + Interface Pattern Guide](./docs/symbol-interface-pattern.md) for
+details.
 
 ### 🔌 Extensions
 
-- `packages/@dangao/bun-server/src/extensions/`: Official extensions (e.g.
+- `packages/bun-server/src/extensions/`: Official extensions (e.g.
   `LoggerExtension`) for plugging in external capabilities.
 
 ### 📖 Complete Example Index
 
-See [examples/README.md](./examples/README.md) for the complete catalog with learning paths, difficulty ratings, and usage scenarios.
+See [examples/README.md](./examples/README.md) for the complete catalog with
+learning paths, difficulty ratings, and usage scenarios.
 
 ## Benchmark Suite
 
@@ -347,14 +455,14 @@ Or use `bun run bench*` scripts for convenience.
 - **English** (default): `docs/api.md`, `docs/guide.md`,
   `docs/best-practices.md`, `docs/migration.md`, `docs/extensions.md`,
   `docs/deployment.md`, `docs/performance.md`, `docs/troubleshooting.md`,
-  `docs/error-handling.md`.
+  `docs/error-handling.md`, `docs/request-lifecycle.md`.
 - **Chinese**: mirrored under `docs/zh/`. If something is missing, please fall
   back to the English source.
 
 ## Roadmap
 
-Detailed milestones and history are tracked in
-[`.roadmap/v0.3.0.md`](./.roadmap/v0.3.0.md).
+Detailed milestones and history are tracked in the [`.roadmap/`](./.roadmap/)
+directory.
 
 ## AI-Assisted Development
 
