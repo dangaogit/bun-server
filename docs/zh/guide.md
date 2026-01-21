@@ -367,7 +367,76 @@ app.listen();
 
 这种模式特别适合大型项目，可以轻松替换实现而不影响使用方代码。
 
-## 9. 测试建议
+## 9. 守卫（Guards）
+
+守卫提供对路由的细粒度访问控制。它们在中间件之后、拦截器之前执行，决定请求是否应该继续。
+
+### 内置守卫
+
+```ts
+import {
+  AuthGuard,
+  Controller,
+  GET,
+  Roles,
+  RolesGuard,
+  UseGuards,
+} from "@dangao/bun-server";
+
+@Controller("/api/admin")
+@UseGuards(AuthGuard, RolesGuard)
+class AdminController {
+  @GET("/dashboard")
+  @Roles("admin")
+  public dashboard() {
+    return { message: "管理员仪表板" };
+  }
+
+  @GET("/users")
+  @Roles("admin", "moderator") // 任一角色即可访问
+  public listUsers() {
+    return { users: [] };
+  }
+}
+```
+
+### 自定义守卫
+
+```ts
+import { Injectable } from "@dangao/bun-server";
+import type { CanActivate, ExecutionContext } from "@dangao/bun-server";
+
+@Injectable()
+class ApiKeyGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
+    const apiKey = request.getHeader("x-api-key");
+    return apiKey === "valid-api-key";
+  }
+}
+
+@Controller("/api/external")
+@UseGuards(ApiKeyGuard)
+class ExternalApiController {
+  @GET("/data")
+  public getData() {
+    return { data: [] };
+  }
+}
+```
+
+### 全局守卫
+
+```ts
+SecurityModule.forRoot({
+  jwt: { secret: "your-secret" },
+  globalGuards: [AuthGuard], // 应用于所有路由
+});
+```
+
+详细文档请参阅 [守卫](./guards.md)。
+
+## 10. 测试建议
 
 - 使用 `tests/utils/test-port.ts` 获取自增端口，避免本地冲突。
 - 在 `afterEach` 钩子中调用 `RouteRegistry.getInstance().clear()` 和

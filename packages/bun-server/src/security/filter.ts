@@ -1,5 +1,6 @@
 import type { Context } from '../core/context';
 import type { Middleware } from '../middleware';
+import type { Container } from '../di/container';
 import { SecurityContextHolder } from './context';
 import { AuthenticationManager } from './authentication-manager';
 import { RoleBasedAccessDecisionManager } from './access-decision-manager';
@@ -10,6 +11,10 @@ import {
 } from '../error/http-exception';
 import { ErrorCode } from '../error/error-codes';
 import { requiresAuth, getAuthMetadata } from '../auth/decorators';
+import { GuardRegistry } from './guards/guard-registry';
+import { ExecutionContextImpl } from './guards/execution-context';
+import { Reflector, REFLECTOR_TOKEN } from './guards/reflector';
+import { GUARD_REGISTRY_TOKEN } from './guards/types';
 
 /**
  * 安全过滤器配置
@@ -27,6 +32,14 @@ export interface SecurityFilterConfig extends SecurityConfig {
    * 令牌提取函数
    */
   extractToken?: (ctx: Context) => string | null;
+  /**
+   * DI 容器（用于解析守卫）
+   */
+  container?: Container;
+  /**
+   * 守卫注册表
+   */
+  guardRegistry?: GuardRegistry;
 }
 
 /**
@@ -39,7 +52,29 @@ export function createSecurityFilter(config: SecurityFilterConfig): Middleware {
     excludePaths = [],
     defaultAuthRequired = true,
     extractToken,
+    container: initialContainer,
+    guardRegistry,
   } = config;
+
+  // 创建或使用传入的守卫注册表
+  const registry = guardRegistry || new GuardRegistry();
+
+  // 延迟获取容器的函数
+  let cachedContainer: Container | null = initialContainer || null;
+  const getContainer = (): Container | null => {
+    if (cachedContainer) {
+      return cachedContainer;
+    }
+    // 尝试从 ControllerRegistry 获取容器
+    try {
+      // 动态导入避免循环依赖
+      const { ControllerRegistry } = require('../controller/controller');
+      cachedContainer = ControllerRegistry.getInstance().getContainer();
+      return cachedContainer;
+    } catch {
+      return null;
+    }
+  };
 
   return async (ctx: Context, next) => {
     return SecurityContextHolder.runWithContext(async () => {
@@ -74,6 +109,14 @@ export function createSecurityFilter(config: SecurityFilterConfig): Middleware {
           }
         }
 
+        // 将安全上下文附加到 Context（在守卫执行前）
+        (ctx as any).security = securityContext;
+        (ctx as any).auth = {
+          isAuthenticated: securityContext.isAuthenticated(),
+          user: securityContext.getPrincipal(),
+          payload: (securityContext.authentication?.details as any),
+        };
+
         // 检查是否需要认证
         const handler = (ctx as any).routeHandler;
         if (handler) {
@@ -82,6 +125,23 @@ export function createSecurityFilter(config: SecurityFilterConfig): Middleware {
             (controllerClass && controllerClass.prototype) || controllerClass;
           const method = handler.method;
 
+          // 执行守卫链（在 @Auth 检查之前）
+          // Guards 在中间件之后、拦截器之前执行
+          const container = getContainer();
+          // 只有当 controllerClass 是一个有效的类（构造函数）时才执行守卫
+          // 测试中可能传入原型而不是类，这种情况跳过守卫执行
+          if (container && typeof controllerClass === 'function') {
+            const methodHandler = controllerTarget[method];
+            const executionContext = new ExecutionContextImpl(
+              ctx,
+              controllerClass,
+              method,
+              methodHandler || (() => {}),
+            );
+            await registry.executeGuards(executionContext, container);
+          }
+
+          // 传统的 @Auth 装饰器检查（向后兼容）
           if (requiresAuth(controllerTarget, method)) {
             const authentication = securityContext.authentication;
             if (!authentication || !authentication.authenticated) {
@@ -118,14 +178,6 @@ export function createSecurityFilter(config: SecurityFilterConfig): Middleware {
           );
         }
 
-        // 将安全上下文附加到 Context
-        (ctx as any).security = securityContext;
-        (ctx as any).auth = {
-          isAuthenticated: securityContext.isAuthenticated(),
-          user: securityContext.getPrincipal(),
-          payload: (securityContext.authentication?.details as any),
-        };
-
         return await next();
       } finally {
         // 清理当前请求内的认证信息，防止泄漏到下一个请求
@@ -133,6 +185,34 @@ export function createSecurityFilter(config: SecurityFilterConfig): Middleware {
       }
     });
   };
+}
+
+/**
+ * 获取守卫注册表
+ * @param container - DI 容器
+ * @returns 守卫注册表实例
+ */
+export function getGuardRegistry(container: Container): GuardRegistry {
+  if (container.isRegistered(GUARD_REGISTRY_TOKEN)) {
+    return container.resolve<GuardRegistry>(GUARD_REGISTRY_TOKEN);
+  }
+  const registry = new GuardRegistry();
+  container.registerInstance(GUARD_REGISTRY_TOKEN, registry);
+  return registry;
+}
+
+/**
+ * 注册 Reflector 到 DI 容器
+ * @param container - DI 容器
+ * @returns Reflector 实例
+ */
+export function registerReflector(container: Container): Reflector {
+  if (container.isRegistered(REFLECTOR_TOKEN)) {
+    return container.resolve<Reflector>(REFLECTOR_TOKEN);
+  }
+  const reflector = new Reflector();
+  container.registerInstance(REFLECTOR_TOKEN, reflector);
+  return reflector;
 }
 
 /**

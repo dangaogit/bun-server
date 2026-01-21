@@ -630,7 +630,76 @@ class UserController {
 }
 ```
 
-## 16. Testing Recommendations
+## 16. Guards
+
+Guards provide fine-grained access control for your routes. They execute after middleware and before interceptors, deciding whether a request should proceed.
+
+### Built-in Guards
+
+```ts
+import {
+  AuthGuard,
+  Controller,
+  GET,
+  Roles,
+  RolesGuard,
+  UseGuards,
+} from "@dangao/bun-server";
+
+@Controller("/api/admin")
+@UseGuards(AuthGuard, RolesGuard)
+class AdminController {
+  @GET("/dashboard")
+  @Roles("admin")
+  public dashboard() {
+    return { message: "Admin Dashboard" };
+  }
+
+  @GET("/users")
+  @Roles("admin", "moderator") // Either role grants access
+  public listUsers() {
+    return { users: [] };
+  }
+}
+```
+
+### Custom Guards
+
+```ts
+import { Injectable } from "@dangao/bun-server";
+import type { CanActivate, ExecutionContext } from "@dangao/bun-server";
+
+@Injectable()
+class ApiKeyGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
+    const apiKey = request.getHeader("x-api-key");
+    return apiKey === "valid-api-key";
+  }
+}
+
+@Controller("/api/external")
+@UseGuards(ApiKeyGuard)
+class ExternalApiController {
+  @GET("/data")
+  public getData() {
+    return { data: [] };
+  }
+}
+```
+
+### Global Guards
+
+```ts
+SecurityModule.forRoot({
+  jwt: { secret: "your-secret" },
+  globalGuards: [AuthGuard], // Applied to all routes
+});
+```
+
+For detailed documentation, see [Guards](./guards.md).
+
+## 17. Testing Recommendations
 
 - Use `tests/utils/test-port.ts` to get auto-incrementing ports, avoiding local
   conflicts.

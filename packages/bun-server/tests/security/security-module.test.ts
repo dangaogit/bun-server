@@ -7,8 +7,8 @@ import 'reflect-metadata';
 
 describe('SecurityModule', () => {
   beforeEach(() => {
-    // 清除模块元数据
-    Reflect.deleteMetadata(MODULE_METADATA_KEY, SecurityModule);
+    // 重置模块状态（包括清除元数据和守卫注册表）
+    SecurityModule.reset();
   });
 
   test('should create module with forRoot', () => {
