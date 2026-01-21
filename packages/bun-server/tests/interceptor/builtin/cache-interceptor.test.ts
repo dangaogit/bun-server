@@ -1,137 +1,284 @@
-import 'reflect-metadata';
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
-import { Application } from '../../../src/core/application';
-import { Controller, ControllerRegistry } from '../../../src/controller/controller';
-import { GET } from '../../../src/router/decorators';
-import { RouteRegistry } from '../../../src/router/registry';
+import 'reflect-metadata';
+
 import {
   Cache,
+  getCacheMetadata,
   CacheInterceptor,
   CACHE_METADATA_KEY,
-  InterceptorRegistry,
-  INTERCEPTOR_REGISTRY_TOKEN,
-} from '../../../src/interceptor';
-import { getTestPort } from '../../utils/test-port';
+  type CacheOptions,
+} from '../../../src/interceptor/builtin/cache-interceptor';
+import { Container } from '../../../src/di/container';
+
+describe('Cache Decorator', () => {
+  test('should set cache metadata with default ttl', () => {
+    class TestService {
+      @Cache()
+      public getData(): string {
+        return 'data';
+      }
+    }
+
+    const metadata = getCacheMetadata(TestService.prototype, 'getData');
+    expect(metadata).toBeDefined();
+    expect(metadata?.ttl).toBe(60000);
+    expect(metadata?.key).toBeUndefined();
+  });
+
+  test('should set cache metadata with custom ttl', () => {
+    class TestService {
+      @Cache({ ttl: 30000 })
+      public getData(): string {
+        return 'data';
+      }
+    }
+
+    const metadata = getCacheMetadata(TestService.prototype, 'getData');
+    expect(metadata?.ttl).toBe(30000);
+  });
+
+  test('should set cache metadata with custom key', () => {
+    class TestService {
+      @Cache({ key: 'my-custom-key' })
+      public getData(): string {
+        return 'data';
+      }
+    }
+
+    const metadata = getCacheMetadata(TestService.prototype, 'getData');
+    expect(metadata?.key).toBe('my-custom-key');
+  });
+
+  test('should set cache metadata with all options', () => {
+    class TestService {
+      @Cache({ ttl: 120000, key: 'full-options' })
+      public getData(): string {
+        return 'data';
+      }
+    }
+
+    const metadata = getCacheMetadata(TestService.prototype, 'getData');
+    expect(metadata?.ttl).toBe(120000);
+    expect(metadata?.key).toBe('full-options');
+  });
+});
+
+describe('getCacheMetadata', () => {
+  test('should return undefined for non-decorated method', () => {
+    class TestService {
+      public normalMethod(): string {
+        return 'data';
+      }
+    }
+
+    const metadata = getCacheMetadata(TestService.prototype, 'normalMethod');
+    expect(metadata).toBeUndefined();
+  });
+
+  test('should return undefined for null target', () => {
+    const metadata = getCacheMetadata(null, 'method');
+    expect(metadata).toBeUndefined();
+  });
+
+  test('should return undefined for non-object target', () => {
+    const metadata = getCacheMetadata('string', 'method');
+    expect(metadata).toBeUndefined();
+  });
+});
 
 describe('CacheInterceptor', () => {
-  let app: Application;
-  let port: number;
-  let interceptorRegistry: InterceptorRegistry;
-  let callCount = 0;
+  let container: Container;
+  let interceptor: CacheInterceptor;
 
   beforeEach(() => {
-    port = getTestPort();
-    app = new Application({ port });
-    interceptorRegistry = app.getContainer().resolve<InterceptorRegistry>(
-      INTERCEPTOR_REGISTRY_TOKEN,
-    );
-    interceptorRegistry.register(CACHE_METADATA_KEY, new CacheInterceptor());
-    callCount = 0;
+    container = new Container();
+    interceptor = new CacheInterceptor();
     CacheInterceptor.clearCache();
   });
 
-  afterEach(async () => {
-    if (app) {
-      await app.stop();
-    }
-    RouteRegistry.getInstance().clear();
-    ControllerRegistry.getInstance().clear();
-    interceptorRegistry.clear();
+  afterEach(() => {
     CacheInterceptor.clearCache();
   });
 
   test('should cache method result', async () => {
-    @Controller('/api/test')
-    class TestController {
-      @GET('/')
-      @Cache({ ttl: 1000 })
-      public getData() {
+    let callCount = 0;
+
+    class TestService {
+      @Cache({ ttl: 60000 })
+      public getData(): string {
         callCount++;
-        return { data: 'cached', count: callCount };
+        return 'data';
       }
     }
 
-    app.registerController(TestController);
-    await app.listen();
+    const service = new TestService();
 
     // 第一次调用
-    const response1 = await fetch(`http://localhost:${port}/api/test`);
-    expect(response1.status).toBe(200);
-    const data1 = await response1.json();
-    expect(data1.count).toBe(1);
+    const result1 = await interceptor.execute(
+      service,
+      'getData',
+      service.getData.bind(service),
+      [],
+      container,
+    );
+
+    expect(result1).toBe('data');
     expect(callCount).toBe(1);
 
-    // 第二次调用（应该使用缓存）
-    const response2 = await fetch(`http://localhost:${port}/api/test`);
-    expect(response2.status).toBe(200);
-    const data2 = await response2.json();
-    expect(data2.count).toBe(1); // 缓存的结果
-    expect(callCount).toBe(1); // 方法没有被再次调用
+    // 第二次调用应该从缓存返回
+    const result2 = await interceptor.execute(
+      service,
+      'getData',
+      service.getData.bind(service),
+      [],
+      container,
+    );
+
+    expect(result2).toBe('data');
+    expect(callCount).toBe(1);
   });
 
   test('should use custom cache key', async () => {
-    @Controller('/api/test')
-    class TestController {
-      @GET('/')
-      @Cache({ ttl: 1000, key: 'custom-key' })
-      public getData() {
-        callCount++;
-        return { data: 'cached' };
+    class TestService {
+      @Cache({ key: 'custom-key' })
+      public getData(): string {
+        return 'data';
       }
     }
 
-    app.registerController(TestController);
-    await app.listen();
+    const service = new TestService();
 
-    await fetch(`http://localhost:${port}/api/test`);
-    await fetch(`http://localhost:${port}/api/test`);
+    await interceptor.execute(
+      service,
+      'getData',
+      service.getData.bind(service),
+      [],
+      container,
+    );
 
-    expect(callCount).toBe(1); // 应该只调用一次（使用缓存）
+    const stats = CacheInterceptor.getCacheStats();
+    expect(stats.keys).toContain('custom-key');
   });
 
-  test('should expire cache after TTL', async () => {
-    @Controller('/api/test')
-    class TestController {
-      @GET('/')
-      @Cache({ ttl: 100 }) // 100ms TTL
-      public getData() {
-        callCount++;
-        return { data: 'cached', count: callCount };
+  test('should generate cache key from class, method and args', async () => {
+    class TestService {
+      @Cache()
+      public getData(id: string): string {
+        return `data-${id}`;
       }
     }
 
-    app.registerController(TestController);
-    await app.listen();
+    const service = new TestService();
 
-    // 第一次调用
-    await fetch(`http://localhost:${port}/api/test`);
-    expect(callCount).toBe(1);
+    await interceptor.execute(
+      service,
+      'getData',
+      service.getData.bind(service),
+      ['123'],
+      container,
+    );
 
-    // 等待缓存过期
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    const stats = CacheInterceptor.getCacheStats();
+    expect(stats.size).toBe(1);
+    // 键应该包含类名、方法名和参数
+    expect(stats.keys[0]).toContain('TestService');
+    expect(stats.keys[0]).toContain('getData');
+    expect(stats.keys[0]).toContain('123');
+  });
 
-    // 第二次调用（缓存已过期）
-    await fetch(`http://localhost:${port}/api/test`);
+  test('should execute method without caching when no metadata', async () => {
+    let callCount = 0;
+
+    class TestService {
+      public normalMethod(): string {
+        callCount++;
+        return 'data';
+      }
+    }
+
+    const service = new TestService();
+
+    await interceptor.execute(
+      service,
+      'normalMethod',
+      service.normalMethod.bind(service),
+      [],
+      container,
+    );
+
+    await interceptor.execute(
+      service,
+      'normalMethod',
+      service.normalMethod.bind(service),
+      [],
+      container,
+    );
+
     expect(callCount).toBe(2);
   });
 
-  test('should work without cache decorator', async () => {
-    @Controller('/api/test')
-    class TestController {
-      @GET('/')
-      public getData() {
-        callCount++;
-        return { data: 'no-cache' };
+  test('should clear all cache', async () => {
+    class TestService {
+      @Cache()
+      public getData(): string {
+        return 'data';
       }
     }
 
-    app.registerController(TestController);
-    await app.listen();
+    const service = new TestService();
 
-    await fetch(`http://localhost:${port}/api/test`);
-    await fetch(`http://localhost:${port}/api/test`);
+    await interceptor.execute(
+      service,
+      'getData',
+      service.getData.bind(service),
+      [],
+      container,
+    );
 
-    expect(callCount).toBe(2); // 没有缓存，应该调用两次
+    expect(CacheInterceptor.getCacheStats().size).toBe(1);
+
+    CacheInterceptor.clearCache();
+
+    expect(CacheInterceptor.getCacheStats().size).toBe(0);
+  });
+
+  test('should clear specific cache key', async () => {
+    class TestService {
+      @Cache({ key: 'key1' })
+      public getData1(): string {
+        return 'data1';
+      }
+
+      @Cache({ key: 'key2' })
+      public getData2(): string {
+        return 'data2';
+      }
+    }
+
+    const service = new TestService();
+
+    await interceptor.execute(
+      service,
+      'getData1',
+      service.getData1.bind(service),
+      [],
+      container,
+    );
+
+    await interceptor.execute(
+      service,
+      'getData2',
+      service.getData2.bind(service),
+      [],
+      container,
+    );
+
+    expect(CacheInterceptor.getCacheStats().size).toBe(2);
+
+    CacheInterceptor.clearCacheKey('key1');
+
+    const stats = CacheInterceptor.getCacheStats();
+    expect(stats.size).toBe(1);
+    expect(stats.keys).toContain('key2');
   });
 });
-

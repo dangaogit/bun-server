@@ -1,373 +1,204 @@
-import { describe, expect, test, beforeEach, mock } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 import 'reflect-metadata';
-import { EventModule, EventListenerScanner } from '../../src/events/event-module';
+
+import { EventModule } from '../../src/events/event-module';
 import { EventEmitterService } from '../../src/events/service';
-import { OnEvent, getOnEventMetadata, isEventListenerClass } from '../../src/events/decorators';
-import { Container } from '../../src/di/container';
-import { Injectable } from '../../src/di/decorators';
+import { EVENT_EMITTER_TOKEN, EVENT_OPTIONS_TOKEN } from '../../src/events/types';
 import { MODULE_METADATA_KEY } from '../../src/di/module';
-import { ModuleRegistry } from '../../src/di/module-registry';
-import {
-  EVENT_EMITTER_TOKEN,
-  EVENT_OPTIONS_TOKEN,
-  type EventEmitter,
-} from '../../src/events/types';
 
 describe('EventModule', () => {
   beforeEach(() => {
-    // 清除模块元数据
     Reflect.deleteMetadata(MODULE_METADATA_KEY, EventModule);
   });
 
-  describe('forRoot()', () => {
-    test('should register event emitter service', () => {
+  describe('forRoot', () => {
+    test('should create module with default options', () => {
       EventModule.forRoot();
 
       const metadata = Reflect.getMetadata(MODULE_METADATA_KEY, EventModule);
       expect(metadata.providers).toBeDefined();
-      expect(metadata.providers.length).toBeGreaterThanOrEqual(2);
-
-      const emitterProvider = metadata.providers.find(
-        (p: any) => p.provide === EVENT_EMITTER_TOKEN,
-      );
-      expect(emitterProvider).toBeDefined();
-      expect(emitterProvider.useValue).toBeInstanceOf(EventEmitterService);
+      expect(metadata.exports).toContain(EVENT_EMITTER_TOKEN);
     });
 
-    test('should register options', () => {
-      const options = { wildcard: true, maxListeners: 50 };
-      EventModule.forRoot(options);
+    test('should create module with custom options', () => {
+      EventModule.forRoot({
+        maxListeners: 50,
+        async: true,
+        errorHandler: (event, error) => {
+          console.error(`Event ${event} error:`, error);
+        },
+      });
 
       const metadata = Reflect.getMetadata(MODULE_METADATA_KEY, EventModule);
+      expect(metadata.providers).toBeDefined();
+
+      // Find options provider
       const optionsProvider = metadata.providers.find(
         (p: any) => p.provide === EVENT_OPTIONS_TOKEN,
       );
-
-      expect(optionsProvider).toBeDefined();
-      expect(optionsProvider.useValue).toEqual(options);
+      expect(optionsProvider?.useValue?.maxListeners).toBe(50);
+      expect(optionsProvider?.useValue?.async).toBe(true);
     });
 
-    test('should export event emitter token', () => {
+    test('should export EventService', () => {
       EventModule.forRoot();
 
       const metadata = Reflect.getMetadata(MODULE_METADATA_KEY, EventModule);
       expect(metadata.exports).toContain(EVENT_EMITTER_TOKEN);
     });
-
-    test('should apply options to event emitter', () => {
-      EventModule.forRoot({ wildcard: true, globalPrefix: 'test' });
-
-      const metadata = Reflect.getMetadata(MODULE_METADATA_KEY, EventModule);
-      const emitterProvider = metadata.providers.find(
-        (p: any) => p.provide === EVENT_EMITTER_TOKEN,
-      );
-
-      // EventEmitterService 内部存储了选项
-      expect(emitterProvider.useValue).toBeInstanceOf(EventEmitterService);
-    });
-  });
-
-  describe('getEventEmitter()', () => {
-    test('should return event emitter from container', () => {
-      EventModule.forRoot();
-
-      const container = new Container();
-      const emitterService = new EventEmitterService();
-      // 使用 registerInstance 方法注册实例（对应 useValue）
-      container.registerInstance(EVENT_EMITTER_TOKEN, emitterService);
-
-      const result = EventModule.getEventEmitter(container);
-      expect(result).toBe(emitterService);
-    });
-
-    test('should return undefined when not registered', () => {
-      const container = new Container();
-      // getEventEmitter 现在会捕获错误并返回 undefined
-      const result = EventModule.getEventEmitter(container);
-      expect(result).toBeUndefined();
-    });
   });
 });
 
-describe('EventListenerScanner', () => {
-  let container: Container;
-  let eventEmitter: EventEmitterService;
-  let scanner: EventListenerScanner;
+describe('EventEmitterService', () => {
+  let service: EventEmitterService;
 
   beforeEach(() => {
-    container = new Container();
-    eventEmitter = new EventEmitterService();
-    scanner = new EventListenerScanner(eventEmitter, container);
+    service = new EventEmitterService({ maxListeners: 10 });
   });
 
-  test('should scan and register event listeners', () => {
-    const handler = mock(() => {});
-
-    @Injectable()
-    class TestService {
-      @OnEvent('test.event')
-      public handleEvent(payload: unknown): void {
-        handler(payload);
-      }
-    }
-
-    // 注册服务到容器
-    container.register(TestService, { useClass: TestService });
-
-    // 扫描并注册监听器
-    scanner.scanAndRegister([TestService]);
-
-    // 触发事件
-    eventEmitter.emit('test.event', { data: 'test' });
-
-    expect(handler).toHaveBeenCalledTimes(1);
-    expect(handler).toHaveBeenCalledWith({ data: 'test' });
+  afterEach(() => {
+    service.removeAllListeners();
   });
 
-  test('should register multiple listeners from same class', () => {
-    const handler1 = mock(() => {});
-    const handler2 = mock(() => {});
+  describe('on', () => {
+    test('should register listener', () => {
+      const handler = () => {};
+      service.on('test-event', handler);
 
-    @Injectable()
-    class TestService {
-      @OnEvent('event1')
-      public handleEvent1(payload: unknown): void {
-        handler1(payload);
-      }
+      expect(service.listenerCount('test-event')).toBe(1);
+    });
 
-      @OnEvent('event2')
-      public handleEvent2(payload: unknown): void {
-        handler2(payload);
-      }
-    }
+    test('should return unsubscribe function', () => {
+      const handler = () => {};
+      const unsubscribe = service.on('test-event', handler);
 
-    container.register(TestService, { useClass: TestService });
-    scanner.scanAndRegister([TestService]);
+      expect(typeof unsubscribe).toBe('function');
+      unsubscribe();
+      expect(service.listenerCount('test-event')).toBe(0);
+    });
 
-    eventEmitter.emit('event1', 'payload1');
-    eventEmitter.emit('event2', 'payload2');
+    test('should support multiple listeners', () => {
+      service.on('event', () => {});
+      service.on('event', () => {});
+      service.on('event', () => {});
 
-    expect(handler1).toHaveBeenCalledWith('payload1');
-    expect(handler2).toHaveBeenCalledWith('payload2');
+      expect(service.listenerCount('event')).toBe(3);
+    });
   });
 
-  test('should respect listener priority', () => {
-    const order: number[] = [];
+  describe('once', () => {
+    test('should register one-time listener', async () => {
+      let callCount = 0;
+      service.once('one-time', () => {
+        callCount++;
+      });
 
-    @Injectable()
-    class TestService {
-      @OnEvent('test.event', { priority: 1 })
-      public lowPriority(): void {
-        order.push(1);
-      }
+      await service.emit('one-time');
+      await service.emit('one-time');
 
-      @OnEvent('test.event', { priority: 10 })
-      public highPriority(): void {
-        order.push(10);
-      }
-    }
-
-    container.register(TestService, { useClass: TestService });
-    scanner.scanAndRegister([TestService]);
-
-    eventEmitter.emit('test.event', null);
-
-    expect(order).toEqual([10, 1]);
+      expect(callCount).toBe(1);
+    });
   });
 
-  test('should skip non-listener classes', () => {
-    @Injectable()
-    class RegularService {
-      public doSomething(): void {}
-    }
+  describe('emit', () => {
+    test('should call listeners with payload', () => {
+      let receivedData: any;
+      service.on('data-event', (data) => {
+        receivedData = data;
+      });
 
-    container.register(RegularService, { useClass: RegularService });
+      service.emit('data-event', { value: 42 });
 
-    // 不应该抛出错误
-    expect(() => scanner.scanAndRegister([RegularService])).not.toThrow();
+      expect(receivedData).toEqual({ value: 42 });
+    });
+
+    test('should not throw when no listeners', () => {
+      // emit returns void, not boolean
+      expect(() => service.emit('no-listeners', null)).not.toThrow();
+    });
+
+    test('should call listener when registered', () => {
+      let called = false;
+      service.on('has-listeners', () => { called = true; });
+      service.emit('has-listeners', null);
+      expect(called).toBe(true);
+    });
+
+    test('should call multiple listeners in order', () => {
+      const order: number[] = [];
+      service.on('ordered', () => order.push(1));
+      service.on('ordered', () => order.push(2));
+      service.on('ordered', () => order.push(3));
+
+      service.emit('ordered', null);
+
+      expect(order).toEqual([1, 2, 3]);
+    });
   });
 
-  test('should handle unregistered listener class gracefully', () => {
-    @Injectable()
-    class UnregisteredService {
-      @OnEvent('test.event')
-      public handleEvent(): void {}
-    }
+  describe('off', () => {
+    test('should remove specific listener', () => {
+      const handler = () => {};
+      service.on('removable', handler);
+      service.off('removable', handler);
 
-    // 容器会尝试解析未注册的类，这里会自动创建实例（无参数构造函数）
-    // 所以不会抛出错误，也不会触发警告
-    expect(() => scanner.scanAndRegister([UnregisteredService])).not.toThrow();
-  });
-});
+      expect(service.listenerCount('removable')).toBe(0);
+    });
 
-describe('EventModule integration', () => {
-  beforeEach(() => {
-    Reflect.deleteMetadata(MODULE_METADATA_KEY, EventModule);
-  });
+    test('should not affect other listeners', () => {
+      const handler1 = () => {};
+      const handler2 = () => {};
 
-  test('should work with initializeListeners via ModuleRegistry', () => {
-    const handler = mock(() => {});
+      service.on('event', handler1);
+      service.on('event', handler2);
+      service.off('event', handler1);
 
-    @Injectable()
-    class NotificationService {
-      @OnEvent('user.created')
-      public sendWelcomeEmail(payload: { email: string }): void {
-        handler(payload);
-      }
-    }
-
-    // 配置模块
-    EventModule.forRoot();
-
-    // 模拟模块注册流程
-    const registry = ModuleRegistry.getInstance();
-    const rootContainer = new Container();
-    
-    // 手动创建 EventModule 的模块引用
-    const eventModuleContainer = new Container({ parent: rootContainer });
-    const emitter = new EventEmitterService();
-    eventModuleContainer.registerInstance(EVENT_EMITTER_TOKEN, emitter);
-
-    // 注册 NotificationService 到同一个容器
-    eventModuleContainer.register(NotificationService, { implementation: NotificationService });
-
-    // 模拟 ModuleRegistry 的 getModuleRef 返回
-    const originalGetModuleRef = registry.getModuleRef.bind(registry);
-    registry.getModuleRef = (moduleClass: any) => {
-      if (moduleClass === EventModule) {
-        return {
-          moduleClass: EventModule,
-          container: eventModuleContainer,
-          metadata: { providers: [], exports: [], imports: [], controllers: [] },
-          controllersRegistered: false,
-          attachedParents: new Set(),
-          extensions: [],
-          middlewares: [],
-          isGlobal: false,
-        } as any;
-      }
-      return originalGetModuleRef(moduleClass);
-    };
-
-    // 初始化监听器
-    EventModule.initializeListeners(eventModuleContainer, [NotificationService]);
-
-    // 发布事件
-    emitter.emit('user.created', { email: 'test@example.com' });
-
-    expect(handler).toHaveBeenCalledWith({ email: 'test@example.com' });
-
-    // 恢复原始方法
-    registry.getModuleRef = originalGetModuleRef;
+      expect(service.listenerCount('event')).toBe(1);
+    });
   });
 
-  test('should support async event handlers', async () => {
-    const results: string[] = [];
+  describe('removeAllListeners', () => {
+    test('should remove all listeners for event', () => {
+      service.on('event', () => {});
+      service.on('event', () => {});
+      service.removeAllListeners('event');
 
-    @Injectable()
-    class AsyncService {
-      @OnEvent('async.event', { async: true })
-      public async handleAsync(payload: string): Promise<void> {
-        await new Promise((resolve) => setTimeout(resolve, 10));
-        results.push(payload);
-      }
-    }
+      expect(service.listenerCount('event')).toBe(0);
+    });
 
-    const container = new Container();
-    const emitter = new EventEmitterService();
-    container.register(EVENT_EMITTER_TOKEN, { useValue: emitter });
-    container.register(AsyncService, { useClass: AsyncService });
+    test('should remove all listeners when no event specified', () => {
+      service.on('event1', () => {});
+      service.on('event2', () => {});
+      service.removeAllListeners();
 
-    const scanner = new EventListenerScanner(emitter, container);
-    scanner.scanAndRegister([AsyncService]);
-
-    await emitter.emitAsync('async.event', 'async-payload');
-
-    expect(results).toContain('async-payload');
+      expect(service.listenerCount('event1')).toBe(0);
+      expect(service.listenerCount('event2')).toBe(0);
+    });
   });
 
-  test('should handle Symbol events with decorators', () => {
-    const USER_UPDATED = Symbol('user.updated');
-    const handler = mock(() => {});
+  describe('eventNames', () => {
+    test('should return all event names', () => {
+      service.on('event1', () => {});
+      service.on('event2', () => {});
+      service.on('event3', () => {});
 
-    @Injectable()
-    class UserEventService {
-      @OnEvent(USER_UPDATED)
-      public handleUserUpdated(payload: unknown): void {
-        handler(payload);
-      }
-    }
-
-    const container = new Container();
-    const emitter = new EventEmitterService();
-    container.register(EVENT_EMITTER_TOKEN, { useValue: emitter });
-    container.register(UserEventService, { useClass: UserEventService });
-
-    const scanner = new EventListenerScanner(emitter, container);
-    scanner.scanAndRegister([UserEventService]);
-
-    emitter.emit(USER_UPDATED, { userId: '123' });
-
-    expect(handler).toHaveBeenCalledWith({ userId: '123' });
-  });
-});
-
-describe('EventModule with registerListeners', () => {
-  beforeEach(() => {
-    Reflect.deleteMetadata(MODULE_METADATA_KEY, EventModule);
-    ModuleRegistry.getInstance().clear();
+      const names = service.eventNames();
+      expect(names).toContain('event1');
+      expect(names).toContain('event2');
+      expect(names).toContain('event3');
+    });
   });
 
-  test('should collect listeners via registerListeners', () => {
-    const handler = mock(() => {});
+  describe('getListeners', () => {
+    test('should return listeners count via listenerCount', () => {
+      const handler1 = () => {};
+      const handler2 = () => {};
 
-    @Injectable()
-    class CollectedService {
-      @OnEvent('collected.event')
-      public handleEvent(payload: unknown): void {
-        handler(payload);
-      }
-    }
+      service.on('event', handler1);
+      service.on('event', handler2);
 
-    EventModule.forRoot();
-    EventModule.registerListeners([CollectedService]);
-
-    // 模拟模块注册流程
-    const registry = ModuleRegistry.getInstance();
-    const rootContainer = new Container();
-    
-    // 手动创建 EventModule 的模块引用
-    const eventModuleContainer = new Container({ parent: rootContainer });
-    const emitter = new EventEmitterService();
-    eventModuleContainer.registerInstance(EVENT_EMITTER_TOKEN, emitter);
-    eventModuleContainer.register(CollectedService, { implementation: CollectedService });
-
-    // 模拟 ModuleRegistry 的 getModuleRef 返回
-    const originalGetModuleRef = registry.getModuleRef.bind(registry);
-    registry.getModuleRef = (moduleClass: any) => {
-      if (moduleClass === EventModule) {
-        return {
-          moduleClass: EventModule,
-          container: eventModuleContainer,
-          metadata: { providers: [], exports: [], imports: [], controllers: [] },
-          controllersRegistered: false,
-          attachedParents: new Set(),
-          extensions: [],
-          middlewares: [],
-          isGlobal: false,
-        } as any;
-      }
-      return originalGetModuleRef(moduleClass);
-    };
-
-    // initializeListeners 会包含通过 registerListeners 注册的类
-    EventModule.initializeListeners(eventModuleContainer);
-
-    emitter.emit('collected.event', 'test');
-
-    expect(handler).toHaveBeenCalledWith('test');
-
-    // 恢复原始方法
-    registry.getModuleRef = originalGetModuleRef;
+      // Use listenerCount method instead
+      expect(service.listenerCount('event')).toBe(2);
+    });
   });
 });

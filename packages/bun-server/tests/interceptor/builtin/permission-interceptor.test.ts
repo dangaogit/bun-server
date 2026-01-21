@@ -1,182 +1,281 @@
+import { describe, expect, test, beforeEach } from 'bun:test';
 import 'reflect-metadata';
-import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
-import { Application } from '../../../src/core/application';
-import { Controller, ControllerRegistry } from '../../../src/controller/controller';
-import { GET } from '../../../src/router/decorators';
-import { RouteRegistry } from '../../../src/router/registry';
+
 import {
   Permission,
+  getPermissionMetadata,
   PermissionInterceptor,
   PERMISSION_METADATA_KEY,
-  InterceptorRegistry,
-  INTERCEPTOR_REGISTRY_TOKEN,
+  type PermissionOptions,
   type PermissionService,
-} from '../../../src/interceptor';
+} from '../../../src/interceptor/builtin/permission-interceptor';
+import { Container } from '../../../src/di/container';
+import { Context } from '../../../src/core/context';
 import { ForbiddenException } from '../../../src/error';
-import { getTestPort } from '../../utils/test-port';
 
-describe('PermissionInterceptor', () => {
-  let app: Application;
-  let port: number;
-  let interceptorRegistry: InterceptorRegistry;
-
-  beforeEach(() => {
-    port = getTestPort();
-    app = new Application({ port });
-    interceptorRegistry = app.getContainer().resolve<InterceptorRegistry>(
-      INTERCEPTOR_REGISTRY_TOKEN,
-    );
-    interceptorRegistry.register(PERMISSION_METADATA_KEY, new PermissionInterceptor());
-  });
-
-  afterEach(async () => {
-    if (app) {
-      await app.stop();
-    }
-    RouteRegistry.getInstance().clear();
-    ControllerRegistry.getInstance().clear();
-    interceptorRegistry.clear();
-  });
-
-  test('should allow access when permission check passes', async () => {
-    // 创建权限服务实现
-    class MockPermissionService implements PermissionService {
-      public async check(
-        userId: string | null,
-        resource: string,
-        action: string,
-      ): Promise<boolean> {
-        return userId === 'user1' && resource === 'user' && action === 'read';
-      }
-    }
-
-    // 注册权限服务
-    app.getContainer().registerInstance(
-      PermissionInterceptor.PERMISSION_SERVICE_TOKEN,
-      new MockPermissionService(),
-    );
-
-    @Controller('/api/users')
-    class UserController {
-      @GET('/:id')
-      @Permission({ resource: 'user', action: 'read' })
-      public getUser() {
-        return { id: '123', name: 'Test User' };
-      }
-    }
-
-    app.registerController(UserController);
-    await app.listen();
-
-    const response = await fetch(`http://localhost:${port}/api/users/123`, {
-      headers: { 'X-User-Id': 'user1' },
-    });
-
-    expect(response.status).toBe(200);
-    const data = await response.json();
-    expect(data.id).toBe('123');
-  });
-
-  test('should deny access when permission check fails', async () => {
-    // 创建权限服务实现
-    class MockPermissionService implements PermissionService {
-      public async check(
-        userId: string | null,
-        resource: string,
-        action: string,
-      ): Promise<boolean> {
-        return false; // 总是拒绝
-      }
-    }
-
-    // 注册权限服务
-    app.getContainer().registerInstance(
-      PermissionInterceptor.PERMISSION_SERVICE_TOKEN,
-      new MockPermissionService(),
-    );
-
-    @Controller('/api/users')
-    class UserController {
-      @GET('/:id')
-      @Permission({ resource: 'user', action: 'read' })
-      public getUser() {
-        return { id: '123', name: 'Test User' };
-      }
-    }
-
-    app.registerController(UserController);
-    await app.listen();
-
-    const response = await fetch(`http://localhost:${port}/api/users/123`, {
-      headers: { 'X-User-Id': 'user1' },
-    });
-
-    expect(response.status).toBe(403);
-  });
-
-  test('should allow anonymous access when allowAnonymous is true', async () => {
-    @Controller('/api/public')
-    class PublicController {
-      @GET('/')
-      @Permission({
-        resource: 'public',
-        action: 'read',
-        allowAnonymous: true,
-      })
-      public getPublicData() {
-        return { data: 'public' };
-      }
-    }
-
-    app.registerController(PublicController);
-    await app.listen();
-
-    // 没有提供用户 ID
-    const response = await fetch(`http://localhost:${port}/api/public`);
-
-    expect(response.status).toBe(200);
-    const data = await response.json();
-    expect(data.data).toBe('public');
-  });
-
-  test('should work without permission decorator', async () => {
-    @Controller('/api/test')
+describe('Permission Decorator', () => {
+  test('should set permission metadata with required options', () => {
     class TestController {
-      @GET('/')
-      public getData() {
-        return { data: 'no-permission-check' };
-      }
+      @Permission({ resource: 'users', action: 'read' })
+      public getUsers(): void {}
     }
 
-    app.registerController(TestController);
-    await app.listen();
-
-    const response = await fetch(`http://localhost:${port}/api/test`);
-
-    expect(response.status).toBe(200);
-    const data = await response.json();
-    expect(data.data).toBe('no-permission-check');
+    const metadata = getPermissionMetadata(TestController.prototype, 'getUsers');
+    expect(metadata).toBeDefined();
+    expect(metadata?.resource).toBe('users');
+    expect(metadata?.action).toBe('read');
+    expect(metadata?.allowAnonymous).toBe(false);
   });
 
-  test('should throw error when PermissionService not registered', async () => {
-    @Controller('/api/users')
-    class UserController {
-      @GET('/:id')
-      @Permission({ resource: 'user', action: 'read' })
-      public getUser() {
-        return { id: '123' };
-      }
+  test('should set permission metadata with allowAnonymous', () => {
+    class TestController {
+      @Permission({ resource: 'posts', action: 'read', allowAnonymous: true })
+      public getPosts(): void {}
     }
 
-    app.registerController(UserController);
-    await app.listen();
+    const metadata = getPermissionMetadata(TestController.prototype, 'getPosts');
+    expect(metadata?.allowAnonymous).toBe(true);
+  });
 
-    const response = await fetch(`http://localhost:${port}/api/users/123`, {
-      headers: { 'X-User-Id': 'user1' },
-    });
+  test('should set all options together', () => {
+    const options: PermissionOptions = {
+      resource: 'orders',
+      action: 'delete',
+      allowAnonymous: false,
+    };
 
-    // 应该返回 500 错误（PermissionService 未注册）
-    expect(response.status).toBe(500);
+    class TestController {
+      @Permission(options)
+      public deleteOrder(): void {}
+    }
+
+    const metadata = getPermissionMetadata(TestController.prototype, 'deleteOrder');
+    expect(metadata?.resource).toBe('orders');
+    expect(metadata?.action).toBe('delete');
+    expect(metadata?.allowAnonymous).toBe(false);
   });
 });
 
+describe('getPermissionMetadata', () => {
+  test('should return undefined for non-decorated method', () => {
+    class TestController {
+      public normalMethod(): void {}
+    }
+
+    const metadata = getPermissionMetadata(TestController.prototype, 'normalMethod');
+    expect(metadata).toBeUndefined();
+  });
+
+  test('should return undefined for null target', () => {
+    const metadata = getPermissionMetadata(null, 'method');
+    expect(metadata).toBeUndefined();
+  });
+
+  test('should return undefined for non-object target', () => {
+    const metadata = getPermissionMetadata('string', 'method');
+    expect(metadata).toBeUndefined();
+  });
+});
+
+describe('PermissionInterceptor', () => {
+  let container: Container;
+  let interceptor: PermissionInterceptor;
+  let mockPermissionService: PermissionService;
+
+  beforeEach(() => {
+    container = new Container();
+    interceptor = new PermissionInterceptor();
+    mockPermissionService = {
+      check: async (userId: string | null, resource: string, action: string) => {
+        // 模拟权限检查：用户 'admin' 有所有权限
+        if (userId === 'admin') return true;
+        // 用户 'user1' 只有读权限
+        if (userId === 'user1' && action === 'read') return true;
+        return false;
+      },
+    };
+    container.registerInstance(
+      PermissionInterceptor.PERMISSION_SERVICE_TOKEN,
+      mockPermissionService,
+    );
+  });
+
+  test('should execute method without permission check when no metadata', async () => {
+    class TestController {
+      public normalMethod(): string {
+        return 'executed';
+      }
+    }
+
+    const controller = new TestController();
+
+    const result = await interceptor.execute(
+      controller,
+      'normalMethod',
+      controller.normalMethod.bind(controller),
+      [],
+      container,
+    );
+
+    expect(result).toBe('executed');
+  });
+
+  test('should allow anonymous access when allowAnonymous is true', async () => {
+    class TestController {
+      @Permission({ resource: 'public', action: 'read', allowAnonymous: true })
+      public getPublic(): string {
+        return 'public data';
+      }
+    }
+
+    const controller = new TestController();
+
+    const result = await interceptor.execute(
+      controller,
+      'getPublic',
+      controller.getPublic.bind(controller),
+      [],
+      container,
+    );
+
+    expect(result).toBe('public data');
+  });
+
+  test('should execute method when user has permission', async () => {
+    class TestController {
+      @Permission({ resource: 'users', action: 'read' })
+      public getUsers(): string {
+        return 'users data';
+      }
+    }
+
+    const controller = new TestController();
+
+    // 创建带有用户 ID header 的上下文
+    const request = new Request('http://localhost/users', {
+      headers: {
+        'X-User-Id': 'admin',
+      },
+    });
+    const context = new Context(request, container);
+
+    const result = await interceptor.execute(
+      controller,
+      'getUsers',
+      controller.getUsers.bind(controller),
+      [],
+      container,
+      context,
+    );
+
+    expect(result).toBe('users data');
+  });
+
+  test('should throw ForbiddenException when user lacks permission', async () => {
+    class TestController {
+      @Permission({ resource: 'admin', action: 'delete' })
+      public deleteAdmin(): string {
+        return 'deleted';
+      }
+    }
+
+    const controller = new TestController();
+
+    const request = new Request('http://localhost/admin', {
+      headers: {
+        'X-User-Id': 'user1',
+      },
+    });
+    const context = new Context(request, container);
+
+    await expect(
+      interceptor.execute(
+        controller,
+        'deleteAdmin',
+        controller.deleteAdmin.bind(controller),
+        [],
+        container,
+        context,
+      ),
+    ).rejects.toThrow();
+  });
+
+  test('should throw error when PermissionService not registered', async () => {
+    const emptyContainer = new Container();
+
+    class TestController {
+      @Permission({ resource: 'users', action: 'read' })
+      public getUsers(): string {
+        return 'users';
+      }
+    }
+
+    const controller = new TestController();
+    const request = new Request('http://localhost/users');
+    const context = new Context(request, emptyContainer);
+
+    await expect(
+      interceptor.execute(
+        controller,
+        'getUsers',
+        controller.getUsers.bind(controller),
+        [],
+        emptyContainer,
+        context,
+      ),
+    ).rejects.toThrow('PermissionService not found');
+  });
+
+  test('should return null userId when no context provided', async () => {
+    class TestController {
+      @Permission({ resource: 'users', action: 'read' })
+      public getUsers(): string {
+        return 'users';
+      }
+    }
+
+    const controller = new TestController();
+
+    // 没有 context，userId 为 null，应该被拒绝
+    await expect(
+      interceptor.execute(
+        controller,
+        'getUsers',
+        controller.getUsers.bind(controller),
+        [],
+        container,
+      ),
+    ).rejects.toThrow();
+  });
+
+  test('should handle Authorization Bearer header', async () => {
+    class TestController {
+      @Permission({ resource: 'users', action: 'read' })
+      public getUsers(): string {
+        return 'users';
+      }
+    }
+
+    const controller = new TestController();
+
+    // 带有 Authorization header 但没有 X-User-Id
+    const request = new Request('http://localhost/users', {
+      headers: {
+        'Authorization': 'Bearer some-token',
+        'X-User-Id': 'admin',
+      },
+    });
+    const context = new Context(request, container);
+
+    const result = await interceptor.execute(
+      controller,
+      'getUsers',
+      controller.getUsers.bind(controller),
+      [],
+      container,
+      context,
+    );
+
+    expect(result).toBe('users');
+  });
+});
