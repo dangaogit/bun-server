@@ -20,6 +20,10 @@ HTTP Request
 └─────────────────────────────────────┘
     ↓
 ┌─────────────────────────────────────┐
+│              Guards                 │
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
 │       Interceptors (Pre)            │
 └─────────────────────────────────────┘
     ↓
@@ -79,6 +83,7 @@ class ApiController {
 | `createCorsMiddleware` | CORS headers |
 | `createErrorHandlingMiddleware` | Global error handling |
 | `createRateLimitMiddleware` | Rate limiting |
+| `createHttpMetricsMiddleware` | HTTP metrics collection |
 | `createStaticFileMiddleware` | Static file serving |
 | `createFileUploadMiddleware` | File upload handling |
 | `createSessionMiddleware` | Session management |
@@ -140,6 +145,40 @@ class UserController {
 
 The router matches the request path and method to a registered route.
 
+## 4. Guards
+
+Guards execute after routing and before interceptors, providing fine-grained access control. They have access to the `ExecutionContext` which provides rich information about the current request.
+
+### Execution Order
+
+1. **Global Guards** - Registered via `SecurityModule.forRoot({ globalGuards: [...] })`
+2. **Controller Guards** - Applied via `@UseGuards()` on controller class
+3. **Method Guards** - Applied via `@UseGuards()` on method
+
+### Built-in Guards
+
+- `AuthGuard`: Requires authentication
+- `OptionalAuthGuard`: Optional authentication
+- `RolesGuard`: Role-based authorization (used with `@Roles()` decorator)
+
+### Example
+
+```typescript
+@Controller('/api/admin')
+@UseGuards(AuthGuard, RolesGuard)
+class AdminController {
+  @GET('/dashboard')
+  @Roles('admin')
+  public dashboard() {
+    return { message: 'Admin Dashboard' };
+  }
+}
+```
+
+For detailed documentation, see [Guards](./guards.md).
+
+## 5. Interceptors (Pre-processing)
+
 ### Matching Priority
 
 1. **Static Routes** - Exact path match (`/api/users`)
@@ -200,7 +239,7 @@ class ApiController {}
 - Response transformation
 - Performance monitoring
 
-## 5. Parameter Binding and Validation
+## 6. Parameter Binding and Validation
 
 ### Parameter Decorators
 
@@ -208,9 +247,11 @@ class ApiController {}
 |-----------|--------|---------|
 | `@Param(name)` | URL path parameter | `/users/:id` → `@Param('id')` |
 | `@Query(name)` | Query string | `?page=1` → `@Query('page')` |
+| `@QueryMap()` | All query parameters | `?page=1&limit=10` → `@QueryMap()` returns `{ page: '1', limit: '10' }` |
 | `@Body()` | Request body | JSON body |
 | `@Body(name)` | Body property | `body.name` → `@Body('name')` |
 | `@Header(name)` | Request header | `@Header('Authorization')` |
+| `@HeaderMap()` | All headers | `@HeaderMap()` returns all headers as object |
 | `@Context()` | Full context | Request context object |
 | `@Session()` | Session data | Session object |
 
@@ -262,7 +303,7 @@ When validation fails, a `ValidationError` is thrown with detailed information:
 }
 ```
 
-## 6. Controller Method Execution
+## 7. Controller Method Execution
 
 After validation, the controller method is invoked with resolved dependencies and bound parameters.
 
@@ -294,7 +335,7 @@ Controller methods can return:
 - **void** - Empty response (204)
 - **Promise** - Async operations
 
-## 7. Interceptors (Post-processing)
+## 8. Interceptors (Post-processing)
 
 After the handler executes, post-interceptors run in reverse order:
 
@@ -318,7 +359,7 @@ class TransformInterceptor implements Interceptor {
 }
 ```
 
-## 8. Exception Filter
+## 9. Exception Filter
 
 If any exception is thrown during the request lifecycle, it's caught by the exception filter.
 

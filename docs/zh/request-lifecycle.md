@@ -20,6 +20,10 @@ HTTP Request
 └─────────────────────────────────────┘
     ↓
 ┌─────────────────────────────────────┐
+│             守卫                     │
+└─────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────┐
 │         拦截器（前置）               │
 └─────────────────────────────────────┘
     ↓
@@ -167,7 +171,39 @@ class UserController {
 }
 ```
 
-## 4. 拦截器（前置处理）
+## 4. 守卫
+
+守卫在路由匹配之后、拦截器之前执行，提供细粒度的访问控制。它们可以访问 `ExecutionContext`，提供关于当前请求的丰富信息。
+
+### 执行顺序
+
+1. **全局守卫** - 通过 `SecurityModule.forRoot({ globalGuards: [...] })` 注册
+2. **控制器守卫** - 通过 `@UseGuards()` 应用于控制器类
+3. **方法守卫** - 通过 `@UseGuards()` 应用于方法
+
+### 内置守卫
+
+- `AuthGuard`：要求认证
+- `OptionalAuthGuard`：可选认证
+- `RolesGuard`：基于角色的授权（与 `@Roles()` 装饰器一起使用）
+
+### 示例
+
+```typescript
+@Controller('/api/admin')
+@UseGuards(AuthGuard, RolesGuard)
+class AdminController {
+  @GET('/dashboard')
+  @Roles('admin')
+  public dashboard() {
+    return { message: '管理员仪表板' };
+  }
+}
+```
+
+详细文档请参阅 [守卫](./guards.md)。
+
+## 5. 拦截器（前置处理）
 
 拦截器在控制器方法之前和之后运行。前置拦截器按顺序执行：
 
@@ -200,7 +236,7 @@ class ApiController {}
 - 响应转换
 - 性能监控
 
-## 5. 参数绑定和验证
+## 6. 参数绑定和验证
 
 ### 参数装饰器
 
@@ -208,9 +244,11 @@ class ApiController {}
 |--------|------|------|
 | `@Param(name)` | URL 路径参数 | `/users/:id` → `@Param('id')` |
 | `@Query(name)` | 查询字符串 | `?page=1` → `@Query('page')` |
+| `@QueryMap()` | 所有查询参数 | `?page=1&limit=10` → `@QueryMap()` 返回 `{ page: '1', limit: '10' }` |
 | `@Body()` | 请求体 | JSON 请求体 |
 | `@Body(name)` | 请求体属性 | `body.name` → `@Body('name')` |
 | `@Header(name)` | 请求头 | `@Header('Authorization')` |
+| `@HeaderMap()` | 所有请求头 | `@HeaderMap()` 返回所有请求头作为对象 |
 | `@Context()` | 完整上下文 | 请求上下文对象 |
 | `@Session()` | 会话数据 | 会话对象 |
 
@@ -262,7 +300,7 @@ public createUser(
 }
 ```
 
-## 6. 控制器方法执行
+## 7. 控制器方法执行
 
 验证通过后，使用已解析的依赖和绑定的参数调用控制器方法。
 
@@ -294,7 +332,7 @@ class UserController {
 - **void** - 空响应（204）
 - **Promise** - 异步操作
 
-## 7. 拦截器（后置处理）
+## 8. 拦截器（后置处理）
 
 处理器执行后，后置拦截器按相反顺序运行：
 
@@ -318,7 +356,7 @@ class TransformInterceptor implements Interceptor {
 }
 ```
 
-## 8. 异常过滤器
+## 9. 异常过滤器
 
 如果在请求生命周期中抛出任何异常，它会被异常过滤器捕获。
 

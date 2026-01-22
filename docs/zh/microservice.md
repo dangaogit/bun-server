@@ -1,26 +1,26 @@
-# Microservice Architecture Support
+# 微服务架构支持
 
-Bun Server Framework provides comprehensive microservice architecture support, including configuration center, service registration and discovery, service invocation, service governance, and observability features.
+Bun Server Framework 提供了完整的微服务架构支持，包括配置中心、服务注册与发现、服务调用、服务治理和可观测性等功能。
 
-## Table of Contents
+## 目录
 
-- [Quick Start](#quick-start)
-- [Configuration Center](#configuration-center)
-- [Service Registration and Discovery](#service-registration-and-discovery)
-- [Service Invocation](#service-invocation)
-- [Service Governance](#service-governance)
-- [Monitoring and Tracing](#monitoring-and-tracing)
-- [Best Practices](#best-practices)
+- [快速开始](#快速开始)
+- [配置中心](#配置中心)
+- [服务注册与发现](#服务注册与发现)
+- [服务调用](#服务调用)
+- [服务治理](#服务治理)
+- [监控和追踪](#监控和追踪)
+- [最佳实践](#最佳实践)
 
-## Quick Start
+## 快速开始
 
-### Install Dependencies
+### 安装依赖
 
 ```bash
 bun add @dangao/bun-server
 ```
 
-### Basic Example
+### 基础示例
 
 ```typescript
 import { Application } from '@dangao/bun-server';
@@ -30,10 +30,10 @@ import {
   ServiceClient,
 } from '@dangao/bun-server';
 
-// Create application
+// 创建应用
 const app = new Application();
 
-// Register configuration center module
+// 注册配置中心模块
 app.registerModule(
   ConfigCenterModule.forRoot({
     provider: 'nacos',
@@ -48,7 +48,7 @@ app.registerModule(
   }),
 );
 
-// Register service registry module
+// 注册服务注册中心模块
 app.registerModule(
   ServiceRegistryModule.forRoot({
     provider: 'nacos',
@@ -63,13 +63,13 @@ app.registerModule(
   }),
 );
 
-// Start application
+// 启动应用
 await app.listen(3000);
 ```
 
-## Configuration Center
+## 配置中心
 
-### Basic Usage
+### 基本使用
 
 ```typescript
 import {
@@ -95,7 +95,7 @@ class MyService {
 }
 ```
 
-### Using Decorators
+### 使用装饰器
 
 ```typescript
 import { ConfigCenterValue, Injectable } from '@dangao/bun-server';
@@ -104,32 +104,32 @@ import { ConfigCenterValue, Injectable } from '@dangao/bun-server';
 class MyService {
   @ConfigCenterValue('my-config', 'DEFAULT_GROUP', {
     defaultValue: 'default-value',
-    watch: true, // Watch for configuration changes
+    watch: true, // 监听配置变更
   })
   public configValue: string = '';
 
   public getConfig() {
-    return this.configValue; // Automatically fetched from config center
+    return this.configValue; // 自动从配置中心获取
   }
 }
 ```
 
-### Hot Configuration Update
+### 配置热更新
 
-The configuration center supports hot configuration updates, automatically notifying the application when configurations change:
+配置中心支持配置热更新，当配置变更时会自动通知应用：
 
 ```typescript
 const configCenter = container.resolve<ConfigCenter>(CONFIG_CENTER_TOKEN);
 
 configCenter.watchConfig('my-config', 'DEFAULT_GROUP', (newConfig) => {
   console.log('Config updated:', newConfig.content);
-  // Update application configuration
+  // 更新应用配置
 });
 ```
 
-### ConfigModule Integration
+### ConfigModule 集成
 
-ConfigModule supports deep integration with the configuration center, automatically refreshing when configurations change:
+ConfigModule 支持与配置中心深度集成，配置变更会自动刷新：
 
 ```typescript
 import { ConfigModule } from '@dangao/bun-server';
@@ -142,16 +142,16 @@ ConfigModule.forRoot({
       ['app.name', { dataId: 'app-name', groupName: 'DEFAULT_GROUP' }],
       ['app.port', { dataId: 'app-port', groupName: 'DEFAULT_GROUP' }],
     ]),
-    configCenterPriority: true, // Config center has highest priority
+    configCenterPriority: true, // 配置中心配置优先级最高
   },
 });
 ```
 
-## Service Registration and Discovery
+## 服务注册与发现
 
-### Service Registration
+### 服务注册
 
-#### Automatic Registration with Decorator
+#### 使用装饰器自动注册
 
 ```typescript
 import { ServiceRegistry, Controller, GET } from '@dangao/bun-server';
@@ -169,13 +169,13 @@ class UserController {
   }
 }
 
-// Service will be automatically registered when application starts
+// 应用启动时会自动注册服务
 const app = new Application();
 app.registerController(UserController);
 await app.listen(3000);
 ```
 
-#### Manual Registration
+#### 手动注册
 
 ```typescript
 import {
@@ -203,9 +203,9 @@ class MyService {
 }
 ```
 
-### Service Discovery
+### 服务发现
 
-#### Automatic Discovery with Decorator
+#### 使用装饰器自动发现
 
 ```typescript
 import { ServiceDiscovery, Injectable } from '@dangao/bun-server';
@@ -214,18 +214,18 @@ import type { ServiceInstance } from '@dangao/bun-server';
 @Injectable()
 class MyService {
   @ServiceDiscovery('user-service', {
-    healthyOnly: true, // Only get healthy instances
+    healthyOnly: true, // 只获取健康实例
   })
   public instances: ServiceInstance[] = [];
 
   public async getAvailableInstances() {
-    // instances will be automatically updated
+    // instances 会自动更新
     return this.instances;
   }
 }
 ```
 
-#### Manual Discovery
+#### 手动发现
 
 ```typescript
 const instances = await serviceRegistry.getInstances('user-service', {
@@ -233,38 +233,38 @@ const instances = await serviceRegistry.getInstances('user-service', {
   namespaceId: 'public',
 });
 
-// Watch for service instance changes
+// 监听服务实例变更
 serviceRegistry.watchInstances('user-service', (newInstances) => {
   console.log('Instances updated:', newInstances);
 });
 ```
 
-### Health Check Integration
+### 健康检查集成
 
-Service registration automatically integrates with the health check module, updating service health status based on health check results:
+服务注册会自动集成健康检查模块，根据健康检查状态更新服务健康状态：
 
 ```typescript
 import { HealthModule } from '@dangao/bun-server';
 
-// Register health check module
+// 注册健康检查模块
 HealthModule.forRoot({
   indicators: [
     {
       name: 'db',
       async check() {
-        // Check database connection
+        // 检查数据库连接
         return { status: 'up' };
       },
     },
   ],
 });
 
-// Services using @ServiceRegistry decorator will automatically update based on health check status
+// 使用 @ServiceRegistry 装饰器的服务会自动根据健康检查状态更新
 ```
 
-## Service Invocation
+## 服务调用
 
-### Basic Usage
+### 基本使用
 
 ```typescript
 import {
@@ -296,7 +296,7 @@ class MyService {
 }
 ```
 
-### Using Decorator Injection
+### 使用装饰器注入
 
 ```typescript
 import { ServiceClient, Injectable } from '@dangao/bun-server';
@@ -317,12 +317,12 @@ class MyService {
 }
 ```
 
-### Load Balancing
+### 负载均衡
 
-ServiceClient supports multiple load balancing strategies:
+ServiceClient 支持多种负载均衡策略：
 
 ```typescript
-// Random load balancing
+// 随机负载均衡
 await serviceClient.call({
   serviceName: 'user-service',
   method: 'GET',
@@ -330,7 +330,7 @@ await serviceClient.call({
   loadBalanceStrategy: 'random',
 });
 
-// Round-robin load balancing
+// 轮询负载均衡
 await serviceClient.call({
   serviceName: 'user-service',
   method: 'GET',
@@ -338,7 +338,7 @@ await serviceClient.call({
   loadBalanceStrategy: 'roundRobin',
 });
 
-// Weighted round-robin
+// 加权轮询
 await serviceClient.call({
   serviceName: 'user-service',
   method: 'GET',
@@ -346,7 +346,7 @@ await serviceClient.call({
   loadBalanceStrategy: 'weightedRoundRobin',
 });
 
-// Consistent hashing (for scenarios requiring session affinity)
+// 一致性哈希（适用于需要会话粘性的场景）
 await serviceClient.call({
   serviceName: 'user-service',
   method: 'GET',
@@ -355,7 +355,7 @@ await serviceClient.call({
   consistentHashKey: 'user-id-123',
 });
 
-// Least active
+// 最少连接
 await serviceClient.call({
   serviceName: 'user-service',
   method: 'GET',
@@ -364,9 +364,9 @@ await serviceClient.call({
 });
 ```
 
-### Streaming Calls
+### 流式调用
 
-Supports streaming responses like Server-Sent Events:
+支持 Server-Sent Events 等流式响应：
 
 ```typescript
 const stream = await serviceClient.callStream({
@@ -375,7 +375,7 @@ const stream = await serviceClient.callStream({
   path: '/api/events',
 });
 
-// Read stream data
+// 读取流数据
 const reader = stream.getReader();
 while (true) {
   const { done, value } = await reader.read();
@@ -384,9 +384,9 @@ while (true) {
 }
 ```
 
-### Interceptors
+### 拦截器
 
-#### Request Interceptors
+#### 请求拦截器
 
 ```typescript
 import {
@@ -397,7 +397,7 @@ import {
 serviceClient.addRequestInterceptor(new TraceIdRequestInterceptor());
 serviceClient.addRequestInterceptor(new RequestLogInterceptor());
 
-// Custom request interceptor
+// 自定义请求拦截器
 serviceClient.addRequestInterceptor({
   async intercept(options) {
     options.headers = {
@@ -409,7 +409,7 @@ serviceClient.addRequestInterceptor({
 });
 ```
 
-#### Response Interceptors
+#### 响应拦截器
 
 ```typescript
 import {
@@ -420,10 +420,10 @@ import {
 serviceClient.addResponseInterceptor(new ResponseLogInterceptor());
 serviceClient.addResponseInterceptor(new ErrorHandlerInterceptor());
 
-// Custom response interceptor
+// 自定义响应拦截器
 serviceClient.addResponseInterceptor({
   async intercept(response) {
-    // Transform response data
+    // 转换响应数据
     return {
       ...response,
       data: transformData(response.data),
@@ -432,27 +432,24 @@ serviceClient.addResponseInterceptor({
 });
 ```
 
-## Service Governance
+## 服务治理
 
-### Circuit Breaker
+### 熔断器
 
-#### Using Decorator
+#### 使用装饰器
 
 ```typescript
 import { CircuitBreaker, Injectable } from '@dangao/bun-server';
 
 @Injectable()
 class MyService {
-  @CircuitBreaker(
-    {
-      failureThreshold: 0.5,
-      timeWindow: 60000,
-      minimumRequests: 10,
-    },
-    'fallbackMethod',
-  )
+  @CircuitBreaker({
+    failureThreshold: 0.5,
+    timeWindow: 60000,
+    minimumRequests: 10,
+  }, 'fallbackMethod')
   public async callExternalService() {
-    // Automatically applies circuit breaker protection
+    // 自动应用熔断保护
     return await externalService.call();
   }
 
@@ -462,7 +459,7 @@ class MyService {
 }
 ```
 
-#### Manual Usage
+#### 手动使用
 
 ```typescript
 import { CircuitBreaker } from '@dangao/bun-server';
@@ -477,15 +474,15 @@ const result = await circuitBreaker.execute(
     return await serviceClient.call(options);
   },
   async () => {
-    // Fallback handling
+    // 降级处理
     return { fallback: true };
   },
 );
 ```
 
-### Rate Limiting
+### 限流
 
-#### In-Memory Rate Limiting
+#### 内存限流
 
 ```typescript
 import { RateLimiter } from '@dangao/bun-server';
@@ -501,12 +498,12 @@ if (!allowed) {
 }
 ```
 
-#### Distributed Rate Limiting (Redis)
+#### 分布式限流（Redis）
 
 ```typescript
 import { RedisRateLimiter } from '@dangao/bun-server';
 
-// Redis client needs to be provided
+// 需要提供 Redis 客户端
 const redisClient = {
   get: async (key: string) => await redis.get(key),
   set: async (key: string, value: string, options?: any) => {
@@ -531,7 +528,7 @@ const rateLimiter = new RedisRateLimiter(
 const allowed = await rateLimiter.allow('service-key');
 ```
 
-### Retry Strategy
+### 重试策略
 
 ```typescript
 import {
@@ -539,37 +536,34 @@ import {
   ExponentialBackoffRetryStrategy,
 } from '@dangao/bun-server';
 
-// Fixed interval retry
+// 固定间隔重试
 const fixedRetry = new FixedIntervalRetryStrategy({
   maxRetries: 3,
   retryDelay: 1000,
 });
 
-// Exponential backoff retry
+// 指数退避重试
 const exponentialRetry = new ExponentialBackoffRetryStrategy({
   maxRetries: 3,
   baseDelay: 1000,
   maxDelay: 30000,
 });
 
-// Use in ServiceClient
+// 在 ServiceClient 中使用
 serviceClient.setDefaultRetryStrategy({
   maxRetries: 3,
   retryDelay: 1000,
   exponentialBackoff: true,
   shouldRetry: (error) => {
-    // Only retry on network errors
-    return (
-      error.message.includes('timeout') ||
-      error.message.includes('network')
-    );
+    // 只对网络错误重试
+    return error.message.includes('timeout') || error.message.includes('network');
   },
 });
 ```
 
-## Monitoring and Tracing
+## 监控和追踪
 
-### Distributed Tracing
+### 分布式追踪
 
 ```typescript
 import {
@@ -585,40 +579,40 @@ const tracer = new Tracer({
 
 tracer.addCollector(new ConsoleTraceCollector());
 
-// Use in ServiceClient
+// 在 ServiceClient 中使用
 serviceClient.setTracer(tracer);
 
-// Manually create span
+// 手动创建 Span
 const span = tracer.startSpan('my-operation', SpanKind.INTERNAL);
 tracer.setSpanTags(span.context.spanId, {
   'operation.name': 'process-data',
   'user.id': '123',
 });
-// ... execute operation
+// ... 执行操作
 tracer.endSpan(span.context.spanId, SpanStatus.OK);
 ```
 
-### Service Monitoring
+### 服务监控
 
 ```typescript
 import { ServiceMetricsCollector } from '@dangao/bun-server';
 
 const metricsCollector = new ServiceMetricsCollector({
   enabled: true,
-  autoReportToMetrics: true, // Automatically report to MetricsModule
+  autoReportToMetrics: true, // 自动上报到 MetricsModule
 });
 
-// Use in ServiceClient
+// 在 ServiceClient 中使用
 serviceClient.setMetricsCollector(metricsCollector);
 
-// Query metrics
+// 查询指标
 const allMetrics = metricsCollector.getAllMetrics();
 const healthStatus = metricsCollector.getAllHealthStatus();
 ```
 
-### Prometheus Integration
+### Prometheus 集成
 
-Service monitoring metrics are automatically reported to MetricsModule and exported in Prometheus format via the `/metrics` endpoint:
+服务监控指标会自动上报到 MetricsModule，通过 `/metrics` 端点导出 Prometheus 格式：
 
 ```typescript
 import { MetricsModule } from '@dangao/bun-server';
@@ -627,59 +621,60 @@ MetricsModule.forRoot({
   enableHttpMetrics: true,
 });
 
-// Access http://localhost:3000/metrics to get Prometheus format metrics
+// 访问 http://localhost:3000/metrics 获取 Prometheus 格式指标
 ```
 
-Exported metrics include:
-- `service_calls_total` - Total service calls
-- `service_calls_success_total` - Successful calls
-- `service_calls_failure_total` - Failed calls
-- `service_call_latency_avg_ms` - Average latency
-- `service_call_latency_min_ms` - Minimum latency
-- `service_call_latency_max_ms` - Maximum latency
-- `service_call_error_rate` - Error rate
-- `service_instance_healthy` - Instance health status
-- `service_instance_consecutive_failures` - Consecutive failures
+导出的指标包括：
+- `service_calls_total` - 服务调用总数
+- `service_calls_success_total` - 成功调用数
+- `service_calls_failure_total` - 失败调用数
+- `service_call_latency_avg_ms` - 平均延迟
+- `service_call_latency_min_ms` - 最小延迟
+- `service_call_latency_max_ms` - 最大延迟
+- `service_call_error_rate` - 错误率
+- `service_instance_healthy` - 实例健康状态
+- `service_instance_consecutive_failures` - 连续失败次数
 
-## Best Practices
+## 最佳实践
 
-### 1. Configuration Management
+### 1. 配置管理
 
-- Use configuration center to manage dynamic configurations
-- Use different namespaces for different environments
-- Enable configuration watching for hot updates
-- Set reasonable configuration priorities
+- 使用配置中心管理动态配置
+- 为不同环境使用不同的命名空间
+- 启用配置监听以实现热更新
+- 设置合理的配置优先级
 
-### 2. Service Registration
+### 2. 服务注册
 
-- Use `@ServiceRegistry` decorator for automatic registration
-- Configure reasonable service metadata (version, weight, etc.)
-- Enable health check integration
-- Ensure services are properly deregistered when application shuts down
+- 使用 `@ServiceRegistry` 装饰器自动注册
+- 配置合理的服务元数据（版本、权重等）
+- 启用健康检查集成
+- 确保应用关闭时正确注销服务
 
-### 3. Service Invocation
+### 3. 服务调用
 
-- Choose appropriate load balancing strategy
-- Configure reasonable timeout values
-- Use interceptors for unified request/response handling
-- Enable tracing and monitoring
+- 选择合适的负载均衡策略
+- 配置合理的超时时间
+- 使用拦截器统一处理请求/响应
+- 启用追踪和监控
 
-### 4. Service Governance
+### 4. 服务治理
 
-- Enable circuit breaker for critical services
-- Configure reasonable rate limiting strategies
-- Implement fallback handling logic
-- Use retry strategies for temporary failures
+- 为关键服务启用熔断器
+- 配置合理的限流策略
+- 实现降级处理逻辑
+- 使用重试策略处理临时故障
 
-### 5. Observability
+### 5. 可观测性
 
-- Enable distributed tracing
-- Configure reasonable sampling rates
-- Integrate Prometheus monitoring
-- Set up alerting rules
+- 启用分布式追踪
+- 配置合理的采样率
+- 集成 Prometheus 监控
+- 设置告警规则
 
-## More Resources
+## 更多资源
 
-- [Configuration Center Guide](./zh/microservice-config-center.md)
-- [Service Registration and Discovery Guide](./zh/microservice-service-registry.md)
-- [Nacos Integration Documentation](./zh/microservice-nacos.md)
+- [配置中心使用指南](./microservice-config-center.md)
+- [服务注册与发现使用指南](./microservice-service-registry.md)
+- [Nacos 集成文档](./microservice-nacos.md)
+

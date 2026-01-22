@@ -1,19 +1,19 @@
-# Symbol + Interface 同名模式详解
+# Symbol + Interface Same-Name Pattern Explained
 
-## 📖 背景
+## 📖 Background
 
-TypeScript 在编译为 JavaScript 后，所有类型信息都会丢失。这给依赖注入框架带来了挑战：如何在运行时识别注入的依赖类型？
+After TypeScript is compiled to JavaScript, all type information is lost. This poses a challenge for dependency injection frameworks: how to identify the type of injected dependencies at runtime?
 
-## 🎯 解决方案
+## 🎯 Solution
 
-Bun Server Framework 采用 **Symbol + Interface 同名模式**，优雅地解决了这个问题。
+Bun Server Framework adopts the **Symbol + Interface Same-Name Pattern** to elegantly solve this problem.
 
-## 💡 核心概念
+## 💡 Core Concepts
 
-### 传统方式的问题
+### Problems with Traditional Approach
 
 ```typescript
-// ❌ 传统方式：只能注入具体类
+// ❌ Traditional approach: can only inject concrete classes
 interface UserService {
   find(id: string): Promise<User>;
 }
@@ -23,102 +23,102 @@ class UserServiceImpl implements UserService {
   async find(id: string) { ... }
 }
 
-// 问题：TypeScript 编译后 interface 消失
-// 无法在运行时通过 interface 类型进行注入
+// Problem: TypeScript interfaces disappear after compilation
+// Cannot inject using interface type at runtime
 public constructor(
-  private readonly userService: UserService  // 编译后类型信息丢失
+  private readonly userService: UserService  // Type information lost after compilation
 ) {}
 ```
 
-### Symbol + Interface 同名模式
+### Symbol + Interface Same-Name Pattern
 
 ```typescript
-// ✅ Bun Server 方式：Symbol + Interface 同名
+// ✅ Bun Server approach: Symbol + Interface same name
 
-// 1. 定义接口（编译时类型检查）
+// 1. Define interface (compile-time type checking)
 interface UserService {
   find(id: string): Promise<User>;
   create(user: User): Promise<User>;
 }
 
-// 2. 定义同名 Symbol（运行时 Token）
-// 注意：声明为 const，与 interface 同名
+// 2. Define same-name Symbol (runtime Token)
+// Note: declared as const, same name as interface
 const UserService = Symbol('UserService');
 
-// 3. 实现接口
+// 3. Implement interface
 @Injectable()
 class UserServiceImpl implements UserService {
   public async find(id: string): Promise<User> {
-    // 实现...
+    // Implementation...
   }
   
   public async create(user: User): Promise<User> {
-    // 实现...
+    // Implementation...
   }
 }
 
-// 4. 在 Module 中配置
+// 4. Configure in Module
 @Module({
   providers: [{
-    provide: UserService,      // Symbol Token（运行时）
-    useClass: UserServiceImpl, // 实现类
+    provide: UserService,      // Symbol Token (runtime)
+    useClass: UserServiceImpl, // Implementation class
   }],
-  exports: [UserServiceImpl],  // 导出实现类（可选）
+  exports: [UserServiceImpl],  // Export implementation class (optional)
 })
 class UserModule {}
 
-// 5. 注入使用
+// 5. Inject and use
 @Controller('/users')
 class UserController {
   public constructor(
-    // 类型是 interface UserService（编译时检查）
-    // 实际注入的是 Symbol('UserService') 对应的实例（运行时）
+    // Type is interface UserService (compile-time check)
+    // Actually injected is instance corresponding to Symbol('UserService') (runtime)
     private readonly userService: UserService,
   ) {}
   
   @GET('/:id')
   public async getUser(@Param('id') id: string) {
-    // TypeScript 知道 userService 有 find 方法
+    // TypeScript knows userService has find method
     return await this.userService.find(id);
   }
 }
 ```
 
-## 🔑 关键要点
+## 🔑 Key Points
 
-### 1. 导入时不能使用 `import type`
+### 1. Cannot Use `import type` When Importing
 
 ```typescript
-// ✅ 正确：同时导入 Symbol 和 interface
+// ✅ Correct: Import both Symbol and interface
 import { UserService } from './user-service';
 
-// ❌ 错误：只导入类型，Symbol 丢失
+// ❌ Wrong: Only import type, Symbol is lost
 import type { UserService } from './user-service';
 
-// ❌ 错误：混合导入会导致混淆
+// ❌ Wrong: Mixed import causes confusion
 import { type UserService } from './user-service';
 ```
 
-**原因**：`import type` 只导入类型信息，编译后会被完全移除，导致 Symbol 丢失。
+**Reason**: `import type` only imports type information, which is completely removed after compilation, causing the Symbol to be lost.
 
-### 2. 导出顺序
+### 2. Export Order
 
 ```typescript
-// 推荐的文件组织方式
+// Recommended file organization
 
 // user-service.ts
-// 1. 导入依赖
+// 1. Import dependencies
 import { Injectable } from '@dangao/bun-server';
 
-// 2. 定义接口
+// 2. Define interface
 export interface UserService {
   find(id: string): Promise<User>;
 }
 
-// 3. 定义 Symbol（与接口同名）
+// 3. Define Symbol (same name as interface)
 export const UserService = Symbol('UserService');
 
-// 4. 实现类
+// 4. Implementation class
 @Injectable()
 export class UserServiceImpl implements UserService {
   public async find(id: string): Promise<User> {
@@ -127,66 +127,66 @@ export class UserServiceImpl implements UserService {
 }
 ```
 
-### 3. Module 配置
+### 3. Module Configuration
 
 ```typescript
 @Module({
   providers: [
     {
-      provide: UserService,      // 使用 Symbol 作为 Token
-      useClass: UserServiceImpl, // 指定实现类
+      provide: UserService,      // Use Symbol as Token
+      useClass: UserServiceImpl, // Specify implementation class
     }
   ],
-  exports: [UserServiceImpl],    // 导出实现类（供其他模块使用）
+  exports: [UserServiceImpl],    // Export implementation class (for other modules to use)
 })
 class UserModule {}
 ```
 
-**注意**：
-- `provide` 使用 Symbol Token
-- `exports` 导出实现类（不是 Symbol）
+**Note**:
+- `provide` uses Symbol Token
+- `exports` exports implementation class (not Symbol)
 
-### 4. 构造函数注入
+### 4. Constructor Injection
 
 ```typescript
-// ✅ 推荐：默认注入（无需装饰器）
+// ✅ Recommended: Default injection (no decorator needed)
 public constructor(
-  private readonly userService: UserService,  // 框架自动识别类型
+  private readonly userService: UserService,  // Framework automatically recognizes type
 ) {}
 
-// ⚠️ 仅在以下情况使用 @Inject
+// ⚠️ Only use @Inject in the following cases
 public constructor(
   @Inject(UserService) private readonly userService: UserService,
 ) {}
 ```
 
-## 📋 完整示例
+## 📋 Complete Example
 
-### 步骤 1：定义服务接口和实现
+### Step 1: Define Service Interface and Implementation
 
 ```typescript
 // src/user/user-service.ts
 
 import { Injectable } from '@dangao/bun-server';
 
-// 1. 定义用户实体
+// 1. Define user entity
 export interface User {
   id: string;
   name: string;
   email: string;
 }
 
-// 2. 定义服务接口
+// 2. Define service interface
 export interface UserService {
   find(id: string): Promise<User | undefined>;
   create(name: string, email: string): Promise<User>;
   findAll(): Promise<User[]>;
 }
 
-// 3. 定义同名 Symbol
+// 3. Define same-name Symbol
 export const UserService = Symbol('UserService');
 
-// 4. 实现服务
+// 4. Implement service
 @Injectable()
 export class UserServiceImpl implements UserService {
   private readonly users = new Map<string, User>();
@@ -208,18 +208,18 @@ export class UserServiceImpl implements UserService {
 }
 ```
 
-### 步骤 2：创建控制器
+### Step 2: Create Controller
 
 ```typescript
 // src/user/user-controller.ts
 
 import { Controller, GET, POST, Body, Param } from '@dangao/bun-server';
-// ✅ 注意：不要用 import type
+// ✅ Note: Don't use import type
 import { UserService } from './user-service';
 
 @Controller('/api/users')
 export class UserController {
-  // 构造函数注入，框架自动识别类型
+  // Constructor injection, framework automatically recognizes type
   public constructor(
     private readonly userService: UserService,
   ) {}
@@ -245,7 +245,7 @@ export class UserController {
 }
 ```
 
-### 步骤 3：配置模块
+### Step 3: Configure Module
 
 ```typescript
 // src/user/user-module.ts
@@ -259,15 +259,15 @@ import { UserService, UserServiceImpl } from './user-service';
   providers: [
     {
       provide: UserService,      // Symbol Token
-      useClass: UserServiceImpl, // 实现类
+      useClass: UserServiceImpl, // Implementation class
     }
   ],
-  exports: [UserServiceImpl],    // 导出供其他模块使用
+  exports: [UserServiceImpl],    // Export for other modules to use
 })
 export class UserModule {}
 ```
 
-### 步骤 4：启动应用
+### Step 4: Start Application
 
 ```typescript
 // src/main.ts
@@ -282,19 +282,19 @@ app.listen();
 console.log('Server running on http://localhost:3000');
 ```
 
-## 🎨 高级用法
+## 🎨 Advanced Usage
 
-### 多实现切换
+### Multiple Implementation Switching
 
 ```typescript
-// 定义接口和 Symbol
+// Define interface and Symbol
 export interface CacheService {
   get(key: string): Promise<string | null>;
   set(key: string, value: string): Promise<void>;
 }
 export const CacheService = Symbol('CacheService');
 
-// 内存实现
+// Memory implementation
 @Injectable()
 export class MemoryCacheService implements CacheService {
   private cache = new Map<string, string>();
@@ -308,19 +308,19 @@ export class MemoryCacheService implements CacheService {
   }
 }
 
-// Redis 实现
+// Redis implementation
 @Injectable()
 export class RedisCacheService implements CacheService {
   async get(key: string) {
-    // Redis 实现...
+    // Redis implementation...
   }
   
   async set(key: string, value: string) {
-    // Redis 实现...
+    // Redis implementation...
   }
 }
 
-// 根据环境切换实现
+// Switch implementation based on environment
 const isProduction = process.env.NODE_ENV === 'production';
 
 @Module({
@@ -334,10 +334,10 @@ const isProduction = process.env.NODE_ENV === 'production';
 export class CacheModule {}
 ```
 
-### 工厂函数
+### Factory Function
 
 ```typescript
-// 使用工厂函数创建实例
+// Use factory function to create instances
 @Module({
   providers: [
     {
@@ -355,54 +355,54 @@ export class CacheModule {}
 export class UserModule {}
 ```
 
-## ❓ 常见问题
+## ❓ Common Questions
 
-### Q1: 为什么不直接使用类作为 Token？
+### Q1: Why Not Use Classes Directly as Tokens?
 
-**A**: 使用类作为 Token 有以下问题：
-1. 无法实现面向接口编程
-2. 紧耦合实现类，不利于测试
-3. 无法在运行时动态切换实现
+**A**: Using classes as tokens has the following problems:
+1. Cannot implement interface-oriented programming
+2. Tight coupling to implementation classes, not conducive to testing
+3. Cannot dynamically switch implementations at runtime
 
-Symbol + Interface 模式提供了更好的灵活性。
+The Symbol + Interface pattern provides better flexibility.
 
-### Q2: Symbol 和 String Token 有什么区别？
+### Q2: What's the Difference Between Symbol and String Tokens?
 
 ```typescript
-// Symbol Token（推荐）
+// Symbol Token (recommended)
 const UserService = Symbol('UserService');
 
-// String Token（不推荐）
+// String Token (not recommended)
 const USER_SERVICE_TOKEN = 'UserService';
 ```
 
-**区别**：
-- Symbol 是唯一的，避免命名冲突
-- String 可能在大型项目中重复，导致注入错误
-- Symbol 配合 interface 同名，语义更清晰
+**Differences**:
+- Symbol is unique, avoiding naming conflicts
+- String may be duplicated in large projects, causing injection errors
+- Symbol combined with same-name interface provides clearer semantics
 
-### Q3: 什么时候必须用 @Inject 装饰器？
+### Q3: When Must @Inject Decorator Be Used?
 
-只有以下情况需要：
-1. 使用 Symbol Token（虽然默认注入也支持，但显式使用更清晰）
-2. 参数类型无法推断（如 interface）
-3. 需要注入特定的实现
+Only needed in the following cases:
+1. Using Symbol Token (although default injection also supports it, explicit use is clearer)
+2. Parameter type cannot be inferred (e.g., interface)
+3. Need to inject specific implementation
 
 ```typescript
-// 需要 @Inject 的情况
+// Cases requiring @Inject
 public constructor(
   @Inject(CONFIG_SERVICE_TOKEN) private config: ConfigService,
   @Inject(LOGGER_TOKEN) private logger: Logger,
 ) {}
 
-// 不需要 @Inject（推荐）
+// No @Inject needed (recommended)
 public constructor(
   private readonly userService: UserService,
   private readonly productService: ProductService,
 ) {}
 ```
 
-### Q4: exports 为什么导出实现类而不是 Symbol？
+### Q4: Why Does exports Export Implementation Classes Instead of Symbols?
 
 ```typescript
 @Module({
@@ -410,22 +410,22 @@ public constructor(
     provide: UserService,      // Symbol Token
     useClass: UserServiceImpl,
   }],
-  exports: [UserServiceImpl],  // 导出实现类
+  exports: [UserServiceImpl],  // Export implementation class
 })
 ```
 
-**原因**：
-- `exports` 的作用是让其他模块可以导入该模块的 providers
-- 导出的是 providers 数组中的元素（实现类）
-- 其他模块通过 `imports` 导入后，可以使用 Symbol Token 注入
+**Reason**:
+- The purpose of `exports` is to allow other modules to import this module's providers
+- What's exported are elements from the providers array (implementation classes)
+- After other modules import through `imports`, they can use Symbol Token for injection
 
-## 📚 相关资源
+## 📚 Related Resources
 
-- [依赖注入指南](./guide.md#dependency-injection)
-- [模块系统详解](./guide.md#module-system)
-- [最佳实践](./best-practices.md)
-- [示例代码](../examples/basic-app.ts)
+- [Dependency Injection Guide](./guide.md#dependency-injection)
+- [Module System Explained](./guide.md#module-system)
+- [Best Practices](./best-practices.md)
+- [Example Code](../examples/basic-app.ts)
 
 ---
 
-**提示**：这个模式是 Bun Server Framework 的核心特性之一，理解它能帮助你更好地设计可维护的应用架构。
+**Tip**: This pattern is one of the core features of Bun Server Framework. Understanding it will help you design more maintainable application architectures.
