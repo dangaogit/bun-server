@@ -85,11 +85,13 @@ import {
   createFileUploadMiddleware, // 文件上传
   createLoggerMiddleware, // 请求日志
   createRequestLoggingMiddleware, // 详细请求日志
+  createRateLimitMiddleware, // 限流
   createStaticFileMiddleware, // 静态文件服务
 } from "@dangao/bun-server";
 
 app.use(createLoggerMiddleware({ prefix: "[App]" }));
 app.use(createCorsMiddleware({ origin: "https://example.com" }));
+app.use(createRateLimitMiddleware({ windowMs: 60000, max: 100 }));
 app.use(createStaticFileMiddleware({ root: "./public", prefix: "/assets" }));
 ```
 
@@ -389,6 +391,57 @@ class UserController {
 - **类型安全访问**：通过 `ConfigService.get/getRequired` 使用点号路径（如 `app.port`）
 - **可验证**：`validate(config)` 钩子可集成 class-validator 风格校验
 - **无侵入**：示例中（`basic-app.ts` / `full-app.ts` / `multi-module-app.ts` / `auth-app.ts`）均通过 `ConfigModule` 管理端口、日志前缀等配置
+
+#### EventModule（事件系统）
+
+EventModule 提供了强大的事件驱动架构：
+
+```typescript
+import {
+  EventModule,
+  OnEvent,
+  EVENT_EMITTER_TOKEN,
+  Injectable,
+  Inject,
+  Module,
+} from "@dangao/bun-server";
+import type { EventEmitter } from "@dangao/bun-server";
+
+// 配置事件模块
+EventModule.forRoot({
+  wildcard: true,
+  maxListeners: 20,
+});
+
+@Injectable()
+class NotificationService {
+  @OnEvent("user.created")
+  public handleUserCreated(payload: { userId: string }) {
+    console.log("用户已创建:", payload);
+  }
+}
+
+@Module({
+  imports: [EventModule],
+  providers: [NotificationService],
+})
+class AppModule {}
+```
+
+#### 其他官方模块
+
+框架还提供了以下模块：
+
+- **CacheModule**：缓存功能，支持 `@Cacheable`、`@CacheEvict`、`@CachePut` 装饰器
+- **QueueModule**：任务队列，支持 `@Queue` 和 `@Cron` 装饰器
+- **SessionModule**：会话管理，支持 `@Session` 装饰器
+- **HealthModule**：健康检查，自动提供 `/health` 和 `/ready` 端点
+- **MetricsModule**：指标收集，支持 Prometheus 格式
+- **DatabaseModule**：数据库连接和 ORM 集成
+- **ConfigCenterModule**：配置中心（Nacos、Consul 等）
+- **ServiceRegistryModule**：服务注册与发现（Nacos、Consul 等）
+
+这些模块的详细文档请参阅 [API 概览](./api.md)。
 
 ### 完整示例
 

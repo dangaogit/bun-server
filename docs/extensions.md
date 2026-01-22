@@ -81,10 +81,12 @@ import {
   createErrorHandlingMiddleware,     // Error handling
   createFileUploadMiddleware,        // File upload
   createStaticFileMiddleware,       // Static file serving
+  createRateLimitMiddleware,        // Rate limiting
 } from '@dangao/bun-server';
 
 app.use(createLoggerMiddleware({ prefix: '[App]' }));
 app.use(createCorsMiddleware({ origin: 'https://example.com' }));
+app.use(createRateLimitMiddleware({ windowMs: 60000, max: 100 }));
 app.use(createStaticFileMiddleware({ root: './public', prefix: '/assets' }));
 ```
 
@@ -377,6 +379,57 @@ class UserController {
 - **Type-safe access**: Use `ConfigService.get/getRequired` with dot-path keys (e.g. `app.port`)
 - **Validation hook**: `validate(config)` can integrate class-validator style validation
 - **Non-intrusive**: Examples (`basic-app.ts` / `full-app.ts` / `multi-module-app.ts` / `auth-app.ts`) use `ConfigModule` to manage ports, logger prefixes, etc.
+
+#### EventModule (Event System)
+
+EventModule provides a powerful event-driven architecture:
+
+```typescript
+import {
+  EventModule,
+  OnEvent,
+  EVENT_EMITTER_TOKEN,
+  Injectable,
+  Inject,
+  Module,
+} from '@dangao/bun-server';
+import type { EventEmitter } from '@dangao/bun-server';
+
+// Configure Event module
+EventModule.forRoot({
+  wildcard: true,
+  maxListeners: 20,
+});
+
+@Injectable()
+class NotificationService {
+  @OnEvent('user.created')
+  public handleUserCreated(payload: { userId: string }) {
+    console.log('User created:', payload);
+  }
+}
+
+@Module({
+  imports: [EventModule],
+  providers: [NotificationService],
+})
+class AppModule {}
+```
+
+#### Other Official Modules
+
+The framework also provides:
+
+- **CacheModule**: Caching with `@Cacheable`, `@CacheEvict`, `@CachePut` decorators
+- **QueueModule**: Job queue with `@Queue` and `@Cron` decorators
+- **SessionModule**: Session management with `@Session` decorator
+- **HealthModule**: Health checks with `/health` and `/ready` endpoints
+- **MetricsModule**: Metrics collection with Prometheus support
+- **DatabaseModule**: Database connection and ORM integration
+- **ConfigCenterModule**: Configuration center (Nacos, Consul, etc.)
+- **ServiceRegistryModule**: Service registry and discovery (Nacos, Consul, etc.)
+
+For detailed documentation on these modules, see the [API Overview](./api.md).
 
 ### Complete Example
 

@@ -1,30 +1,30 @@
-# 服务注册与发现使用指南
+# Service Registration and Discovery Usage Guide
 
-本文档介绍如何使用 Bun Server Framework 的服务注册与发现功能。
+This document introduces how to use the service registration and discovery features in Bun Server Framework.
 
-## 目录
+## Table of Contents
 
-- [概述](#概述)
-- [快速开始](#快速开始)
-- [服务注册](#服务注册)
-- [服务发现](#服务发现)
-- [负载均衡](#负载均衡)
-- [健康检查集成](#健康检查集成)
-- [最佳实践](#最佳实践)
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+- [Service Registration](#service-registration)
+- [Service Discovery](#service-discovery)
+- [Load Balancing](#load-balancing)
+- [Health Check Integration](#health-check-integration)
+- [Best Practices](#best-practices)
 
-## 概述
+## Overview
 
-服务注册与发现提供了微服务架构中的核心能力：
+Service registration and discovery provides core capabilities in microservice architecture:
 
-- **服务注册**：将服务实例注册到注册中心
-- **服务发现**：从注册中心发现服务实例
-- **负载均衡**：支持多种负载均衡策略
-- **健康检查**：自动根据健康检查状态更新服务健康状态
-- **实例监听**：监听服务实例变更
+- **Service Registration**: Register service instances to the registry
+- **Service Discovery**: Discover service instances from the registry
+- **Load Balancing**: Supports multiple load balancing strategies
+- **Health Check**: Automatically update service health status based on health check results
+- **Instance Watching**: Watch for service instance changes
 
-## 快速开始
+## Quick Start
 
-### 1. 注册服务注册中心模块
+### 1. Register Service Registry Module
 
 ```typescript
 import { Application } from '@dangao/bun-server';
@@ -42,13 +42,13 @@ app.registerModule(
         username: 'nacos',
         password: 'nacos',
       },
-      heartbeatInterval: 5000, // 心跳间隔（毫秒）
+      heartbeatInterval: 5000, // Heartbeat interval (milliseconds)
     },
   }),
 );
 ```
 
-### 2. 注册服务
+### 2. Register Service
 
 ```typescript
 import { ServiceRegistry, Controller, GET } from '@dangao/bun-server';
@@ -68,14 +68,14 @@ class UserController {
 
 app.registerController(UserController);
 await app.listen(3000);
-// 服务会自动注册到注册中心
+// Service will be automatically registered to the registry
 ```
 
-## 服务注册
+## Service Registration
 
-### 使用装饰器自动注册
+### Automatic Registration with Decorator
 
-最简单的方式是使用 `@ServiceRegistry` 装饰器：
+The simplest way is to use the `@ServiceRegistry` decorator:
 
 ```typescript
 @ServiceRegistry('user-service', {
@@ -97,19 +97,19 @@ class UserController {
 }
 ```
 
-**配置说明**：
-- `serviceName`：服务名（必需）
-- `port`：服务端口（可选，默认从 Application 获取）
-- `ip`：服务 IP（可选，默认从 Application 获取）
-- `weight`：服务权重（用于加权负载均衡）
-- `enabled`：是否启用
-- `healthy`：初始健康状态
-- `metadata`：服务元数据（版本、区域等）
-- `clusterName`：集群名
-- `namespaceId`：命名空间
-- `groupName`：分组名
+**Configuration Description**:
+- `serviceName`: Service name (required)
+- `port`: Service port (optional, default from Application)
+- `ip`: Service IP (optional, default from Application)
+- `weight`: Service weight (for weighted load balancing)
+- `enabled`: Whether enabled
+- `healthy`: Initial health status
+- `metadata`: Service metadata (version, region, etc.)
+- `clusterName`: Cluster name
+- `namespaceId`: Namespace
+- `groupName`: Group name
 
-### 手动注册
+### Manual Registration
 
 ```typescript
 import {
@@ -142,7 +142,7 @@ class MyService {
   }
 
   public async renewService() {
-    // 续约服务（心跳）
+    // Renew service (heartbeat)
     await this.registry.renew({
       serviceName: 'my-service',
       ip: '127.0.0.1',
@@ -151,7 +151,7 @@ class MyService {
   }
 
   public async deregisterService() {
-    // 注销服务
+    // Deregister service
     await this.registry.deregister({
       serviceName: 'my-service',
       ip: '127.0.0.1',
@@ -161,11 +161,11 @@ class MyService {
 }
 ```
 
-## 服务发现
+## Service Discovery
 
-### 使用装饰器自动发现
+### Automatic Discovery with Decorator
 
-使用 `@ServiceDiscovery` 装饰器自动注入服务实例列表：
+Use the `@ServiceDiscovery` decorator to automatically inject service instance lists:
 
 ```typescript
 import { ServiceDiscovery, Injectable } from '@dangao/bun-server';
@@ -174,23 +174,23 @@ import type { ServiceInstance } from '@dangao/bun-server';
 @Injectable()
 class MyService {
   @ServiceDiscovery('user-service', {
-    healthyOnly: true, // 只获取健康实例
+    healthyOnly: true, // Only get healthy instances
     namespaceId: 'public',
     groupName: 'DEFAULT_GROUP',
   })
   public instances: ServiceInstance[] = [];
 
   public async getAvailableInstances() {
-    // instances 会自动更新
+    // instances will be automatically updated
     return this.instances;
   }
 }
 ```
 
-### 手动发现
+### Manual Discovery
 
 ```typescript
-// 获取服务实例列表
+// Get service instance list
 const instances = await serviceRegistry.getInstances('user-service', {
   healthyOnly: true,
   namespaceId: 'public',
@@ -198,12 +198,12 @@ const instances = await serviceRegistry.getInstances('user-service', {
   clusterName: 'default',
 });
 
-// 监听服务实例变更
+// Watch for service instance changes
 const unsubscribe = serviceRegistry.watchInstances(
   'user-service',
   (newInstances) => {
     console.log('Instances updated:', newInstances);
-    // 更新本地缓存
+    // Update local cache
     updateLocalCache(newInstances);
   },
   {
@@ -212,19 +212,19 @@ const unsubscribe = serviceRegistry.watchInstances(
   },
 );
 
-// 取消监听
+// Unsubscribe
 unsubscribe();
 ```
 
-## 负载均衡
+## Load Balancing
 
-ServiceClient 支持多种负载均衡策略，详见[服务调用文档](./microservice.md#负载均衡)。
+ServiceClient supports multiple load balancing strategies. For details, see [Service Invocation Documentation](./microservice.md#load-balancing).
 
-## 健康检查集成
+## Health Check Integration
 
-服务注册会自动集成健康检查模块，根据健康检查状态更新服务健康状态：
+Service registration automatically integrates with the health check module, updating service health status based on health check results:
 
-### 1. 注册健康检查模块
+### 1. Register Health Check Module
 
 ```typescript
 import { HealthModule } from '@dangao/bun-server';
@@ -234,7 +234,7 @@ HealthModule.forRoot({
     {
       name: 'db',
       async check() {
-        // 检查数据库连接
+        // Check database connection
         const isHealthy = await checkDatabase();
         return {
           status: isHealthy ? 'up' : 'down',
@@ -245,7 +245,7 @@ HealthModule.forRoot({
     {
       name: 'cache',
       async check() {
-        // 检查缓存连接
+        // Check cache connection
         return { status: 'up' };
       },
     },
@@ -253,54 +253,53 @@ HealthModule.forRoot({
 });
 ```
 
-### 2. 使用 @ServiceRegistry 装饰器
+### 2. Use @ServiceRegistry Decorator
 
-使用 `@ServiceRegistry` 装饰器的服务会自动根据健康检查状态更新：
+Services using the `@ServiceRegistry` decorator will automatically update based on health check status:
 
 ```typescript
 @ServiceRegistry('user-service')
 @Controller('/api/users')
 class UserController {
-  // 服务会根据健康检查状态自动更新健康状态
+  // Service will automatically update health status based on health check
 }
 ```
 
-### 3. 健康检查更新机制
+### 3. Health Check Update Mechanism
 
-- 每 30 秒检查一次健康状态
-- 如果健康检查失败，服务会被标记为不健康
-- 不健康的服务实例不会被负载均衡器选择（如果设置了 `healthyOnly: true`）
+- Check health status every 30 seconds
+- If health check fails, service will be marked as unhealthy
+- Unhealthy service instances will not be selected by load balancer (if `healthyOnly: true` is set)
 
-## 最佳实践
+## Best Practices
 
-### 1. 服务注册
+### 1. Service Registration
 
-- **使用装饰器**：优先使用 `@ServiceRegistry` 装饰器自动注册
-- **配置元数据**：设置版本、区域等元数据便于管理
-- **合理权重**：根据服务实例性能设置权重
-- **自动注销**：确保应用关闭时正确注销服务
+- **Use Decorator**: Prefer using `@ServiceRegistry` decorator for automatic registration
+- **Configure Metadata**: Set metadata like version, region for easier management
+- **Reasonable Weight**: Set weight based on service instance performance
+- **Automatic Deregistration**: Ensure services are properly deregistered when application shuts down
 
-### 2. 服务发现
+### 2. Service Discovery
 
-- **健康过滤**：使用 `healthyOnly: true` 只获取健康实例
-- **实例监听**：监听实例变更及时更新本地缓存
-- **命名空间**：使用命名空间区分不同环境
+- **Health Filtering**: Use `healthyOnly: true` to only get healthy instances
+- **Instance Watching**: Watch for instance changes and update local cache promptly
+- **Namespace**: Use namespaces to distinguish different environments
 
-### 3. 负载均衡
+### 3. Load Balancing
 
-- **随机**：适用于无状态服务
-- **轮询**：适用于性能相近的实例
-- **加权轮询**：适用于性能差异较大的实例
-- **一致性哈希**：适用于需要会话粘性的场景
-- **最少连接**：适用于长连接场景
+- **Random**: Suitable for stateless services
+- **Round-robin**: Suitable for instances with similar performance
+- **Weighted Round-robin**: Suitable for instances with significant performance differences
+- **Consistent Hashing**: Suitable for scenarios requiring session affinity
+- **Least Active**: Suitable for long connection scenarios
 
-### 4. 健康检查
+### 4. Health Check
 
-- **关键依赖**：为关键依赖（数据库、缓存等）添加健康检查
-- **检查频率**：合理设置检查频率（默认 30 秒）
-- **快速失败**：健康检查应该快速失败，避免阻塞
+- **Critical Dependencies**: Add health checks for critical dependencies (database, cache, etc.)
+- **Check Frequency**: Set check frequency reasonably (default 30 seconds)
+- **Fast Failure**: Health checks should fail fast to avoid blocking
 
-## 示例
+## Examples
 
-完整示例请参考 `examples/microservice-app.ts`。
-
+For complete examples, please refer to `examples/microservice-app.ts`.

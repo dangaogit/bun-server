@@ -1,40 +1,40 @@
-# Nacos Integration Documentation
+# Nacos 集成文档
 
-This document introduces how to use Nacos as a configuration center and service registry in Bun Server Framework.
+本文档介绍如何在 Bun Server Framework 中使用 Nacos 作为配置中心和服务注册中心。
 
-## Table of Contents
+## 目录
 
-- [Overview](#overview)
-- [Nacos Installation](#nacos-installation)
-- [Configuration Center Integration](#configuration-center-integration)
-- [Service Registry Integration](#service-registry-integration)
-- [Complete Example](#complete-example)
-- [Common Issues](#common-issues)
+- [概述](#概述)
+- [Nacos 安装](#nacos-安装)
+- [配置中心集成](#配置中心集成)
+- [服务注册中心集成](#服务注册中心集成)
+- [完整示例](#完整示例)
+- [常见问题](#常见问题)
 
-## Overview
+## 概述
 
-Bun Server Framework provides Nacos 3.X support through the `@dangao/nacos-client` package, including:
+Bun Server Framework 通过 `@dangao/nacos-client` 包提供 Nacos 3.X 支持，包括：
 
-- **Configuration Management**: Dynamic configuration fetching and watching
-- **Service Registration**: Service instance registration, renewal, and deregistration
-- **Service Discovery**: Service instance querying and watching
-- **Open API**: Based on Nacos 3.X Open API implementation
+- **配置管理**：动态配置获取和监听
+- **服务注册**：服务实例注册、续约、注销
+- **服务发现**：服务实例查询和监听
+- **Open API**：基于 Nacos 3.X Open API 实现
 
-## Nacos Installation
+## Nacos 安装
 
-### Docker Installation (Recommended)
+### Docker 安装（推荐）
 
 ```bash
 docker run --name nacos -e MODE=standalone -p 8848:8848 nacos/nacos-server:v3.0.0
 ```
 
-### Access Console
+### 访问控制台
 
-Visit http://localhost:8848/nacos, default username/password: `nacos/nacos`
+访问 http://localhost:8848/nacos，默认用户名/密码：`nacos/nacos`
 
-## Configuration Center Integration
+## 配置中心集成
 
-### 1. Register Configuration Center Module
+### 1. 注册配置中心模块
 
 ```typescript
 import { Application } from '@dangao/bun-server';
@@ -52,21 +52,21 @@ app.registerModule(
         username: 'nacos',
         password: 'nacos',
       },
-      watchInterval: 3000, // Configuration polling interval (milliseconds)
+      watchInterval: 3000, // 配置轮询间隔（毫秒）
     },
   }),
 );
 ```
 
-### 2. Create Configuration in Nacos Console
+### 2. 在 Nacos 控制台创建配置
 
-1. Log in to Nacos console
-2. Go to "Configuration Management" -> "Configuration List"
-3. Click "+" to create configuration:
-   - **Data ID**: `my-config`
-   - **Group**: `DEFAULT_GROUP`
-   - **Configuration Format**: `JSON` (or other formats)
-   - **Configuration Content**:
+1. 登录 Nacos 控制台
+2. 进入"配置管理" -> "配置列表"
+3. 点击"+"创建配置：
+   - **Data ID**：`my-config`
+   - **Group**：`DEFAULT_GROUP`
+   - **配置格式**：`JSON`（或其他格式）
+   - **配置内容**：
      ```json
      {
        "app": {
@@ -76,7 +76,7 @@ app.registerModule(
      }
      ```
 
-### 3. Use Configuration
+### 3. 使用配置
 
 ```typescript
 import {
@@ -102,18 +102,18 @@ class MyService {
 }
 ```
 
-### 4. Hot Configuration Update
+### 4. 配置热更新
 
 ```typescript
 configCenter.watchConfig('my-config', 'DEFAULT_GROUP', (newConfig) => {
   console.log('Config updated:', newConfig.content);
-  // Update application configuration
+  // 更新应用配置
 });
 ```
 
-## Service Registry Integration
+## 服务注册中心集成
 
-### 1. Register Service Registry Module
+### 1. 注册服务注册中心模块
 
 ```typescript
 import { ServiceRegistryModule } from '@dangao/bun-server';
@@ -128,15 +128,15 @@ app.registerModule(
         username: 'nacos',
         password: 'nacos',
       },
-      heartbeatInterval: 5000, // Heartbeat interval (milliseconds)
+      heartbeatInterval: 5000, // 心跳间隔（毫秒）
     },
   }),
 );
 ```
 
-### 2. Register Service
+### 2. 注册服务
 
-#### Using Decorator (Recommended)
+#### 使用装饰器（推荐）
 
 ```typescript
 import { ServiceRegistry, Controller, GET } from '@dangao/bun-server';
@@ -156,10 +156,10 @@ class UserController {
 
 app.registerController(UserController);
 await app.listen(3000);
-// Service will be automatically registered to Nacos
+// 服务会自动注册到 Nacos
 ```
 
-#### Manual Registration
+#### 手动注册
 
 ```typescript
 import {
@@ -186,7 +186,7 @@ class MyService {
 }
 ```
 
-### 3. Service Discovery
+### 3. 服务发现
 
 ```typescript
 import {
@@ -199,13 +199,13 @@ const instances = await serviceRegistry.getInstances('user-service', {
   namespaceId: 'public',
 });
 
-// Watch for service instance changes
+// 监听服务实例变更
 serviceRegistry.watchInstances('user-service', (newInstances) => {
   console.log('Instances updated:', newInstances);
 });
 ```
 
-## Complete Example
+## 完整示例
 
 ```typescript
 import { Application, Controller, GET, Injectable, Inject } from '@dangao/bun-server';
@@ -219,7 +219,7 @@ import {
   type ServiceRegistry,
 } from '@dangao/bun-server';
 
-// Register configuration center
+// 注册配置中心
 ConfigCenterModule.forRoot({
   provider: 'nacos',
   nacos: {
@@ -232,7 +232,7 @@ ConfigCenterModule.forRoot({
   },
 });
 
-// Register service registry
+// 注册服务注册中心
 ServiceRegistryModule.forRoot({
   provider: 'nacos',
   nacos: {
@@ -245,7 +245,7 @@ ServiceRegistryModule.forRoot({
   },
 });
 
-// Service class
+// 服务类
 @Injectable()
 class UserService {
   private readonly serviceClient: ServiceClient;
@@ -266,7 +266,7 @@ class UserService {
   }
 }
 
-// Controller
+// 控制器
 @ServiceRegistry('user-service', { port: 3000 })
 @Controller('/api/users')
 class UserController {
@@ -278,68 +278,69 @@ class UserController {
   }
 }
 
-// Start application
+// 启动应用
 const app = new Application();
 app.registerController(UserController);
 await app.listen(3000);
 ```
 
-## Common Issues
+## 常见问题
 
-### 1. Connection Failure
+### 1. 连接失败
 
-**Issue**: Unable to connect to Nacos server
+**问题**：无法连接到 Nacos 服务器
 
-**Solutions**:
-- Check if Nacos server is running
-- Check if `serverList` configuration is correct
-- Check network connection and firewall settings
-- Check if username and password are correct
+**解决方案**：
+- 检查 Nacos 服务器是否运行
+- 检查 `serverList` 配置是否正确
+- 检查网络连接和防火墙设置
+- 检查用户名和密码是否正确
 
-### 2. Configuration Fetch Failure
+### 2. 配置获取失败
 
-**Issue**: Unable to fetch configuration
+**问题**：无法获取配置
 
-**Solutions**:
-- Check if configuration exists in Nacos console
-- Check if Data ID and Group are correct
-- Check if namespace is correct
-- Check permission settings
+**解决方案**：
+- 检查配置是否在 Nacos 控制台中存在
+- 检查 Data ID 和 Group 是否正确
+- 检查命名空间是否正确
+- 检查权限设置
 
-### 3. Service Registration Failure
+### 3. 服务注册失败
 
-**Issue**: Service cannot be registered to Nacos
+**问题**：服务无法注册到 Nacos
 
-**Solutions**:
-- Check if service registry module is registered
-- Check if service name, IP, and port are correct
-- Check if Nacos server connection is normal
-- Check application logs for detailed error information
+**解决方案**：
+- 检查服务注册中心模块是否已注册
+- 检查服务名、IP、端口是否正确
+- 检查 Nacos 服务器连接是否正常
+- 查看应用日志获取详细错误信息
 
-### 4. Service Discovery Returns Empty
+### 4. 服务发现为空
 
-**Issue**: Service discovery returns empty list
+**问题**：服务发现返回空列表
 
-**Solutions**:
-- Check if service is registered
-- Check `healthyOnly` option (if set to true, only healthy instances are returned)
-- Check if namespace and group are correct
-- Check if service instances are healthy
+**解决方案**：
+- 检查服务是否已注册
+- 检查 `healthyOnly` 选项（如果设置为 true，只返回健康实例）
+- 检查命名空间和分组是否正确
+- 检查服务实例是否健康
 
-### 5. Hot Configuration Update Not Working
+### 5. 配置热更新不生效
 
-**Issue**: Application not updated after configuration changes
+**问题**：配置变更后应用未更新
 
-**Solutions**:
-- Check if configuration watching is enabled (`watch: true`)
-- Check if `watchInterval` setting is reasonable
-- Check if configuration watch callback is correctly implemented
-- Check logs to confirm if configuration changes are detected
+**解决方案**：
+- 检查是否启用了配置监听（`watch: true`）
+- 检查 `watchInterval` 设置是否合理
+- 检查配置监听回调是否正确实现
+- 查看日志确认配置变更是否被检测到
 
-## Reference Resources
+## 参考资源
 
-- [Nacos Official Documentation](https://nacos.io/docs/latest/)
+- [Nacos 官方文档](https://nacos.io/docs/latest/)
 - [Nacos 3.X Open API](https://nacos.io/docs/latest/manual/user/open-api/)
-- [Microservice Usage Guide](./microservice.md)
-- [Configuration Center Usage Guide](./microservice-config-center.md)
-- [Service Registration and Discovery Usage Guide](./microservice-service-registry.md)
+- [微服务使用指南](./microservice.md)
+- [配置中心使用指南](./microservice-config-center.md)
+- [服务注册与发现使用指南](./microservice-service-registry.md)
+

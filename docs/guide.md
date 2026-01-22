@@ -25,6 +25,50 @@ app.listen();
 > Tip: Default port is 3000, can be adjusted via `app.listen(customPort)` or
 > `new Application({ port })`.
 
+### Using BunServer (Low-level API)
+
+For advanced use cases, you can use `BunServer` directly:
+
+```ts
+import { BunServer } from "@dangao/bun-server";
+
+const server = new BunServer({
+  port: 3000,
+  fetch: async (request) => {
+    // Custom request handling
+    return new Response("Hello World");
+  },
+});
+
+server.listen();
+```
+
+### Accessing Request Context in Services
+
+Use `ContextService` to access the current request context in services:
+
+```ts
+import {
+  ContextService,
+  CONTEXT_SERVICE_TOKEN,
+  Inject,
+  Injectable,
+} from "@dangao/bun-server";
+
+@Injectable()
+class UserService {
+  public constructor(
+    @Inject(CONTEXT_SERVICE_TOKEN) private readonly contextService: ContextService,
+  ) {}
+
+  public getCurrentUser() {
+    const ctx = this.contextService.getContext();
+    const userId = ctx.getHeader("x-user-id");
+    return { userId };
+  }
+}
+```
+
 ## 2. Register Controllers and Dependencies
 
 ```ts
@@ -61,12 +105,68 @@ app.registerController(UserController);
 app.listen();
 ```
 
+### Advanced Parameter Binding
+
+Bun Server supports advanced parameter binding decorators:
+
+```ts
+import {
+  Body,
+  Context,
+  Controller,
+  GET,
+  Header,
+  HeaderMap,
+  Param,
+  Query,
+  QueryMap,
+} from "@dangao/bun-server";
+
+@Controller("/api/users")
+class UserController {
+  // Get single query parameter
+  @GET("/search")
+  public search(@Query("q") query: string) {
+    return { query };
+  }
+
+  // Get all query parameters as an object
+  @GET("/filter")
+  public filter(@QueryMap() params: Record<string, string>) {
+    return { filters: params };
+  }
+
+  // Get single header
+  @GET("/profile")
+  public getProfile(@Header("authorization") token: string) {
+    return { token };
+  }
+
+  // Get all headers as an object
+  @GET("/headers")
+  public getHeaders(@HeaderMap() headers: Record<string, string>) {
+    return { headers };
+  }
+
+  // Get full context object
+  @GET("/context")
+  public getContext(@Context() ctx: Context) {
+    return {
+      method: ctx.getMethod(),
+      path: ctx.getPath(),
+      query: ctx.getQuery(),
+    };
+  }
+}
+```
+
 ## 3. Using Middleware
 
 ```ts
 import {
   createCorsMiddleware,
   createLoggerMiddleware,
+  createRateLimitMiddleware,
 } from "@dangao/bun-server";
 
 const app = new Application({ port: 3000 });
@@ -75,6 +175,14 @@ const app = new Application({ port: 3000 });
 app.use(createLoggerMiddleware({ prefix: "[App]" }));
 app.use(createCorsMiddleware({ origin: "*" }));
 
+// Rate limiting middleware
+app.use(
+  createRateLimitMiddleware({
+    windowMs: 60000, // 1 minute
+    max: 100, // 100 requests per window
+  }),
+);
+
 // Custom middleware
 app.use(async (ctx, next) => {
   console.log("Before request");
@@ -82,6 +190,29 @@ app.use(async (ctx, next) => {
   console.log("After request");
   return response;
 });
+```
+
+### Rate Limiting Decorator
+
+You can also use the `@RateLimit()` decorator on controllers or methods:
+
+```ts
+import { Controller, GET, RateLimit } from "@dangao/bun-server";
+
+@Controller("/api")
+@RateLimit({ windowMs: 60000, max: 10 }) // Applied to all methods
+class ApiController {
+  @GET("/public")
+  public publicEndpoint() {
+    return { message: "Public" };
+  }
+
+  @GET("/limited")
+  @RateLimit({ windowMs: 60000, max: 5 }) // Override controller limit
+  public limitedEndpoint() {
+    return { message: "Limited" };
+  }
+}
 ```
 
 ## 4. Parameter Validation
@@ -125,6 +256,7 @@ app.listen();
 import {
   createFileUploadMiddleware,
   createStaticFileMiddleware,
+  FileStorage,
 } from "@dangao/bun-server";
 
 const app = new Application({ port: 3000 });
@@ -134,6 +266,22 @@ app.use(createFileUploadMiddleware({ maxSize: 5 * 1024 * 1024 }));
 
 // Static files
 app.use(createStaticFileMiddleware({ root: "./public", prefix: "/assets" }));
+
+// Using FileStorage service
+@Injectable()
+class FileService {
+  public constructor(
+    @Inject(FileStorage) private readonly fileStorage: FileStorage,
+  ) {}
+
+  public async saveFile(file: File): Promise<string> {
+    const path = await this.fileStorage.save(file, {
+      directory: "./uploads",
+      filename: `file-${Date.now()}`,
+    });
+    return path;
+  }
+}
 ```
 
 ## 7. Error Handling and Custom Filters
@@ -928,7 +1076,101 @@ class AppService {
 }
 ```
 
-## 19. Testing Recommendations
+## 19. Microservice Support
+
+Bun Server provides comprehensive microservice architecture support, including configuration center, service registry, service client, governance, and observability.
+
+### Configuration Center
+
+```ts
+import {
+  ConfigCenterModule,
+  CONFIG_CENTER_TOKEN,
+  Inject,
+  Injectable,
+} from "@dangao/bun-server";
+import type { ConfigCenter } from "@dangao/bun-server";
+
+ConfigCenterModule.forRoot({
+  provider: "nacos",
+  nacos: {
+    client: {
+      serverList: ["http://localhost:8848"],
+      namespace: "public",
+    },
+  },
+});
+
+@Injectable()
+class ConfigService {
+  public constructor(
+    @Inject(CONFIG_CENTER_TOKEN) private readonly configCenter: ConfigCenter,
+  ) {}
+
+  public async getConfig() {
+    const config = await this.configCenter.getConfig(
+      "my-config",
+      "DEFAULT_GROUP",
+    );
+    return JSON.parse(config.content);
+  }
+}
+```
+
+### Service Registry
+
+```ts
+import {
+  RegisterService,
+  ServiceRegistryModule,
+} from "@dangao/bun-server";
+
+ServiceRegistryModule.forRoot({
+  provider: "nacos",
+  nacos: {
+    client: {
+      serverList: ["http://localhost:8848"],
+    },
+  },
+});
+
+@Injectable()
+class MyService {
+  @RegisterService({
+    serviceName: "my-service",
+    ip: "127.0.0.1",
+    port: 3000,
+  })
+  public start() {
+    // Service registered
+  }
+}
+```
+
+### Service Client
+
+```ts
+import {
+  ServiceClient,
+  ServiceCall,
+  Injectable,
+} from "@dangao/bun-server";
+
+@Injectable()
+class OrderService {
+  @ServiceClient("user-service")
+  private readonly userClient!: ServiceClient;
+
+  @ServiceCall("GET", "/users/:id")
+  public async getUser(id: string) {
+    return await this.userClient.call("GET", `/users/${id}`);
+  }
+}
+```
+
+For detailed documentation, see [Microservice Architecture](./microservice.md).
+
+## 20. Testing Recommendations
 
 - Use `tests/utils/test-port.ts` to get auto-incrementing ports, avoiding local
   conflicts.

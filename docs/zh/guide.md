@@ -25,6 +25,50 @@ app.listen();
 > Tip: 默认端口为 3000，可通过 `app.listen(customPort)` 或
 > `new Application({ port })` 调整。
 
+### 使用 BunServer（底层 API）
+
+对于高级用例，您可以直接使用 `BunServer`：
+
+```ts
+import { BunServer } from "@dangao/bun-server";
+
+const server = new BunServer({
+  port: 3000,
+  fetch: async (request) => {
+    // 自定义请求处理
+    return new Response("Hello World");
+  },
+});
+
+server.listen();
+```
+
+### 在服务中访问请求上下文
+
+使用 `ContextService` 在服务中访问当前请求上下文：
+
+```ts
+import {
+  ContextService,
+  CONTEXT_SERVICE_TOKEN,
+  Inject,
+  Injectable,
+} from "@dangao/bun-server";
+
+@Injectable()
+class UserService {
+  public constructor(
+    @Inject(CONTEXT_SERVICE_TOKEN) private readonly contextService: ContextService,
+  ) {}
+
+  public getCurrentUser() {
+    const ctx = this.contextService.getContext();
+    const userId = ctx.getHeader("x-user-id");
+    return { userId };
+  }
+}
+```
+
 ## 2. 注册控制器与依赖
 
 ```ts
@@ -71,14 +115,81 @@ app.registerController(UserController);
 app.listen();
 ```
 
+### 高级参数绑定
+
+Bun Server 支持高级参数绑定装饰器：
+
+```ts
+import {
+  Body,
+  Context,
+  Controller,
+  GET,
+  Header,
+  HeaderMap,
+  Param,
+  Query,
+  QueryMap,
+} from "@dangao/bun-server";
+
+@Controller("/api/users")
+class UserController {
+  // 获取单个查询参数
+  @GET("/search")
+  public search(@Query("q") query: string) {
+    return { query };
+  }
+
+  // 获取所有查询参数作为对象
+  @GET("/filter")
+  public filter(@QueryMap() params: Record<string, string>) {
+    return { filters: params };
+  }
+
+  // 获取单个请求头
+  @GET("/profile")
+  public getProfile(@Header("authorization") token: string) {
+    return { token };
+  }
+
+  // 获取所有请求头作为对象
+  @GET("/headers")
+  public getHeaders(@HeaderMap() headers: Record<string, string>) {
+    return { headers };
+  }
+
+  // 获取完整的上下文对象
+  @GET("/context")
+  public getContext(@Context() ctx: Context) {
+    return {
+      method: ctx.getMethod(),
+      path: ctx.getPath(),
+      query: ctx.getQuery(),
+    };
+  }
+}
+```
+
 ## 3. 使用中间件
 
 ```ts
-import { createCorsMiddleware, createLoggerMiddleware } from "@dangao/bun-server";
+import {
+  createCorsMiddleware,
+  createLoggerMiddleware,
+  createRateLimitMiddleware,
+} from "@dangao/bun-server";
 
 const app = new Application();
 app.use(createLoggerMiddleware({ prefix: "[Example]" }));
 app.use(createCorsMiddleware({ origin: "*" }));
+
+// 限流中间件
+app.use(
+  createRateLimitMiddleware({
+    windowMs: 60000, // 1 分钟
+    max: 100, // 每个窗口 100 个请求
+  }),
+);
 ```
 
 `@UseMiddleware()` 可作用于单个控制器或方法：
@@ -97,6 +208,29 @@ const auth = async (ctx, next) => {
 @UseMiddleware(auth)
 @Controller('/secure')
 class SecureController { ... }
+```
+
+### 限流装饰器
+
+您也可以在控制器或方法上使用 `@RateLimit()` 装饰器：
+
+```ts
+import { Controller, GET, RateLimit } from "@dangao/bun-server";
+
+@Controller("/api")
+@RateLimit({ windowMs: 60000, max: 10 }) // 应用于所有方法
+class ApiController {
+  @GET("/public")
+  public publicEndpoint() {
+    return { message: "Public" };
+  }
+
+  @GET("/limited")
+  @RateLimit({ windowMs: 60000, max: 5 }) // 覆盖控制器限制
+  public limitedEndpoint() {
+    return { message: "Limited" };
+  }
+}
 ```
 
 ## 4. 参数验证
@@ -140,15 +274,34 @@ app.listen();
 import {
   createFileUploadMiddleware,
   createStaticFileMiddleware,
+  FileStorage,
+  Inject,
+  Injectable,
 } from "@dangao/bun-server";
 
 const app = new Application({ port: 3000 });
 
-// File upload
+// 文件上传
 app.use(createFileUploadMiddleware({ maxSize: 5 * 1024 * 1024 }));
 
-// Static files
+// 静态文件
 app.use(createStaticFileMiddleware({ root: "./public", prefix: "/assets" }));
+
+// 使用 FileStorage 服务
+@Injectable()
+class FileService {
+  public constructor(
+    @Inject(FileStorage) private readonly fileStorage: FileStorage,
+  ) {}
+
+  public async saveFile(file: File): Promise<string> {
+    const path = await this.fileStorage.save(file, {
+      directory: "./uploads",
+      filename: `file-${Date.now()}`,
+    });
+    return path;
+  }
+}
 ```
 
 上传后的文件可在 `context.body.files` 中读取；静态资源请求会自动设置
@@ -665,7 +818,101 @@ class AppService {
 }
 ```
 
-## 12. 测试建议
+## 12. 微服务支持
+
+Bun Server 提供了完整的微服务架构支持，包括配置中心、服务注册与发现、服务调用、服务治理和可观测性等功能。
+
+### 配置中心
+
+```ts
+import {
+  ConfigCenterModule,
+  CONFIG_CENTER_TOKEN,
+  Inject,
+  Injectable,
+} from "@dangao/bun-server";
+import type { ConfigCenter } from "@dangao/bun-server";
+
+ConfigCenterModule.forRoot({
+  provider: "nacos",
+  nacos: {
+    client: {
+      serverList: ["http://localhost:8848"],
+      namespace: "public",
+    },
+  },
+});
+
+@Injectable()
+class ConfigService {
+  public constructor(
+    @Inject(CONFIG_CENTER_TOKEN) private readonly configCenter: ConfigCenter,
+  ) {}
+
+  public async getConfig() {
+    const config = await this.configCenter.getConfig(
+      "my-config",
+      "DEFAULT_GROUP",
+    );
+    return JSON.parse(config.content);
+  }
+}
+```
+
+### 服务注册中心
+
+```ts
+import {
+  RegisterService,
+  ServiceRegistryModule,
+} from "@dangao/bun-server";
+
+ServiceRegistryModule.forRoot({
+  provider: "nacos",
+  nacos: {
+    client: {
+      serverList: ["http://localhost:8848"],
+    },
+  },
+});
+
+@Injectable()
+class MyService {
+  @RegisterService({
+    serviceName: "my-service",
+    ip: "127.0.0.1",
+    port: 3000,
+  })
+  public start() {
+    // 服务已注册
+  }
+}
+```
+
+### 服务客户端
+
+```ts
+import {
+  ServiceClient,
+  ServiceCall,
+  Injectable,
+} from "@dangao/bun-server";
+
+@Injectable()
+class OrderService {
+  @ServiceClient("user-service")
+  private readonly userClient!: ServiceClient;
+
+  @ServiceCall("GET", "/users/:id")
+  public async getUser(id: string) {
+    return await this.userClient.call("GET", `/users/${id}`);
+  }
+}
+```
+
+详细文档请参阅 [微服务架构](./microservice.md)。
+
+## 13. 测试建议
 
 - 使用 `tests/utils/test-port.ts` 获取自增端口，避免本地冲突。
 - 在 `afterEach` 钩子中调用 `RouteRegistry.getInstance().clear()` 和

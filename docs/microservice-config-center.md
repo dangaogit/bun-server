@@ -1,29 +1,29 @@
-# 配置中心使用指南
+# Configuration Center Usage Guide
 
-本文档介绍如何使用 Bun Server Framework 的配置中心功能。
+This document introduces how to use the configuration center feature in Bun Server Framework.
 
-## 目录
+## Table of Contents
 
-- [概述](#概述)
-- [快速开始](#快速开始)
-- [基本使用](#基本使用)
-- [配置热更新](#配置热更新)
-- [ConfigModule 集成](#configmodule-集成)
-- [装饰器使用](#装饰器使用)
-- [最佳实践](#最佳实践)
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+- [Basic Usage](#basic-usage)
+- [Hot Configuration Update](#hot-configuration-update)
+- [ConfigModule Integration](#configmodule-integration)
+- [Decorator Usage](#decorator-usage)
+- [Best Practices](#best-practices)
 
-## 概述
+## Overview
 
-配置中心提供了集中式配置管理能力，支持：
+The configuration center provides centralized configuration management capabilities, supporting:
 
-- **动态配置**：从配置中心获取配置，支持配置热更新
-- **多环境支持**：通过命名空间和分组管理不同环境的配置
-- **配置优先级**：配置中心配置 > 环境变量 > 默认配置
-- **配置监听**：监听配置变更，自动刷新应用配置
+- **Dynamic Configuration**: Fetch configurations from the configuration center with hot update support
+- **Multi-Environment Support**: Manage configurations for different environments through namespaces and groups
+- **Configuration Priority**: Config center > Environment variables > Default configuration
+- **Configuration Watching**: Watch for configuration changes and automatically refresh application configuration
 
-## 快速开始
+## Quick Start
 
-### 1. 注册配置中心模块
+### 1. Register Configuration Center Module
 
 ```typescript
 import { Application } from '@dangao/bun-server';
@@ -41,13 +41,13 @@ app.registerModule(
         username: 'nacos',
         password: 'nacos',
       },
-      watchInterval: 3000, // 配置轮询间隔（毫秒）
+      watchInterval: 3000, // Configuration polling interval (milliseconds)
     },
   }),
 );
 ```
 
-### 2. 使用配置中心
+### 2. Use Configuration Center
 
 ```typescript
 import {
@@ -72,15 +72,15 @@ class MyService {
 }
 ```
 
-## 基本使用
+## Basic Usage
 
-### 获取配置
+### Get Configuration
 
 ```typescript
-// 基本用法
+// Basic usage
 const config = await configCenter.getConfig('my-config', 'DEFAULT_GROUP');
 
-// 指定命名空间
+// Specify namespace
 const config = await configCenter.getConfig(
   'my-config',
   'DEFAULT_GROUP',
@@ -88,20 +88,20 @@ const config = await configCenter.getConfig(
 );
 ```
 
-### 配置结果
+### Configuration Result
 
-`getConfig` 返回 `ConfigResult` 对象：
+`getConfig` returns a `ConfigResult` object:
 
 ```typescript
 interface ConfigResult {
-  content: string;        // 配置内容
-  md5: string;           // 配置 MD5（用于判断是否变更）
-  lastModified: number;  // 最后修改时间（时间戳）
-  contentType: string;   // 内容类型
+  content: string;        // Configuration content
+  md5: string;           // Configuration MD5 (for change detection)
+  lastModified: number;  // Last modified time (timestamp)
+  contentType: string;   // Content type
 }
 ```
 
-### 监听配置变更
+### Watch Configuration Changes
 
 ```typescript
 const unsubscribe = configCenter.watchConfig(
@@ -109,37 +109,37 @@ const unsubscribe = configCenter.watchConfig(
   'DEFAULT_GROUP',
   (newConfig) => {
     console.log('Config updated:', newConfig.content);
-    // 更新应用配置
+    // Update application configuration
     updateAppConfig(JSON.parse(newConfig.content));
   },
 );
 
-// 取消监听
+// Unsubscribe
 unsubscribe();
 ```
 
-## 配置热更新
+## Hot Configuration Update
 
-配置中心支持配置热更新，通过轮询机制检测配置变更：
+The configuration center supports hot configuration updates through a polling mechanism to detect configuration changes:
 
 ```typescript
 ConfigCenterModule.forRoot({
   provider: 'nacos',
   nacos: {
-    watchInterval: 3000, // 每 3 秒检查一次配置变更
+    watchInterval: 3000, // Check for configuration changes every 3 seconds
   },
 });
 
-// 监听配置变更
+// Watch configuration changes
 configCenter.watchConfig('my-config', 'DEFAULT_GROUP', (newConfig) => {
-  // 配置变更时自动调用
+  // Automatically called when configuration changes
   console.log('Config hot updated:', newConfig.content);
 });
 ```
 
-## ConfigModule 集成
+## ConfigModule Integration
 
-ConfigModule 支持与配置中心深度集成，配置变更会自动刷新 ConfigService：
+ConfigModule supports deep integration with the configuration center, automatically refreshing ConfigService when configurations change:
 
 ```typescript
 import { ConfigModule } from '@dangao/bun-server';
@@ -157,11 +157,11 @@ ConfigModule.forRoot({
       ['app.name', { dataId: 'app-name', groupName: 'DEFAULT_GROUP' }],
       ['app.port', { dataId: 'app-port', groupName: 'DEFAULT_GROUP' }],
     ]),
-    configCenterPriority: true, // 配置中心配置优先级最高
+    configCenterPriority: true, // Config center has highest priority
   },
 });
 
-// 使用 ConfigService
+// Use ConfigService
 import { CONFIG_SERVICE_TOKEN, ConfigService } from '@dangao/bun-server';
 
 @Injectable()
@@ -171,22 +171,22 @@ class MyService {
   ) {}
 
   public getAppName() {
-    // 自动从配置中心获取，配置变更时自动更新
+    // Automatically fetched from config center, auto-updated on changes
     return this.config.get<string>('app.name');
   }
 }
 ```
 
-### 配置优先级
+### Configuration Priority
 
-- `configCenterPriority: true`（默认）：配置中心 > 环境变量 > 默认配置
-- `configCenterPriority: false`：默认配置 > 环境变量 > 配置中心
+- `configCenterPriority: true` (default): Config center > Environment variables > Default configuration
+- `configCenterPriority: false`: Default configuration > Environment variables > Config center
 
-## 装饰器使用
+## Decorator Usage
 
 ### @ConfigCenterValue
 
-自动注入配置值：
+Automatically inject configuration values:
 
 ```typescript
 import { ConfigCenterValue, Injectable } from '@dangao/bun-server';
@@ -195,19 +195,19 @@ import { ConfigCenterValue, Injectable } from '@dangao/bun-server';
 class MyService {
   @ConfigCenterValue('app-name', 'DEFAULT_GROUP', {
     defaultValue: 'MyApp',
-    watch: true, // 监听配置变更
+    watch: true, // Watch for configuration changes
   })
   public appName: string = '';
 
   public getAppName() {
-    return this.appName; // 自动从配置中心获取
+    return this.appName; // Automatically fetched from config center
   }
 }
 ```
 
 ### @NacosValue
 
-Nacos 特定的配置值注入（便捷别名）：
+Nacos-specific configuration value injection (convenience alias):
 
 ```typescript
 import { NacosValue, Injectable } from '@dangao/bun-server';
@@ -221,38 +221,37 @@ class MyService {
 }
 ```
 
-## 最佳实践
+## Best Practices
 
-### 1. 配置组织
+### 1. Configuration Organization
 
-- **命名空间**：用于区分不同环境（dev、test、prod）
-- **分组**：用于逻辑分组（DEFAULT_GROUP、DATABASE_GROUP 等）
-- **DataId**：配置的唯一标识
+- **Namespace**: Used to distinguish different environments (dev, test, prod)
+- **Group**: Used for logical grouping (DEFAULT_GROUP, DATABASE_GROUP, etc.)
+- **DataId**: Unique identifier for configuration
 
-### 2. 配置格式
+### 2. Configuration Format
 
-- 推荐使用 JSON 格式存储配置
-- 支持纯文本配置（如 properties、yaml 等）
+- Recommended to use JSON format for storing configurations
+- Supports plain text configurations (such as properties, yaml, etc.)
 
-### 3. 配置监听
+### 3. Configuration Watching
 
-- 为关键配置启用监听（`watch: true`）
-- 配置变更时及时更新应用状态
-- 避免频繁的配置变更
+- Enable watching for critical configurations (`watch: true`)
+- Update application state promptly when configurations change
+- Avoid frequent configuration changes
 
-### 4. 错误处理
+### 4. Error Handling
 
-- 配置获取失败时使用默认值
-- 记录配置获取错误日志
-- 实现配置降级策略
+- Use default values when configuration fetch fails
+- Log configuration fetch errors
+- Implement configuration fallback strategies
 
-### 5. 性能优化
+### 5. Performance Optimization
 
-- 合理设置 `watchInterval`（建议 3-10 秒）
-- 使用配置缓存减少 API 调用
-- 批量获取配置（如果支持）
+- Set `watchInterval` reasonably (recommended 3-10 seconds)
+- Use configuration caching to reduce API calls
+- Batch fetch configurations (if supported)
 
-## 示例
+## Examples
 
-完整示例请参考 `examples/microservice-app.ts`。
-
+For complete examples, please refer to `examples/microservice-app.ts`.

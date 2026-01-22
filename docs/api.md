@@ -8,7 +8,9 @@ Framework for quick reference.
 | API                        | Description                                                                                                                                                              |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `Application(options?)`    | Main application class, supports `use` for global middleware, `registerController`/`registerWebSocketGateway` for components, and `listen/stop` for lifecycle management |
+| `BunServer(options?)`      | Low-level server wrapper, provides direct access to Bun's server API                                                                                                      |
 | `Context`                  | Unified request context, wraps `Request` and provides methods like `getQuery/getParam/getBody/setHeader/setStatus/createResponse`                                        |
+| `ContextService`           | Service for accessing request context in services, provides `getContext()` method                                                                                        |
 | `ResponseBuilder`          | Provides convenient response builders: `json/text/html/empty/redirect/error/file`                                                                                        |
 | `RouteRegistry` / `Router` | Can directly register functional routes or get the underlying `Router` for manual control                                                                                |
 
@@ -17,7 +19,7 @@ Framework for quick reference.
 - `@Controller(path)`: Declare controller prefix.
 - `@GET/@POST/@PUT/@PATCH/@DELETE(path)`: Declare HTTP methods.
 - Parameter decorators:
-  `@Body() / @Query(key) / @Param(key) / @Header(key) / @Session()`.
+  `@Body() / @Query(key) / @QueryMap() / @Param(key) / @Header(key) / @HeaderMap() / @Context()`.
 - `ControllerRegistry` automatically parses decorators and registers routes.
 
 **Example**:
@@ -191,6 +193,7 @@ For detailed information, please refer to
 - `Middleware` type: `(context, next) => Response`.
 - `MiddlewarePipeline`: `use`, `run`, `hasMiddlewares`, `clear`.
 - `@UseMiddleware(...middlewares)`: Applied to controller classes or methods.
+- `@RateLimit(options)`: Rate limiting decorator for controllers or methods.
 - Built-in middleware:
   - `createLoggerMiddleware`
   - `createRequestLoggingMiddleware`
@@ -198,6 +201,7 @@ For detailed information, please refer to
   - `createErrorHandlingMiddleware`
   - `createFileUploadMiddleware`
   - `createStaticFileMiddleware`
+  - `createRateLimitMiddleware`
 
 ## Validation
 
@@ -227,8 +231,15 @@ For detailed information, please refer to
 ## Request Utilities
 
 - `BodyParser`: `parse(request)`, automatically caches parsed results.
-- `FileHandler`: Parses `multipart/form-data`, returns structured file objects.
 - `RequestWrapper`: Lightweight wrapper for compatibility scenarios.
+- `ResponseBuilder`: Provides convenient response builders.
+
+## File Handling
+
+- `FileStorage`: File storage service for managing uploaded files.
+- `createFileUploadMiddleware(options?)`: Middleware for handling file uploads.
+- `createStaticFileMiddleware(root, options?)`: Middleware for serving static files.
+- `UploadedFileInfo`: Type definition for uploaded file information.
 
 ## Database Module
 
@@ -485,14 +496,40 @@ class OrderService {
 }
 ```
 
+## Config Module
+
+- `ConfigModule.forRoot(options)`: Configure configuration management
+- `ConfigService`: `get()`, `set()`, `has()`, `getOrThrow()`
+- `CONFIG_SERVICE_TOKEN`: Token for dependency injection
+
+**Example**:
+
+```typescript
+ConfigModule.forRoot({
+  defaultConfig: { app: { name: "MyApp", port: 3000 } },
+});
+
+@Injectable()
+class AppService {
+  public constructor(
+    @Inject(CONFIG_SERVICE_TOKEN) private readonly config: ConfigService,
+  ) {}
+
+  public getPort() {
+    return this.config.get<number>("app.port");
+  }
+}
+```
+
 ## Security Module
 
 - `SecurityModule.forRoot(options)`: Configure security and authentication
-- `@Auth(options?)`: Require authentication/authorization
 - `SecurityContextHolder`: Access current security context
 - `AuthenticationManager`: Manage authentication
 - `JwtAuthenticationProvider`: JWT authentication provider
 - `OAuth2AuthenticationProvider`: OAuth2 authentication provider
+- `createSecurityFilter()`: Create security filter middleware
+- `RoleBasedAccessDecisionManager`: Role-based access control
 
 **Example**:
 
@@ -507,96 +544,172 @@ SecurityModule.forRoot({
 @Controller("/api/users")
 class UserController {
   @GET("/profile")
-  @Auth() // Require authentication
+  public getProfile() {
+    const context = SecurityContextHolder.getContext();
+    return context.getPrincipal();
+  }
+}
+```
+
+## Guards System
+
+- `@UseGuards(...guards)`: Apply guards to controllers or methods
+- `@Roles(...roles)`: Require specific roles
+- `AuthGuard`: Require authentication
+- `OptionalAuthGuard`: Optional authentication
+- `RolesGuard`: Role-based authorization guard
+- `createRolesGuard(options)`: Create custom roles guard
+- `GuardRegistry`: Central registry for guards
+- `ExecutionContext`: Execution context for guards
+- `Reflector`: Metadata reflection utility
+
+**Example**:
+
+```typescript
+@Controller("/api/users")
+class UserController {
+  @GET("/profile")
+  @UseGuards(AuthGuard)
   public getProfile() {
     const context = SecurityContextHolder.getContext();
     return context.getPrincipal();
   }
 
   @GET("/admin")
-  @Auth({ roles: ["admin"] }) // Require admin role
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles("admin")
   public getAdmin() {
     return { message: "Admin access" };
   }
 }
 ```
 
-## Export Entry
+## Events Module
 
-All above APIs can be exported from `src/index.ts`, via
+- `EventModule.forRoot(options?)`: Configure event system
+- `EventEmitterService`: Event emitter service
+- `@OnEvent(event, options?)`: Register event listener method
+- `EventListenerScanner`: Scans and registers event listeners
+- `EVENT_EMITTER_TOKEN`: Token for dependency injection
 
-```ts
-import {
-  // Core
-  Application,
-  // Security
-  Auth,
-  BadRequestException,
-  CACHE_SERVICE_TOKEN,
-  Cacheable,
-  CacheEvict,
-  CacheModule,
-  // Cache
-  CacheService,
-  Column,
-  // Modules
-  ConfigModule,
-  Container,
-  Context,
-  Controller,
-  createCorsMiddleware,
-  createErrorHandlingMiddleware,
-  createLoggerMiddleware,
-  Cron,
-  DATABASE_SERVICE_TOKEN,
-  DatabaseModule,
-  // Database
-  DatabaseService,
-  DELETE,
-  Entity,
-  GET,
-  HealthModule,
-  // Errors
-  HttpException,
-  Inject,
-  // Dependency Injection
-  Injectable,
-  IsEmail,
-  IsNumber,
-  IsString,
-  LoggerModule,
-  MetricsModule,
-  Module,
-  NotFoundException,
-  OnMessage,
-  PATCH,
-  // Testing
-  PerformanceHarness,
-  POST,
-  PrimaryKey,
-  PUT,
-  Queue,
-  QUEUE_SERVICE_TOKEN,
-  QueueModule,
-  // Queue
-  QueueService,
-  Repository,
-  SecurityContextHolder,
-  SecurityModule,
-  Session,
-  SESSION_SERVICE_TOKEN,
-  SessionModule,
-  // Session
-  SessionService,
-  SwaggerModule,
-  Transactional,
-  // Middleware
-  UseMiddleware,
-  // Validation
-  Validate,
-  // WebSocket
-  WebSocketGateway,
-} from "@dangao/bun-server";
+**Example**:
+
+```typescript
+EventModule.forRoot({
+  wildcard: true,
+  maxListeners: 20,
+});
+
+@Injectable()
+class NotificationService {
+  public constructor(
+    @Inject(EVENT_EMITTER_TOKEN) private readonly eventEmitter: EventEmitter,
+  ) {}
+
+  @OnEvent('user.created')
+  public async handleUserCreated(data: { userId: string }) {
+    // Send notification
+  }
+}
 ```
 
-for use in applications.
+## Microservice Modules
+
+### Config Center Module
+
+- `ConfigCenterModule.forRoot(options)`: Configure config center (Nacos, Consul, etc.)
+- `CONFIG_CENTER_TOKEN`: Token for dependency injection
+- `NacosConfigCenter`: Nacos implementation
+
+**Example**:
+
+```typescript
+ConfigCenterModule.forRoot({
+  provider: 'nacos',
+  nacos: {
+    client: {
+      serverList: 'localhost:8848',
+      namespace: 'public',
+    },
+  },
+});
+```
+
+### Service Registry Module
+
+- `ServiceRegistryModule.forRoot(options)`: Configure service registry (Nacos, Consul, etc.)
+- `SERVICE_REGISTRY_TOKEN`: Token for dependency injection
+- `NacosServiceRegistry`: Nacos implementation
+- `@RegisterService(options)`: Register service instance
+- `@DiscoverService(serviceName)`: Discover service instances
+
+**Example**:
+
+```typescript
+ServiceRegistryModule.forRoot({
+  provider: 'nacos',
+  nacos: {
+    client: {
+      serverList: 'localhost:8848',
+    },
+  },
+});
+
+@Injectable()
+class MyService {
+  @RegisterService({
+    serviceName: 'my-service',
+    ip: '127.0.0.1',
+    port: 3000,
+  })
+  public start() {
+    // Service registered
+  }
+}
+```
+
+### Service Client
+
+- `ServiceClient`: Service-to-service communication client
+- `@ServiceClient(serviceName, options?)`: Inject service client
+- `@ServiceCall(method, path, options?)`: Declare service call
+- Load balancers: `RandomLoadBalancer`, `RoundRobinLoadBalancer`, `WeightedRoundRobinLoadBalancer`, `ConsistentHashLoadBalancer`, `LeastActiveLoadBalancer`
+- Interceptors: `TraceIdRequestInterceptor`, `UserInfoRequestInterceptor`, `RequestLogInterceptor`, etc.
+
+**Example**:
+
+```typescript
+@Injectable()
+class OrderService {
+  @ServiceClient('user-service')
+  private readonly userClient!: ServiceClient;
+
+  @ServiceCall('GET', '/users/:id')
+  public async getUser(id: string) {
+    return await this.userClient.call('GET', `/users/${id}`);
+  }
+}
+```
+
+### Governance
+
+- `CircuitBreaker`: Circuit breaker pattern implementation
+- `RateLimiter`: Rate limiting for service calls
+- `RetryStrategyImpl`: Retry strategy implementation
+
+### Tracing
+
+- `Tracer`: Distributed tracing
+- `ConsoleTraceCollector`: Console-based trace collector
+- `MemoryTraceCollector`: In-memory trace collector
+- `SpanStatus`, `SpanKind`: Span types
+
+### Monitoring
+
+- `ServiceMetricsCollector`: Service call metrics collection
+- `ServiceCallMetrics`: Metrics data structure
+- `ServiceInstanceHealth`: Health check data
+
+## Export Entry
+
+All above APIs can be exported from `src/index.ts`. See the full export list in `src/index.ts` for complete API reference.
