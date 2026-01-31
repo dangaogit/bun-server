@@ -41,11 +41,21 @@ export function createErrorHandlingMiddleware(
     try {
       return await next();
     } catch (error) {
+      const routeHandler = (context as { routeHandler?: { controller?: { name?: string }; method?: string } }).routeHandler;
       log(error, { method: context.method, path: context.path });
       logger.error("Unhandled error", {
         method: context.method,
         path: context.path,
         error,
+      });
+      logger.debug("Unhandled error details", {
+        method: context.method,
+        path: context.path,
+        routeHandler: routeHandler
+          ? `${routeHandler.controller?.name ?? 'unknown'}.${routeHandler.method ?? 'unknown'}`
+          : undefined,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
       });
 
       if (error instanceof Response) {

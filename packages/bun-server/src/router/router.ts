@@ -3,6 +3,7 @@ import type { Constructor } from '../core/types';
 import { Route } from './route';
 import type { HttpMethod, RouteHandler, RouteMatch } from './types';
 import type { Middleware } from '../middleware';
+import { LoggerManager } from '@dangao/logsmith';
 
 /**
  * 路由器类
@@ -168,14 +169,23 @@ export class Router {
   public async preHandle(context: Context): Promise<void> {
     const method = context.method as HttpMethod;
     const path = this.normalizePath(context.path);
+    const logger = LoggerManager.getLogger();
 
     // 使用 findRouteWithMatch 避免重复匹配
     const result = this.findRouteWithMatch(method, path);
     if (!result) {
+      logger.debug('[Router] Route not matched', { method, path });
       return;
     }
 
     const { route, match } = result;
+    logger.debug('[Router] Route matched', {
+      method,
+      path,
+      routePath: route.path,
+      controller: route.controllerClass?.name,
+      methodName: route.methodName,
+    });
     if (match.matched) {
       context.params = match.params;
     }
@@ -196,6 +206,7 @@ export class Router {
   public async handle(context: Context): Promise<Response | undefined> {
     const method = context.method as HttpMethod;
     const path = this.normalizePath(context.path);
+    const logger = LoggerManager.getLogger();
 
     // 使用 findRouteWithMatch 获取路由和匹配结果
     const result = this.findRouteWithMatch(method, path);
@@ -204,7 +215,13 @@ export class Router {
     }
 
     const { route, match } = result;
-    
+
+    logger.debug('[Router] Executing handler', {
+      path: route.path,
+      controller: route.controllerClass?.name,
+      methodName: route.methodName,
+    });
+
     // 设置路径参数
     if (match.matched) {
       context.params = match.params;
