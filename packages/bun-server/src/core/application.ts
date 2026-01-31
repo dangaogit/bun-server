@@ -242,6 +242,13 @@ export class Application {
    * @returns 响应对象
    */
   private async handleRequest(context: Context): Promise<Response> {
+    const logger = LoggerManager.getLogger();
+    logger.debug('[Request] Incoming', {
+      method: context.method,
+      path: context.path,
+      url: context.url?.href,
+    });
+
     // 使用 AsyncLocalStorage 包裹请求处理，确保所有中间件和控制器都在请求上下文中执行
     return await contextStore.run(context, async () => {
       // 对于 POST、PUT、PATCH 请求，提前解析 body 并缓存
@@ -265,6 +272,10 @@ export class Application {
           return response;
         }
 
+        logger.debug('[Router] No route matched', {
+          method: context.method,
+          path: context.path,
+        });
         context.setStatus(404);
         return context.createResponse({ error: 'Not Found' });
       });

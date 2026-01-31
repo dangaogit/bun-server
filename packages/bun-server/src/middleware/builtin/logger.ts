@@ -38,6 +38,14 @@ export function createLoggerMiddleware(
     } finally {
       const status = response?.status ?? context.statusCode ?? 200;
       log(`${prefix} ${context.method} ${context.path} ${status}`);
+      if (status >= 400) {
+        const logger = LoggerManager.getLogger();
+        logger.debug(`${prefix} Error response`, {
+          method: context.method,
+          path: context.path,
+          statusCode: status,
+        });
+      }
     }
   };
 }
@@ -85,6 +93,15 @@ export function createRequestLoggingMiddleware(
         }ms`,
         error instanceof Error ? { error: error.message } : undefined,
       );
+      if (error instanceof Error) {
+        LoggerManager.getLogger().debug(`${prefix} Request error details`, {
+          method: context.method,
+          path: context.path,
+          durationMs: duration.toFixed(2),
+          message: error.message,
+          stack: error.stack,
+        });
+      }
       throw error;
     }
   };

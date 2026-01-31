@@ -3,6 +3,7 @@ import { HttpException } from './http-exception';
 import { ExceptionFilterRegistry } from './filter';
 import { ValidationError } from '../validation';
 import { ErrorMessageI18n } from './i18n';
+import { LoggerManager } from '@dangao/logsmith';
 
 /**
  * 全局错误处理
@@ -16,6 +17,15 @@ export async function handleError(error: unknown, context: Context): Promise<Res
 
   if (error instanceof HttpException) {
     context.setStatus(error.status);
+    if (error.status >= 400) {
+      LoggerManager.getLogger().debug('HttpException', {
+        method: context.method,
+        path: context.path,
+        status: error.status,
+        code: error.code,
+        message: error.message,
+      });
+    }
 
     // 如果异常有错误码，尝试国际化消息
     let errorMessage = error.message;
@@ -56,7 +66,14 @@ export async function handleError(error: unknown, context: Context): Promise<Res
   }
 
   const message = error instanceof Error ? error.message : String(error);
+  const stack = error instanceof Error ? error.stack : undefined;
   context.setStatus(500);
+  LoggerManager.getLogger().debug('Internal error (500)', {
+    method: context.method,
+    path: context.path,
+    message,
+    stack,
+  });
   return context.createResponse({
     error: 'Internal Server Error',
     details: process.env.NODE_ENV === 'production' ? undefined : message,

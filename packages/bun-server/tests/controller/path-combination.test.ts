@@ -483,6 +483,141 @@ describe('Controller Path Normalization', () => {
     expect(data.success).toBe(true);
   });
 
+  // 场景 a: @Controller() + @GET('test') / @POST('test') -> /test
+  test('scenario a: @Controller() with @GET("test") and @POST("test") should match /test', async () => {
+    @Controller()
+    class TestController {
+      @GET('test')
+      public getTest() {
+        return { method: 'GET', path: 'test' };
+      }
+
+      @POST('test')
+      public postTest() {
+        return { method: 'POST', path: 'test' };
+      }
+    }
+
+    app.registerController(TestController);
+    await app.listen();
+
+    const getRes = await fetch(`http://localhost:${port}/test`);
+    expect(getRes.status).toBe(200);
+    expect((await getRes.json()).method).toBe('GET');
+
+    const postRes = await fetch(`http://localhost:${port}/test`, { method: 'POST' });
+    expect(postRes.status).toBe(200);
+    expect((await postRes.json()).method).toBe('POST');
+  });
+
+  // 场景 b: @Controller() + @GET('/test') / @POST('/test') -> /test
+  test('scenario b: @Controller() with @GET("/test") and @POST("/test") should match /test', async () => {
+    @Controller()
+    class TestController {
+      @GET('/test')
+      public getTest() {
+        return { method: 'GET', path: 'test' };
+      }
+
+      @POST('/test')
+      public postTest() {
+        return { method: 'POST', path: 'test' };
+      }
+    }
+
+    app.registerController(TestController);
+    await app.listen();
+
+    const getRes = await fetch(`http://localhost:${port}/test`);
+    expect(getRes.status).toBe(200);
+    expect((await getRes.json()).method).toBe('GET');
+
+    const postRes = await fetch(`http://localhost:${port}/test`, { method: 'POST' });
+    expect(postRes.status).toBe(200);
+    expect((await postRes.json()).method).toBe('POST');
+  });
+
+  // 场景 c: @Controller('') + @GET() / @POST() -> /
+  test('scenario c: @Controller("") with @GET() and @POST() should match /', async () => {
+    @Controller('')
+    class TestController {
+      @GET()
+      public getRoot() {
+        return { method: 'GET', path: '/' };
+      }
+
+      @POST()
+      public postRoot() {
+        return { method: 'POST', path: '/' };
+      }
+    }
+
+    app.registerController(TestController);
+    await app.listen();
+
+    const getRes = await fetch(`http://localhost:${port}/`);
+    expect(getRes.status).toBe(200);
+    expect((await getRes.json()).method).toBe('GET');
+
+    const postRes = await fetch(`http://localhost:${port}/`, { method: 'POST' });
+    expect(postRes.status).toBe(200);
+    expect((await postRes.json()).method).toBe('POST');
+  });
+
+  // 场景 d: @Controller() + @GET() / @POST() -> /
+  test('scenario d: @Controller() with @GET() and @POST() should match /', async () => {
+    @Controller()
+    class TestController {
+      @GET()
+      public getRoot() {
+        return { method: 'GET', path: '/' };
+      }
+
+      @POST()
+      public postRoot() {
+        return { method: 'POST', path: '/' };
+      }
+    }
+
+    app.registerController(TestController);
+    await app.listen();
+
+    const getRes = await fetch(`http://localhost:${port}/`);
+    expect(getRes.status).toBe(200);
+    expect((await getRes.json()).method).toBe('GET');
+
+    const postRes = await fetch(`http://localhost:${port}/`, { method: 'POST' });
+    expect(postRes.status).toBe(200);
+    expect((await postRes.json()).method).toBe('POST');
+  });
+
+  // 场景 e: @Controller() + @GET('/') / @POST('/') -> /
+  test('scenario e: @Controller() with @GET("/") and @POST("/") should match /', async () => {
+    @Controller()
+    class TestController {
+      @GET('/')
+      public getRoot() {
+        return { method: 'GET', path: '/' };
+      }
+
+      @POST('/')
+      public postRoot() {
+        return { method: 'POST', path: '/' };
+      }
+    }
+
+    app.registerController(TestController);
+    await app.listen();
+
+    const getRes = await fetch(`http://localhost:${port}/`);
+    expect(getRes.status).toBe(200);
+    expect((await getRes.json()).method).toBe('GET');
+
+    const postRes = await fetch(`http://localhost:${port}/`, { method: 'POST' });
+    expect(postRes.status).toBe(200);
+    expect((await postRes.json()).method).toBe('POST');
+  });
+
   // 测试所有场景在同一应用中同时工作
   test('should handle all path normalization scenarios simultaneously', async () => {
     @Controller('/')

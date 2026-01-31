@@ -15,6 +15,7 @@ import {
   InterceptorChain,
   scanInterceptorMetadata,
 } from '../interceptor';
+import { LoggerManager } from '@dangao/logsmith';
 
 /**
  * 控制器元数据键
@@ -212,6 +213,13 @@ export class ControllerRegistry {
           // 创建响应
           return context.createResponse(responseData);
         } catch (error) {
+          LoggerManager.getLogger().debug('Controller handler error', {
+            controller: controllerClass.name,
+            method: propertyKey,
+            path: context.path,
+            errorMessage: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+          });
           // 使用全局错误处理器，确保错误码和国际化正确应用
           const { handleError } = await import('../error/handler');
           return await handleError(error, context);
@@ -258,8 +266,8 @@ export class ControllerRegistry {
       base = '/';
     }
 
-    // 规范化 methodPath：移除前导斜杠
-    const method = methodPath.replace(/^\/+/, '');
+    // 规范化 methodPath：移除前导斜杠（支持 undefined，如 @GET() 无参）
+    const method = (methodPath ?? '').replace(/^\/+/, '');
 
     if (!method) {
       // 如果方法路径为空，返回基础路径
