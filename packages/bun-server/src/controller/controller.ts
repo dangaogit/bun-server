@@ -258,8 +258,8 @@ export class ControllerRegistry {
       base = '/';
     }
 
-    // 规范化 methodPath：移除前导斜杠
-    const method = methodPath.replace(/^\/+/, '');
+    // 规范化 methodPath：移除前导斜杠（支持 undefined，如 @GET() 无参）
+    const method = (methodPath ?? '').replace(/^\/+/, '');
 
     if (!method) {
       // 如果方法路径为空，返回基础路径

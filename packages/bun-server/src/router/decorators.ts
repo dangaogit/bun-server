@@ -25,10 +25,10 @@ export interface RouteMetadata {
 /**
  * 路由装饰器工厂
  * @param method - HTTP 方法
- * @param path - 路由路径
+ * @param path - 路由路径（可选，默认 ''，即 @GET() 等价于根路径）
  * @returns 方法装饰器
  */
-function createRouteDecorator(method: HttpMethod, path: string) {
+function createRouteDecorator(method: HttpMethod, path: string = '') {
   return function (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
     // 注意：装饰器应用顺序问题
     // 方法装饰器（@GET）在类装饰器（@Controller）之前应用
@@ -72,9 +72,9 @@ function createRouteDecorator(method: HttpMethod, path: string) {
       }
     }
     
-    existingRoutes.push({ 
-      method, 
-      path, 
+    existingRoutes.push({
+      method,
+      path: path ?? '',
       handler: descriptor.value as RouteHandler,
       propertyKey: propertyKeyStr || undefined,
     });
@@ -84,40 +84,40 @@ function createRouteDecorator(method: HttpMethod, path: string) {
 
 /**
  * GET 路由装饰器
- * @param path - 路由路径
+ * @param path - 路由路径（可选，默认 ''，即 @GET() 映射到控制器基础路径或 /）
  */
-export function GET(path: string) {
+export function GET(path: string = '') {
   return createRouteDecorator('GET', path);
 }
 
 /**
  * POST 路由装饰器
- * @param path - 路由路径
+ * @param path - 路由路径（可选，默认 ''）
  */
-export function POST(path: string) {
+export function POST(path: string = '') {
   return createRouteDecorator('POST', path);
 }
 
 /**
  * PUT 路由装饰器
- * @param path - 路由路径
+ * @param path - 路由路径（可选，默认 ''）
  */
-export function PUT(path: string) {
+export function PUT(path: string = '') {
   return createRouteDecorator('PUT', path);
 }
 
 /**
  * DELETE 路由装饰器
- * @param path - 路由路径
+ * @param path - 路由路径（可选，默认 ''）
  */
-export function DELETE(path: string) {
+export function DELETE(path: string = '') {
   return createRouteDecorator('DELETE', path);
 }
 
 /**
  * PATCH 路由装饰器
- * @param path - 路由路径
+ * @param path - 路由路径（可选，默认 ''）
  */
-export function PATCH(path: string) {
+export function PATCH(path: string = '') {
   return createRouteDecorator('PATCH', path);
 }
