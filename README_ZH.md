@@ -469,6 +469,11 @@ bun benchmark/di.bench.ts
   - `docs/zh/request-lifecycle.md` - 请求生命周期指南
 - **英文文档**：位于 `docs/`
   目录，为默认文档；如果缺失内容，请优先参考英文版本。
+- **实践问题库**：位于 `skills/` 目录
+  - 记录开发过程中遇到的实际问题、错误和解决方案
+  - 按类别组织（events、di、modules、common）
+  - 每个问题包含完整的错误信息、原因分析和修复步骤
+  - [查看实践问题库](./skills/README.md)
 
 ## 路线图
 

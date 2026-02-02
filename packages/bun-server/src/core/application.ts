@@ -18,6 +18,7 @@ import { ConfigService } from '../config/service';
 import { ConfigModule } from '../config/config-module';
 import { CacheModule, CACHE_POST_PROCESSOR_TOKEN } from '../cache';
 import { LoggerManager } from '@dangao/logsmith';
+import { EventModule } from '../events/event-module';
 
 /**
  * 应用配置选项
@@ -102,6 +103,9 @@ export class Application {
     // 初始化配置中心集成（在所有模块注册完成后）
     await this.initializeConfigCenter();
 
+    // 自动初始化事件监听器（如果 EventModule 已注册且启用了 autoScan）
+    this.initializeEventListeners();
+
     const finalPort = port ?? this.options.port ?? 3000;
     const finalHostname = hostname ?? this.options.hostname;
 
@@ -175,6 +179,31 @@ export class Application {
           error,
         );
       }
+    }
+  }
+
+  /**
+   * 初始化事件监听器
+   * 在所有模块注册完成后调用，自动扫描并注册使用 @OnEvent 装饰器的类
+   */
+  private initializeEventListeners(): void {
+    const container = this.getContainer();
+    
+    // 检查 EventModule 是否已注册
+    const registry = ModuleRegistry.getInstance();
+    const eventModuleRef = registry.getModuleRef(EventModule);
+    
+    if (!eventModuleRef) {
+      // EventModule 未注册，跳过
+      return;
+    }
+
+    // 调用自动初始化
+    const initialized = EventModule.autoInitialize(container);
+    
+    if (initialized) {
+      const logger = LoggerManager.getLogger();
+      logger.debug('[Application] Event listeners initialized automatically');
     }
   }
 

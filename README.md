@@ -458,6 +458,11 @@ Or use `bun run bench*` scripts for convenience.
   `docs/error-handling.md`, `docs/request-lifecycle.md`.
 - **Chinese**: mirrored under `docs/zh/`. If something is missing, please fall
   back to the English source.
+- **Skills & Troubleshooting**: `skills/` directory
+  - Real-world problems encountered during development with solutions
+  - Organized by category (events, di, modules, common)
+  - Each issue includes complete error info, root cause analysis, and fix steps
+  - [View Skills Repository](./skills/README.md)
 
 ## Roadmap
 
