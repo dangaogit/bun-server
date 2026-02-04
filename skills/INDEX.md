@@ -15,6 +15,18 @@
   [EventModule 配置和初始化](./events/event-module-setup.md#步骤-2在启动时初始化事件监听器)
 - **关键词**: OnEvent, initializeListeners, event listeners
 
+### "Cannot resolve dependency" / "Parameter type is undefined"
+
+- **模块**: DI Container
+- **问题**: [依赖注入不工作](./di/injection-not-working.md)
+- **关键词**: @Inject, design:paramtypes, emitDecoratorMetadata, tsconfig, monorepo
+
+### "必须使用 @Inject() 才能注入"
+
+- **模块**: DI Container
+- **问题**: [依赖注入不工作](./di/injection-not-working.md)
+- **关键词**: tsconfig.json, Bun 调试插件, monorepo
+
 ## 按模块查找
 
 ### EventModule
@@ -26,7 +38,10 @@
 
 ### DI Container
 
-敬请期待...
+- [依赖注入不工作（必须使用 @Inject）](./di/injection-not-working.md)
+  - Monorepo 根目录缺少 tsconfig.json
+  - 调试插件不读取 tsconfig.json
+  - emitDecoratorMetadata 配置问题
 
 ### Module System
 
@@ -41,10 +56,19 @@
 ### 功能不生效
 
 - [EventModule: @OnEvent 装饰器不工作](./events/event-module-setup.md#原因-2没有初始化事件监听器)
+- [DI: 依赖注入不工作（必须使用 @Inject）](./di/injection-not-working.md)
 
 ### 模块化架构
 
 - [EventModule: 配置顺序问题](./events/event-module-setup.md#模块化架构中的特殊情况)
+
+### Monorepo 项目
+
+- [DI: Monorepo 根目录缺少 tsconfig.json](./di/injection-not-working.md#原因-1monorepo-根目录缺少-tsconfigjson)
+
+### 调试问题
+
+- [DI: Bun 调试插件不读取 tsconfig.json](./di/injection-not-working.md#原因-2调试插件不读取-tsconfigjson)
 
 ## 常见问题模式
 
@@ -98,4 +122,5 @@
 
 ## 更新日志
 
+- 2026-02-04: 添加 DI 依赖注入不工作问题（Monorepo/调试插件/tsconfig 配置）
 - 2026-02-02: 创建快速索引，添加 EventModule 相关问题
