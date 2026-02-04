@@ -173,6 +173,25 @@ export interface EventModuleOptions {
    * @param payload - 事件负载
    */
   onError?: (error: Error, event: string | symbol, payload: unknown) => void;
+
+  /**
+   * 是否自动扫描和注册事件监听器
+   * 当设置为 true 时，框架会在应用启动时自动扫描所有模块中使用 @OnEvent 装饰器的类
+   * @default true
+   */
+  autoScan?: boolean;
+
+  /**
+   * 需要排除的监听器类（不自动注册）
+   * 用于在自动扫描时排除某些类
+   */
+  excludeListeners?: Function[];
+
+  /**
+   * 额外的监听器类（强制注册）
+   * 即使 autoScan 为 false，这些类也会被注册
+   */
+  includeListeners?: Function[];
 }
 
 /**

@@ -18,6 +18,8 @@
     "start:transaction": "bun 02-official-modules/transaction-app.ts",
     "start:queue": "bun 02-official-modules/queue-app.ts",
     "start:metrics": "bun 02-official-modules/metrics-rate-limit-app.ts",
+    "start:events": "bun 02-official-modules/events-app.ts",
+    "start:events-module": "bun 02-official-modules/events-module-based-app.ts",
     "start:custom-decorator": "bun 03-advanced/custom-decorator-app.ts",
     "start:advanced-decorator": "bun 03-advanced/advanced-decorator-app.ts",
     "start:websocket-chat": "bun 03-advanced/websocket-chat-app.ts",

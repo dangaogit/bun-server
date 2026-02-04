@@ -103,6 +103,11 @@ export class EventModule {
   private static listenerClasses: Function[] = [];
 
   /**
+   * 模块选项
+   */
+  private static options: EventModuleOptions & { autoScan?: boolean } = {};
+
+  /**
    * 创建事件模块
    * @param options - 模块配置
    *
@@ -121,6 +126,12 @@ export class EventModule {
    * ```
    */
   public static forRoot(options: EventModuleOptions = {}): typeof EventModule {
+    // 保存选项（默认启用自动扫描）
+    EventModule.options = {
+      ...options,
+      autoScan: options.autoScan ?? true,
+    };
+
     const providers: ModuleProvider[] = [];
 
     // 创建事件发射器服务
@@ -268,5 +279,102 @@ export class EventModule {
     }
 
     return undefined;
+  }
+
+  /**
+   * 自动初始化事件监听器
+   * 由框架在应用启动时自动调用，扫描所有模块中使用 @OnEvent 装饰器的类并注册
+   * 
+   * @param rootContainer - 根容器
+   * @returns 是否成功初始化
+   * 
+   * @internal 此方法由框架内部调用，用户通常不需要手动调用
+   */
+  public static autoInitialize(rootContainer: Container): boolean {
+    // 检查是否启用自动扫描
+    if (EventModule.options.autoScan === false) {
+      return false;
+    }
+
+    // 获取 EventEmitter
+    const registry = ModuleRegistry.getInstance();
+    const eventModuleRef = registry.getModuleRef(EventModule);
+
+    if (!eventModuleRef) {
+      return false;
+    }
+
+    let eventEmitter: EventEmitter | undefined;
+    try {
+      eventEmitter = eventModuleRef.container.resolve<EventEmitter>(EVENT_EMITTER_TOKEN);
+    } catch {
+      return false;
+    }
+
+    if (!eventEmitter) {
+      return false;
+    }
+
+    // 收集所有监听器类
+    const listenerClasses = new Set<Function>();
+
+    // 1. 添加通过 registerListeners 注册的类
+    for (const listenerClass of EventModule.listenerClasses) {
+      listenerClasses.add(listenerClass);
+    }
+
+    // 2. 添加通过选项配置的强制包含类
+    if (EventModule.options.includeListeners) {
+      for (const listenerClass of EventModule.options.includeListeners) {
+        listenerClasses.add(listenerClass);
+      }
+    }
+
+    // 3. 自动扫描所有模块的 providers，并从对应的模块容器中解析实例
+    const shouldAutoScan = EventModule.options.autoScan ?? true;
+    if (shouldAutoScan === true) {
+      const allModuleRefs = Array.from(registry['moduleRefs'].values());
+      
+      for (const moduleRef of allModuleRefs) {
+        for (const provider of moduleRef.metadata.providers) {
+          // 提取提供者类
+          let providerClass: Function | undefined;
+
+          if (typeof provider === 'function') {
+            providerClass = provider;
+          } else if ('useClass' in provider && provider.useClass) {
+            providerClass = provider.useClass;
+          }
+
+          // 检查是否是事件监听器类
+          if (providerClass && isEventListenerClass(providerClass)) {
+            // 检查是否被排除
+            const isExcluded = EventModule.options.excludeListeners?.includes(providerClass);
+            if (!isExcluded) {
+              // 使用模块容器创建 scanner 并注册监听器
+              // 这样可以确保解析的实例和控制器中注入的是同一个
+              const scanner = new EventListenerScanner(eventEmitter, moduleRef.container);
+              scanner.registerListenerClass(providerClass);
+            }
+          }
+        }
+      }
+    }
+
+    // 4. 注册通过选项配置的强制包含类（使用根容器）
+    if (EventModule.options.includeListeners) {
+      const scanner = new EventListenerScanner(eventEmitter, rootContainer);
+      for (const listenerClass of EventModule.options.includeListeners) {
+        scanner.registerListenerClass(listenerClass);
+      }
+    }
+
+    // 5. 注册通过 registerListeners 注册的类（使用根容器）
+    if (EventModule.listenerClasses.length > 0) {
+      const scanner = new EventListenerScanner(eventEmitter, rootContainer);
+      scanner.scanAndRegister(EventModule.listenerClasses);
+    }
+
+    return true;
   }
 }
