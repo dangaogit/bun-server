@@ -1,7 +1,7 @@
 {
   "name": "@dangao/logsmith",
   "description": "A simple logger implementation.",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
