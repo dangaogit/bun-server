@@ -98,4 +98,44 @@ export class RequestRecorder {
   public getCount(): number {
     return this.count;
   }
+
+  /**
+   * 导出所有记录为 JSONL 格式字符串
+   * 每行一条 JSON 记录，按时间倒序（最新在前）
+   */
+  public exportToJsonl(): string {
+    const records = this.getAll();
+    return records.map((r) => JSON.stringify(r)).join('\n') + '\n';
+  }
+
+  /**
+   * 从 JSONL 内容导入请求记录
+   * 利用 Bun 1.3.7+ 原生 Bun.JSONL.parse() 高性能解析
+   * @param content - JSONL 格式文本
+   */
+  public importFromJsonl(content: string): void {
+    const records = Bun.JSONL.parse(content) as RequestRecord[];
+    for (const record of records) {
+      if (record.id) {
+        const oldRecord = this.buffer[this.writeIndex];
+        if (oldRecord) {
+          this.idMap.delete(oldRecord.id);
+        }
+        this.buffer[this.writeIndex] = record;
+        this.idMap.set(record.id, this.writeIndex);
+        this.writeIndex = (this.writeIndex + 1) % this.maxRecords;
+        if (this.count < this.maxRecords) {
+          this.count += 1;
+        }
+      }
+    }
+  }
+
+  /**
+   * 解析 JSONL 内容为 RequestRecord 数组（静态工具方法）
+   * @param content - JSONL 格式文本
+   */
+  public static parseJsonl(content: string): RequestRecord[] {
+    return Bun.JSONL.parse(content) as RequestRecord[];
+  }
 }

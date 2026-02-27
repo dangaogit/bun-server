@@ -35,14 +35,10 @@ export class Route {
   public readonly methodName?: string;
 
   /**
-   * 路径模式（用于匹配）
+   * Web 标准 URLPattern（Bun 1.3.4+ 原生支持）
+   * 仅为动态路由创建，静态路由使用精确字符串比较
    */
-  private readonly pattern: RegExp;
-
-  /**
-   * 路径参数名列表
-   */
-  private readonly paramNames: string[];
+  private readonly urlPattern?: URLPattern;
 
   private readonly middlewarePipeline: MiddlewarePipeline | null;
   private readonly staticKey?: string;
@@ -62,33 +58,13 @@ export class Route {
     this.controllerClass = controllerClass;
     this.methodName = methodName;
 
-    // 解析路径参数
-    const { pattern, paramNames } = this.parsePath(path);
-    this.pattern = pattern;
-    this.paramNames = paramNames;
-    this.middlewarePipeline = middlewares.length > 0 ? new MiddlewarePipeline(middlewares) : null;
     this.isStatic = !path.includes(':') && !path.includes('*');
     if (this.isStatic) {
       this.staticKey = `${method}:${path}`;
+    } else {
+      this.urlPattern = new URLPattern({ pathname: path });
     }
-  }
-
-  /**
-   * 解析路径，生成匹配模式和参数名列表
-   * @param path - 路由路径
-   * @returns 匹配模式和参数名列表
-   */
-  private parsePath(path: string): { pattern: RegExp; paramNames: string[] } {
-    const paramNames: string[] = [];
-    const patternString = path
-      .replace(/:([^/]+)/g, (_, paramName) => {
-        paramNames.push(paramName);
-        return '([^/]+)';
-      })
-      .replace(/\*/g, '.*');
-
-    const pattern = new RegExp(`^${patternString}$`);
-    return { pattern, paramNames };
+    this.middlewarePipeline = middlewares.length > 0 ? new MiddlewarePipeline(middlewares) : null;
   }
 
   /**
@@ -98,21 +74,27 @@ export class Route {
    * @returns 匹配结果
    */
   public match(method: HttpMethod, path: string): RouteMatch {
-    // 方法不匹配
     if (this.method !== method) {
       return { matched: false, params: {} };
     }
 
-    // 路径不匹配
-    const match = path.match(this.pattern);
-    if (!match) {
+    if (this.isStatic) {
+      return path === this.path
+        ? { matched: true, params: {} }
+        : { matched: false, params: {} };
+    }
+
+    const result = this.urlPattern!.exec({ pathname: path });
+    if (!result) {
       return { matched: false, params: {} };
     }
 
-    // 提取路径参数
     const params: Record<string, string> = {};
-    for (let i = 0; i < this.paramNames.length; i++) {
-      params[this.paramNames[i]] = match[i + 1] ?? '';
+    const groups = result.pathname.groups;
+    for (const [key, value] of Object.entries(groups)) {
+      if (value !== undefined) {
+        params[key] = value;
+      }
     }
 
     return { matched: true, params };

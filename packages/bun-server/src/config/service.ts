@@ -1,8 +1,58 @@
+import type { ConfigFileFormat } from './types';
+
 /**
  * 配置服务
  * 提供类型安全的配置访问能力
  */
 export class ConfigService<TConfig extends Record<string, unknown> = Record<string, unknown>> {
+  /**
+   * 解析配置内容，按 JSON -> JSONC -> JSON5 顺序自动尝试
+   * 利用 Bun 1.3.6+ 的 Bun.JSONC 和 Bun 1.3.7+ 的 Bun.JSON5
+   * @param content - 配置文本内容
+   * @param format - 强制指定格式（可选），省略则自动检测
+   */
+  public static parseConfigContent(content: string, format?: ConfigFileFormat): unknown {
+    if (format === 'jsonc') {
+      return Bun.JSONC.parse(content);
+    }
+    if (format === 'json5') {
+      return Bun.JSON5.parse(content);
+    }
+    if (format === 'json') {
+      return JSON.parse(content);
+    }
+
+    try {
+      return JSON.parse(content);
+    } catch {
+      try {
+        return Bun.JSONC.parse(content);
+      } catch {
+        return Bun.JSON5.parse(content);
+      }
+    }
+  }
+
+  /**
+   * 从文件加载配置，根据扩展名自动选择解析器
+   * @param filePath - 配置文件路径（.json / .jsonc / .json5）
+   */
+  public static async loadConfigFile(filePath: string): Promise<Record<string, unknown>> {
+    const file = Bun.file(filePath);
+    const content = await file.text();
+
+    let format: ConfigFileFormat | undefined;
+    if (filePath.endsWith('.json5')) {
+      format = 'json5';
+    } else if (filePath.endsWith('.jsonc')) {
+      format = 'jsonc';
+    } else if (filePath.endsWith('.json')) {
+      format = 'json';
+    }
+
+    return ConfigService.parseConfigContent(content, format) as Record<string, unknown>;
+  }
+
   private config: TConfig;
   private readonly namespace?: string;
   private configUpdateListeners: Array<(config: TConfig) => void> = [];

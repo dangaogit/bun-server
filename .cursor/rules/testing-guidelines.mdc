@@ -203,6 +203,79 @@ describe('HealthController', () => {
 });
 ```
 
+## Bun 1.3.4+ 测试特性
+
+### Fake Timers（Bun 1.3.4+）
+
+使用 `jest.useFakeTimers()` 控制时间，适用于测试定时器相关功能（健康检查间隔、
+请求超时、缓存 TTL 等）：
+
+```typescript
+import { describe, expect, test, jest } from 'bun:test';
+
+describe('CacheService', () => {
+  test('should expire after TTL', () => {
+    jest.useFakeTimers();
+
+    const cache = new CacheService({ ttl: 5000 });
+    cache.set('key', 'value');
+
+    jest.advanceTimersByTime(3000);
+    expect(cache.get('key')).toBe('value');
+
+    jest.advanceTimersByTime(3000);
+    expect(cache.get('key')).toBeUndefined();
+
+    jest.useRealTimers();
+  });
+});
+```
+
+### Symbol.dispose 自动恢复 Mock（Bun 1.3.9+）
+
+使用 `using` 关键字让 spy/mock 在作用域结束时自动恢复，无需手动调用
+`mockRestore()`：
+
+```typescript
+import { describe, expect, test, spyOn } from 'bun:test';
+
+describe('UserService', () => {
+  test('should call dependency method', () => {
+    const service = new UserService();
+
+    {
+      using spy = spyOn(service, 'findById').mockReturnValue({ id: '1' });
+      expect(service.findById('1')).toEqual({ id: '1' });
+      expect(spy).toHaveBeenCalledTimes(1);
+    }
+
+    // spy 离开作用域后自动恢复，无需 afterEach 清理
+  });
+});
+```
+
+### --retry 测试重试（Bun 1.3.10+）
+
+CI 环境中使用 `--retry` 标志自动重试失败测试：
+
+```bash
+# 命令行
+bun test --retry 3
+
+# 或在 bunfig.toml 中配置
+# [test]
+# retry = 3
+```
+
+单个测试可以通过 `{ retry: N }` 覆盖全局设置：
+
+```typescript
+test('flaky network call', { retry: 5 }, async () => {
+  const res = await fetch('https://example.com/api');
+  expect(res.ok).toBe(true);
+});
+```
+
 ## 运行测试
 
 ```bash
@@ -215,6 +288,9 @@ bun test tests/health
 
 # 运行特定测试文件
 bun test tests/config/config-module.test.ts
+
+# CI 环境：重试失败测试
+bun test --retry 3
 ```
 
 ## 测试覆盖率目标
@@ -229,3 +305,5 @@ bun test tests/config/config-module.test.ts
 2. **Container 清理**：使用 `container.clear()` 清理容器状态
 3. **测试端口**：使用 `getTestPort()` 工具函数避免端口冲突
 4. **异步测试**：确保正确处理异步操作和 Promise
+5. **Fake Timers**：测试结束后必须调用 `jest.useRealTimers()` 恢复真实计时器
+6. **Mock 清理**：优先使用 `using spy = spyOn(...)` 自动恢复，避免遗漏手动清理

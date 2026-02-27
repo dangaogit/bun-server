@@ -49,6 +49,11 @@ export class DashboardService {
       `${this.basePath}/api/health`,
       (ctx) => this.handleHealth(ctx),
     );
+    registry.register(
+      'POST',
+      `${this.basePath}/api/markdown`,
+      (ctx) => this.handleMarkdownRender(ctx),
+    );
   }
 
   /**
@@ -143,6 +148,34 @@ export class DashboardService {
     return new Response(JSON.stringify(data), {
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
     });
+  }
+
+  /**
+   * 将 Markdown 文本渲染为 HTML
+   * 利用 Bun 1.3.8+ 内置 Bun.markdown 解析器（Zig 实现，支持 GFM）
+   */
+  private async handleMarkdownRender(ctx: Context): Promise<Response> {
+    if (!this.checkAuth(ctx)) {
+      return this.unauthorizedResponse();
+    }
+    try {
+      const body = await ctx.request.json() as { content?: string };
+      if (!body.content) {
+        return new Response(JSON.stringify({ error: 'content field is required' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        });
+      }
+      const html = Bun.markdown.html(body.content, { headings: true });
+      return new Response(JSON.stringify({ html }), {
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      });
+    } catch (err) {
+      return new Response(JSON.stringify({ error: (err as Error).message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      });
+    }
   }
 
   /**
