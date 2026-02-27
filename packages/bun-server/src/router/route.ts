@@ -35,10 +35,14 @@ export class Route {
   public readonly methodName?: string;
 
   /**
-   * Web 标准 URLPattern（Bun 1.3.4+ 原生支持）
-   * 仅为动态路由创建，静态路由使用精确字符串比较
+   * 动态路由匹配用正则（比 URLPattern.exec() 快约 10 倍）
    */
-  private readonly urlPattern?: URLPattern;
+  private readonly pattern?: RegExp;
+
+  /**
+   * 动态路由参数名列表
+   */
+  private readonly paramNames?: string[];
 
   private readonly middlewarePipeline: MiddlewarePipeline | null;
   private readonly staticKey?: string;
@@ -62,9 +66,26 @@ export class Route {
     if (this.isStatic) {
       this.staticKey = `${method}:${path}`;
     } else {
-      this.urlPattern = new URLPattern({ pathname: path });
+      const { pattern, paramNames } = Route.parsePath(path);
+      this.pattern = pattern;
+      this.paramNames = paramNames;
     }
     this.middlewarePipeline = middlewares.length > 0 ? new MiddlewarePipeline(middlewares) : null;
+  }
+
+  /**
+   * 解析路径，生成匹配模式和参数名列表
+   */
+  private static parsePath(path: string): { pattern: RegExp; paramNames: string[] } {
+    const paramNames: string[] = [];
+    const patternString = path
+      .replace(/:([^/]+)/g, (_, paramName) => {
+        paramNames.push(paramName);
+        return '([^/]+)';
+      })
+      .replace(/\*/g, '.*');
+
+    return { pattern: new RegExp(`^${patternString}$`), paramNames };
   }
 
   /**
@@ -84,17 +105,14 @@ export class Route {
         : { matched: false, params: {} };
     }
 
-    const result = this.urlPattern!.exec({ pathname: path });
-    if (!result) {
+    const match = path.match(this.pattern!);
+    if (!match) {
       return { matched: false, params: {} };
     }
 
     const params: Record<string, string> = {};
-    const groups = result.pathname.groups;
-    for (const [key, value] of Object.entries(groups)) {
-      if (value !== undefined) {
-        params[key] = value;
-      }
+    for (let i = 0; i < this.paramNames!.length; i++) {
+      params[this.paramNames![i]] = match[i + 1] ?? '';
     }
 
     return { matched: true, params };

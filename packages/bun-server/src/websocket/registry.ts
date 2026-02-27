@@ -16,7 +16,8 @@ interface GatewayDefinition {
     message?: string;
     close?: string;
   };
-  urlPattern: URLPattern;
+  pattern: RegExp;
+  paramNames: string[];
   isStatic: boolean;
 }
 
@@ -45,6 +46,18 @@ export class WebSocketGatewayRegistry {
     return WebSocketGatewayRegistry.instance;
   }
 
+  private static parsePath(path: string): { pattern: RegExp; paramNames: string[] } {
+    const paramNames: string[] = [];
+    const patternString = path
+      .replace(/:([^/]+)/g, (_, paramName) => {
+        paramNames.push(paramName);
+        return '([^/]+)';
+      })
+      .replace(/\*/g, '.*');
+
+    return { pattern: new RegExp(`^${patternString}$`), paramNames };
+  }
+
   public register(gatewayClass: Constructor<unknown>): void {
     const metadata = getGatewayMetadata(gatewayClass);
     if (!metadata) {
@@ -60,13 +73,15 @@ export class WebSocketGatewayRegistry {
       this.container.register(gatewayClass);
     }
 
+    const { pattern, paramNames } = WebSocketGatewayRegistry.parsePath(metadata.path);
     const isStatic = !metadata.path.includes(':') && !metadata.path.includes('*');
 
     const definition: GatewayDefinition = {
       path: metadata.path,
       gatewayClass,
       handlers,
-      urlPattern: new URLPattern({ pathname: metadata.path }),
+      pattern,
+      paramNames,
       isStatic,
     };
 
@@ -90,7 +105,7 @@ export class WebSocketGatewayRegistry {
     }
 
     for (const gateway of this.dynamicGateways) {
-      if (gateway.urlPattern.test({ pathname: path })) {
+      if (gateway.pattern.test(path)) {
         return true;
       }
     }
@@ -116,14 +131,11 @@ export class WebSocketGatewayRegistry {
     }
 
     for (const gateway of this.dynamicGateways) {
-      const result = gateway.urlPattern.exec({ pathname: path });
-      if (result) {
+      const match = path.match(gateway.pattern);
+      if (match) {
         const params: Record<string, string> = {};
-        const groups = result.pathname.groups;
-        for (const [key, value] of Object.entries(groups)) {
-          if (value !== undefined) {
-            params[key] = value;
-          }
+        for (let i = 0; i < gateway.paramNames.length; i++) {
+          params[gateway.paramNames[i]] = match[i + 1] ?? '';
         }
         return { definition: gateway, params };
       }
