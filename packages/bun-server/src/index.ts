@@ -1,5 +1,7 @@
 export { Application, type ApplicationOptions } from './core/application';
+export { applyDecorators } from './core/apply-decorators';
 export { BunServer, type ServerOptions } from './core/server';
+export { ClusterManager, type ClusterOptions } from './core/cluster';
 export { Context } from './core/context';
 export { ContextService, CONTEXT_SERVICE_TOKEN, contextStore } from './core/context-service';
 export { Route, Router, RouteRegistry } from './router';
@@ -34,6 +36,13 @@ export {
   type ModuleClass,
 } from './di/module';
 export { ModuleRegistry } from './di/module-registry';
+export { AsyncProviderRegistry, type AsyncModuleOptions } from './di/async-module';
+export type {
+  OnModuleInit,
+  OnModuleDestroy,
+  OnApplicationBootstrap,
+  OnApplicationShutdown,
+} from './di/lifecycle';
 export {
   InterceptorRegistry,
   InterceptorChain,
@@ -272,6 +281,12 @@ export {
   HEALTH_OPTIONS_TOKEN,
 } from './health';
 export {
+  DashboardModule,
+  DashboardService,
+  DASHBOARD_OPTIONS_TOKEN,
+  type DashboardModuleOptions,
+} from './dashboard';
+export {
   MetricsModule,
   MetricsCollector,
   PrometheusFormatter,
@@ -352,11 +367,31 @@ export {
   type AuthConfig,
 } from './auth';
 export {
+  DebugModule,
+  RequestRecorder,
+  createDebugMiddleware,
+  DEBUG_OPTIONS_TOKEN,
+  DEBUG_RECORDER_TOKEN,
+  type DebugModuleOptions,
+  type RequestRecord,
+} from './debug';
+export {
   PerformanceHarness,
   StressTester,
   type BenchmarkResult,
   type StressResult,
 } from './testing/harness';
+export { Test, TestingModule, TestingModuleBuilder } from './testing/testing-module';
+export { TestHttpClient } from './testing/test-client';
+// Client Generation
+export {
+  ClientGenerator,
+  createClient,
+  type RouteManifest,
+  type RouteManifestEntry,
+  type ClientConfig,
+  type ClientRequestOptions,
+} from './client';
 // Cache 模块
 export {
   CacheModule,

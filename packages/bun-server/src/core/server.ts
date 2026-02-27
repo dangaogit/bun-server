@@ -159,7 +159,7 @@ export class BunServer {
     });
 
     const hostname = this.options.hostname ?? "localhost";
-    const port = this.options.port ?? 3000;
+    const port = this.server.port;
     logger.info(`Server started at http://${hostname}:${port}`);
   }
 
@@ -258,8 +258,12 @@ export class BunServer {
 
   /**
    * 获取服务器端口
+   * 如果服务器正在运行，返回实际绑定的端口（支持 port:0 场景）
    */
   public getPort(): number {
+    if (this.server) {
+      return this.server.port ?? this.options.port ?? 3000;
+    }
     return this.options.port ?? 3000;
   }
 

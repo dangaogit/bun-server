@@ -215,6 +215,106 @@ export class SwaggerGenerator {
   }
 
   /**
+   * 生成 Markdown 格式的 API 文档
+   * 利用 Bun 1.3.8+ 原生 Bun.markdown 内置解析器
+   */
+  public generateMarkdown(): string {
+    const doc = this.generate();
+    const lines: string[] = [];
+
+    lines.push(`# ${doc.info.title}`);
+    lines.push('');
+    if (doc.info.description) {
+      lines.push(doc.info.description);
+      lines.push('');
+    }
+    lines.push(`**Version:** ${doc.info.version}`);
+    lines.push('');
+
+    if (doc.servers?.length) {
+      lines.push('## Servers');
+      lines.push('');
+      for (const server of doc.servers) {
+        lines.push(`- \`${server.url}\`${server.description ? ' — ' + server.description : ''}`);
+      }
+      lines.push('');
+    }
+
+    if (doc.tags?.length) {
+      lines.push('## Tags');
+      lines.push('');
+      for (const tag of doc.tags) {
+        lines.push(`- **${tag.name}**${tag.description ? ': ' + tag.description : ''}`);
+      }
+      lines.push('');
+    }
+
+    lines.push('## Endpoints');
+    lines.push('');
+
+    const methods = ['get', 'post', 'put', 'delete', 'patch'] as const;
+    for (const [path, pathObj] of Object.entries(doc.paths)) {
+      for (const method of methods) {
+        const operation = pathObj[method];
+        if (!operation) continue;
+
+        lines.push(`### \`${method.toUpperCase()}\` ${path}`);
+        lines.push('');
+        if (operation.summary) {
+          lines.push(`**${operation.summary}**`);
+          lines.push('');
+        }
+        if (operation.description) {
+          lines.push(operation.description);
+          lines.push('');
+        }
+        if (operation.tags?.length) {
+          lines.push(`Tags: ${operation.tags.map((t) => `\`${t}\``).join(', ')}`);
+          lines.push('');
+        }
+        if (operation.deprecated) {
+          lines.push('> **Deprecated**');
+          lines.push('');
+        }
+
+        if (operation.parameters?.length) {
+          lines.push('| Parameter | In | Type | Required | Description |');
+          lines.push('|---|---|---|---|---|');
+          for (const param of operation.parameters) {
+            const type = param.schema?.type ?? 'string';
+            const required = param.required ? 'Yes' : 'No';
+            lines.push(`| \`${param.name}\` | ${param.in} | ${type} | ${required} | ${param.description ?? ''} |`);
+          }
+          lines.push('');
+        }
+
+        if (operation.responses) {
+          lines.push('**Responses:**');
+          lines.push('');
+          for (const [status, resp] of Object.entries(operation.responses)) {
+            lines.push(`- **${status}**: ${resp.description ?? ''}`);
+          }
+          lines.push('');
+        }
+
+        lines.push('---');
+        lines.push('');
+      }
+    }
+
+    return lines.join('\n');
+  }
+
+  /**
+   * 生成 Markdown 并渲染为 HTML
+   * 利用 Bun.markdown.html() 进行高性能渲染
+   */
+  public generateMarkdownHtml(): string {
+    const md = this.generateMarkdown();
+    return Bun.markdown.html(md, { headings: true });
+  }
+
+  /**
    * 规范化路径
    */
   private normalizePath(path: string): string {

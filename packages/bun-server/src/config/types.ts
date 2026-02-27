@@ -1,3 +1,8 @@
+/**
+ * 配置文件解析格式
+ */
+export type ConfigFileFormat = 'json' | 'jsonc' | 'json5';
+
 export interface ConfigModuleOptions<TConfig extends Record<string, unknown> = Record<string, unknown>> {
   /**
    * 默认配置对象（最低优先级）
@@ -9,6 +14,13 @@ export interface ConfigModuleOptions<TConfig extends Record<string, unknown> = R
    * @param env - process.env 快照
    */
   load?: (env: Record<string, string | undefined>) => Partial<TConfig>;
+
+  /**
+   * 配置文件路径列表（支持 .json / .jsonc / .json5 格式）
+   * 优先级：configFiles > defaultConfig，按数组顺序后者覆盖前者
+   * 仅在 forRootAsync 中生效（文件读取为异步操作）
+   */
+  configFiles?: string[];
 
   /**
    * 配置验证函数（可抛出错误）

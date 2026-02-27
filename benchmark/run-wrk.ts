@@ -195,9 +195,19 @@ async function runWrk(baseUrl: string, target: BenchTarget, tier: TierConfig): P
   return { name: target.name, endpoint: target.endpoint, ...parsed };
 }
 
+async function getPackageVersion(): Promise<string> {
+  try {
+    const pkgPath = resolve(BENCH_DIR, '..', 'packages', 'bun-server', 'package.json');
+    const pkg = await Bun.file(pkgPath).json();
+    return pkg.version ?? 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
 function generateReport(
   tierResults: TierResult[],
-  env: { os: string; bunVersion: string; cpuModel: string; cores: string; fdLimit: number | 'unlimited' },
+  env: { os: string; bunVersion: string; cpuModel: string; cores: string; fdLimit: number | 'unlimited'; pkgVersion: string },
 ): string {
   const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
   const lines: string[] = [
@@ -205,7 +215,7 @@ function generateReport(
     '',
     `> Generated: ${now}`,
     `> CPU: ${env.cpuModel} (${env.cores} cores)`,
-    `> OS: ${env.os} | Bun ${env.bunVersion} | @dangao/bun-server 1.9.0`,
+    `> OS: ${env.os} | Bun ${env.bunVersion} | @dangao/bun-server ${env.pkgVersion}`,
     `> ulimit -n: ${env.fdLimit} (child processes raised to ${MIN_FD_LIMIT})`,
     '',
   ];
@@ -296,7 +306,8 @@ async function main(): Promise<void> {
 
   await warmup(baseUrl);
 
-  const env = await getEnvironmentInfo();
+  const [env, pkgVersion] = await Promise.all([getEnvironmentInfo(), getPackageVersion()]);
+  const envWithPkg = { ...env, pkgVersion };
   const tierResults: TierResult[] = [];
 
   for (const tier of TIERS) {
@@ -316,7 +327,7 @@ async function main(): Promise<void> {
 
   await shutdownServer(serverProc);
 
-  const report = generateReport(tierResults, env);
+  const report = generateReport(tierResults, envWithPkg);
   console.log('\n' + report);
 
   await Bun.write(REPORT_PATH, report);

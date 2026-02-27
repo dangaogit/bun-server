@@ -33,6 +33,11 @@ export interface LoggerOptions {
    * 时间格式，默认 yyyy-MM-dd HH:mm:ss.S
    */
   timeFormat?: string;
+  /**
+   * 自动换行列宽（Bun 1.3.7+ 使用 Bun.wrapAnsi 实现 ANSI 感知换行）
+   * 设为 0 或 undefined 禁用换行
+   */
+  wrapWidth?: number;
 }
 
 export interface Logger {
@@ -59,6 +64,7 @@ export class SimpleLogger implements Logger {
   private readonly colorize: boolean;
   private readonly colors: Partial<Record<LogLevel, string>>;
   private readonly timeFormat: string;
+  private readonly wrapWidth: number;
 
   public constructor(options: LoggerOptions = {}) {
     this.prefix = options.prefix;
@@ -66,6 +72,7 @@ export class SimpleLogger implements Logger {
     this.sink = options.sink ?? this.createConsoleSink();
     this.colorize = options.colorize ?? true;
     this.timeFormat = options.timeFormat ?? 'yyyy-MM-dd HH:mm:ss.S';
+    this.wrapWidth = options.wrapWidth ?? 0;
     this.colors = {
       [LogLevel.TRACE]: '\x1b[90m',
       [LogLevel.DEBUG]: '\x1b[34m',
@@ -121,7 +128,14 @@ export class SimpleLogger implements Logger {
       const line = `${time}${prefix}${label} ${entry.message}`;
       const colored = this.colorizeLine(entry.level, line);
 
-      console.log(colored, ...entry.args);
+      const BunObj = typeof Bun !== 'undefined' ? Bun as Record<string, unknown> : undefined;
+      const output = this.wrapWidth > 0 && BunObj && typeof BunObj.wrapAnsi === 'function'
+        ? (BunObj.wrapAnsi as (text: string, cols: number, opts?: Record<string, unknown>) => string)(
+            colored, this.wrapWidth, { hard: false, wordWrap: true, trim: false },
+          )
+        : colored;
+
+      console.log(output, ...entry.args);
     };
   }
 

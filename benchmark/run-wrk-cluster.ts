@@ -192,9 +192,19 @@ async function runWrk(baseUrl: string, target: BenchTarget, tier: TierConfig): P
   return { name: target.name, endpoint: target.endpoint, ...parsed };
 }
 
+async function getPackageVersion(): Promise<string> {
+  try {
+    const pkgPath = resolve(BENCH_DIR, '..', 'packages', 'bun-server', 'package.json');
+    const pkg = await Bun.file(pkgPath).json();
+    return pkg.version ?? 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
 function generateReport(
   tierResults: TierResult[],
-  env: { os: string; bunVersion: string; cpuModel: string; cores: string },
+  env: { os: string; bunVersion: string; cpuModel: string; cores: string; pkgVersion: string },
   workerCount: number,
 ): string {
   const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
@@ -203,7 +213,7 @@ function generateReport(
     '',
     `> Generated: ${now}`,
     `> CPU: ${env.cpuModel} (${env.cores} cores)`,
-    `> OS: ${env.os} | Bun ${env.bunVersion} | @dangao/bun-server 1.9.0`,
+    `> OS: ${env.os} | Bun ${env.bunVersion} | @dangao/bun-server ${env.pkgVersion}`,
     `> Workers: ${workerCount} (reusePort: true)`,
     `> NOTE: reusePort only effective on Linux`,
     '',
@@ -284,7 +294,8 @@ async function main(): Promise<void> {
 
   await warmup(baseUrl);
 
-  const env = await getEnvironmentInfo();
+  const [env, pkgVersion] = await Promise.all([getEnvironmentInfo(), getPackageVersion()]);
+  const envWithPkg = { ...env, pkgVersion };
   const tierResults: TierResult[] = [];
 
   for (const tier of TIERS) {
@@ -311,7 +322,7 @@ async function main(): Promise<void> {
   await Promise.all(workers.map((w) => w.exited));
   clearTimeout(killTimeout);
 
-  const report = generateReport(tierResults, env, workerCount);
+  const report = generateReport(tierResults, envWithPkg, workerCount);
   console.log('\n' + report);
 
   await Bun.write(REPORT_PATH, report);

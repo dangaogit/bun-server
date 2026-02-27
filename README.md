@@ -46,6 +46,22 @@
 - 📡 **WebSocket gateways** with `@WebSocketGateway`, `@OnMessage`, etc.
 - 📚 **Docs & samples** including multi-language docs, benchmark scripts and
   best practices.
+- 🧪 **Testing module** with `Test.createTestingModule()`, provider override,
+  and built-in HTTP test client.
+- 🔄 **Lifecycle hooks** — `OnModuleInit`, `OnModuleDestroy`,
+  `OnApplicationBootstrap`, `OnApplicationShutdown`.
+- ⚡ **Async module config** — `forRootAsync()` with factory injection on
+  ConfigModule, DatabaseModule, CacheModule and more.
+- 🔌 **Type-safe client generation** — extract route manifests and create
+  typed API clients from controller metadata.
+- 🎨 **Decorator composition** — `applyDecorators()` to merge multiple
+  decorators into one reusable decorator.
+- 📊 **Built-in dashboard** — `DashboardModule` provides a zero-dependency
+  monitoring web UI with system info, routes and health status.
+- 🐛 **Request replay / debug** — `DebugModule` records requests in a ring
+  buffer with a debug UI for inspection and replay.
+- 🖥️ **Zero-config cluster** — `ClusterManager` auto-spawns reusePort
+  workers matching CPU core count.
 
 ## Architecture
 
@@ -368,6 +384,8 @@ Examples are organized by difficulty and feature category:
   - `multi-module-app.ts` - Module dependencies and organization
   - `context-scope-app.ts` - Request scoping and ContextService
   - `full-app.ts` - Validation, uploads, static files, WebSocket
+  - `lifecycle-app.ts` - Lifecycle hooks (OnModuleInit, OnModuleDestroy, etc.)
+  - `async-config-app.ts` - Async module config with `forRootAsync()`
 
 - **[Official Modules](./examples/02-official-modules/)** - Ready-to-use modules
   - `auth-app.ts` - JWT + OAuth2 authentication (with Web UI)
@@ -376,15 +394,21 @@ Examples are organized by difficulty and feature category:
   - `orm-app.ts` - Entity + Repository pattern
   - `cache-app.ts` - Caching with decorators
   - `queue-app.ts` - Task queues and Cron jobs
+  - `dashboard-app.ts` - Built-in monitoring dashboard (with Web UI)
 
 - **[Advanced](./examples/03-advanced/)** - Custom framework extensions
   - `custom-decorator-app.ts` - Create custom decorators
+  - `apply-decorators-app.ts` - Decorator composition with `applyDecorators()`
+  - `testing-app.ts` - TestingModule with mock providers and HTTP client
+  - `type-safe-client-app.ts` - Type-safe API client from controller metadata
+  - `debug-app.ts` - Request recording and replay (with Web UI)
   - `websocket-chat-app.ts` - Complete WebSocket chat with rooms (with Web UI)
   - `microservice-app.ts` - Microservices architecture
 
 - **[Real World](./examples/04-real-world/)** - Production-ready examples
   - `database-test-app.ts` - Database connection tester (Web UI)
   - `perf/app.ts` - Performance benchmarking
+  - `perf/cluster-app.ts` - Zero-config cluster with `ClusterManager`
 
 ### 🔑 Symbol + Interface Pattern
 

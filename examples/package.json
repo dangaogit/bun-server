@@ -22,12 +22,21 @@
     "start:metrics": "bun 02-official-modules/metrics-rate-limit-app.ts",
     "start:events": "bun 02-official-modules/events-app.ts",
     "start:events-module": "bun 02-official-modules/events-module-based-app.ts",
+    "start:global-module": "bun 01-basic/global-module-app.ts",
+    "start:lifecycle": "bun 01-core-features/lifecycle-app.ts",
+    "start:async-config": "bun 01-core-features/async-config-app.ts",
+    "start:dashboard": "bun 02-official-modules/dashboard-app.ts",
     "start:custom-decorator": "bun 03-advanced/custom-decorator-app.ts",
     "start:advanced-decorator": "bun 03-advanced/advanced-decorator-app.ts",
+    "start:apply-decorators": "bun 03-advanced/apply-decorators-app.ts",
+    "start:testing": "bun 03-advanced/testing-app.ts",
+    "start:type-safe-client": "bun 03-advanced/type-safe-client-app.ts",
+    "start:debug": "bun 03-advanced/debug-app.ts",
     "start:websocket-chat": "bun 03-advanced/websocket-chat-app.ts",
     "start:microservice": "bun 03-advanced/microservice-app.ts",
     "start:database-test": "bun 04-real-world/database-test-app.ts",
-    "start:perf": "bun 04-real-world/perf/app.ts"
+    "start:perf": "bun 04-real-world/perf/app.ts",
+    "start:cluster": "bun 04-real-world/perf/cluster-app.ts"
   },
   "dependencies": {
     "@dangao/bun-server": "workspace:^",

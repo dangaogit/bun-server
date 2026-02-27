@@ -6,6 +6,12 @@ import { isGlobalModule } from './decorators';
 import type { Constructor } from '@/core/types';
 import type { ApplicationExtension } from '../extensions/types';
 import type { Middleware } from '../middleware';
+import {
+  callOnModuleInit,
+  callOnModuleDestroy,
+  callOnApplicationBootstrap,
+  callOnApplicationShutdown,
+} from './lifecycle';
 
 interface ModuleRef {
   moduleClass: ModuleClass;
@@ -47,6 +53,17 @@ export class ModuleRegistry {
 
   public getModuleRef(moduleClass: ModuleClass): ModuleRef | undefined {
     return this.moduleRefs.get(moduleClass);
+  }
+
+  /**
+   * 获取所有模块的子容器（用于异步 provider 初始化）
+   */
+  public getAllModuleContainers(): Container[] {
+    const containers: Container[] = [];
+    for (const [, ref] of this.moduleRefs) {
+      containers.push(ref.container);
+    }
+    return containers;
   }
 
   public clear(): void {
@@ -205,6 +222,64 @@ export class ModuleRegistry {
       return [];
     }
     return moduleRef.middlewares;
+  }
+
+  /**
+   * 解析所有模块中的 provider 实例，用于生命周期钩子调用
+   */
+  public resolveAllProviderInstances(): unknown[] {
+    const instances: unknown[] = [];
+    for (const [, ref] of this.moduleRefs) {
+      for (const provider of ref.metadata.providers) {
+        try {
+          if (typeof provider === 'function') {
+            instances.push(ref.container.resolve(provider));
+          } else if ('useClass' in provider) {
+            const token = provider.provide ?? provider.useClass;
+            instances.push(ref.container.resolve(token as Constructor<unknown>));
+          } else if ('useValue' in provider) {
+            instances.push(provider.useValue);
+          } else if ('useFactory' in provider) {
+            instances.push(ref.container.resolve(provider.provide as Constructor<unknown>));
+          }
+        } catch {
+          // skip providers that can't be resolved (e.g. pending async providers)
+        }
+      }
+    }
+    return instances;
+  }
+
+  /**
+   * 调用所有 provider 的 onModuleInit 钩子
+   */
+  public async callModuleInitHooks(): Promise<void> {
+    const instances = this.resolveAllProviderInstances();
+    await callOnModuleInit(instances);
+  }
+
+  /**
+   * 调用所有 provider 的 onApplicationBootstrap 钩子
+   */
+  public async callBootstrapHooks(): Promise<void> {
+    const instances = this.resolveAllProviderInstances();
+    await callOnApplicationBootstrap(instances);
+  }
+
+  /**
+   * 调用所有 provider 的 onModuleDestroy 钩子
+   */
+  public async callModuleDestroyHooks(): Promise<void> {
+    const instances = this.resolveAllProviderInstances();
+    await callOnModuleDestroy(instances);
+  }
+
+  /**
+   * 调用所有 provider 的 onApplicationShutdown 钩子
+   */
+  public async callShutdownHooks(signal?: string): Promise<void> {
+    const instances = this.resolveAllProviderInstances();
+    await callOnApplicationShutdown(instances, signal);
   }
 
   private registerExport(parentContainer: Container, moduleRef: ModuleRef, token: ProviderToken): void {

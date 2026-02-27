@@ -46,12 +46,7 @@ export class WebSocketGatewayRegistry {
     return WebSocketGatewayRegistry.instance;
   }
 
-  /**
-   * 解析路径，生成匹配模式和参数名列表
-   * @param path - 路由路径
-   * @returns 匹配模式和参数名列表
-   */
-  private parsePath(path: string): { pattern: RegExp; paramNames: string[] } {
+  private static parsePath(path: string): { pattern: RegExp; paramNames: string[] } {
     const paramNames: string[] = [];
     const patternString = path
       .replace(/:([^/]+)/g, (_, paramName) => {
@@ -60,8 +55,7 @@ export class WebSocketGatewayRegistry {
       })
       .replace(/\*/g, '.*');
 
-    const pattern = new RegExp(`^${patternString}$`);
-    return { pattern, paramNames };
+    return { pattern: new RegExp(`^${patternString}$`), paramNames };
   }
 
   public register(gatewayClass: Constructor<unknown>): void {
@@ -79,8 +73,7 @@ export class WebSocketGatewayRegistry {
       this.container.register(gatewayClass);
     }
 
-    // 解析路径
-    const { pattern, paramNames } = this.parsePath(metadata.path);
+    const { pattern, paramNames } = WebSocketGatewayRegistry.parsePath(metadata.path);
     const isStatic = !metadata.path.includes(':') && !metadata.path.includes('*');
 
     const definition: GatewayDefinition = {
@@ -94,7 +87,6 @@ export class WebSocketGatewayRegistry {
 
     this.gateways.set(metadata.path, definition);
 
-    // 分别存储静态和动态路由
     if (isStatic) {
       this.staticGateways.set(metadata.path, definition);
     } else {
@@ -108,12 +100,10 @@ export class WebSocketGatewayRegistry {
    * @returns 是否有匹配的网关
    */
   public hasGateway(path: string): boolean {
-    // 先检查静态路由
     if (this.staticGateways.has(path)) {
       return true;
     }
 
-    // 遍历动态路由
     for (const gateway of this.dynamicGateways) {
       if (gateway.pattern.test(path)) {
         return true;
@@ -135,17 +125,14 @@ export class WebSocketGatewayRegistry {
    * @returns 匹配的网关定义和路径参数
    */
   private getGateway(path: string): { definition: GatewayDefinition; params: Record<string, string> } | undefined {
-    // 先检查静态路由
     const staticGateway = this.staticGateways.get(path);
     if (staticGateway) {
       return { definition: staticGateway, params: {} };
     }
 
-    // 遍历动态路由
     for (const gateway of this.dynamicGateways) {
       const match = path.match(gateway.pattern);
       if (match) {
-        // 提取路径参数
         const params: Record<string, string> = {};
         for (let i = 0; i < gateway.paramNames.length; i++) {
           params[gateway.paramNames[i]] = match[i + 1] ?? '';

@@ -3,6 +3,7 @@ export { ConfigService } from './service';
 export {
   CONFIG_SERVICE_TOKEN,
   type ConfigModuleOptions,
+  type ConfigFileFormat,
 } from './types';
 
 

@@ -1,48 +1,67 @@
 /**
- * Multi-process cluster example using reusePort.
+ * Zero-Config Cluster example using ClusterManager.
  *
- * Each worker binds to the same port with SO_REUSEPORT enabled.
- * The kernel distributes incoming connections across workers.
+ * ClusterManager auto-detects CPU cores and spawns workers.
+ * Each worker binds to the same port with SO_REUSEPORT.
  *
  * NOTE: reusePort only works on Linux. macOS/Windows will silently
- * ignore the option and all workers except the first will fail to bind.
+ * ignore the option.
  *
  * Usage:
  *   bun examples/04-real-world/perf/cluster-app.ts
- *
- * Benchmark:
- *   wrk -t8 -c500 -d30s http://localhost:3300/api/ping
  */
 
-import { spawn } from 'bun';
+import { ClusterManager, Application, Controller, GET, Module } from '@dangao/bun-server';
 
-const WORKER_SCRIPT = new URL('./cluster-worker.ts', import.meta.url).pathname;
 const PORT = Number(process.env.PORT ?? 3300);
-const WORKERS = Number(process.env.WORKERS ?? navigator.hardwareConcurrency);
 
-console.log(`Starting ${WORKERS} workers on port ${PORT} (reusePort)...`);
-console.log(`Platform: ${process.platform} (reusePort effective on Linux only)\n`);
+if (!ClusterManager.isWorker()) {
+  // Master process: spawn workers
+  const workers = process.env.WORKERS ? Number(process.env.WORKERS) : ('auto' as const);
 
-const procs: ReturnType<typeof spawn>[] = [];
+  const manager = new ClusterManager({
+    workers,
+    scriptPath: import.meta.path,
+    port: PORT,
+  });
 
-for (let i = 0; i < WORKERS; i++) {
-  procs.push(
-    spawn({
-      cmd: ['bun', 'run', WORKER_SCRIPT],
-      env: { ...process.env, PORT: String(PORT), WORKER_ID: String(i) },
-      stdout: 'inherit',
-      stderr: 'inherit',
-    }),
-  );
+  manager.start();
+
+  process.on('SIGINT', async () => {
+    await manager.stop();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', async () => {
+    await manager.stop();
+    process.exit(0);
+  });
+} else {
+  // Worker process
+  @Controller('/api')
+  class PerfController {
+    @GET('/ping')
+    public ping(): object {
+      return { pong: true, worker: ClusterManager.getWorkerId() };
+    }
+
+    @GET('/json')
+    public json(): object {
+      return {
+        message: 'Hello from worker ' + ClusterManager.getWorkerId(),
+        timestamp: Date.now(),
+      };
+    }
+  }
+
+  @Module({ controllers: [PerfController] })
+  class WorkerModule {}
+
+  const app = new Application({
+    port: PORT,
+    reusePort: true,
+    enableSignalHandlers: true,
+  });
+  app.registerModule(WorkerModule);
+  await app.listen();
 }
-
-function killAll(): void {
-  for (const p of procs) p.kill();
-}
-
-process.on('SIGINT', killAll);
-process.on('SIGTERM', killAll);
-
-console.log(`\nAll ${WORKERS} workers started.`);
-console.log(`  curl http://localhost:${PORT}/api/ping`);
-console.log(`  wrk -t8 -c500 -d30s http://localhost:${PORT}/api/ping`);

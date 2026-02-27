@@ -2,6 +2,7 @@ import { Module, MODULE_METADATA_KEY, type ModuleProvider } from '../di/module';
 import { CONFIG_CENTER_TOKEN } from '../microservice/config-center/types';
 import type { ConfigCenter } from '../microservice/config-center/types';
 import { ControllerRegistry } from '../controller/controller';
+import { type AsyncModuleOptions, registerAsyncProviders } from '../di/async-module';
 
 import { ConfigService } from './service';
 import { CONFIG_SERVICE_TOKEN, type ConfigModuleOptions } from './types';
@@ -68,6 +69,47 @@ export class ConfigModule {
     Reflect.defineMetadata(MODULE_METADATA_KEY, metadata, ConfigModule);
 
     return ConfigModule;
+  }
+
+  /**
+   * 异步创建配置模块
+   * 支持 configFiles 选项从 .json / .jsonc / .json5 文件异步加载配置
+   * @param asyncOptions - 异步配置选项
+   */
+  public static forRootAsync(
+    asyncOptions: AsyncModuleOptions<ConfigModuleOptions>,
+  ): typeof ConfigModule {
+    const tokenMap = new Map<symbol, (config: ConfigModuleOptions) => unknown | Promise<unknown>>();
+    tokenMap.set(CONFIG_SERVICE_TOKEN, async (options) => {
+      const env = ConfigModule.snapshotEnv();
+      const defaultConfig = (options.defaultConfig ?? {}) as Record<string, unknown>;
+
+      // 从配置文件加载（按数组顺序，后者覆盖前者）
+      let fileConfig: Record<string, unknown> = {};
+      if (options.configFiles?.length) {
+        const fileConfigs = await Promise.all(
+          options.configFiles.map((f) => ConfigService.loadConfigFile(f)),
+        );
+        for (const fc of fileConfigs) {
+          fileConfig = { ...fileConfig, ...fc };
+        }
+      }
+
+      const loadedConfig = (options.load ? options.load(env) : {}) as Record<string, unknown>;
+
+      // 优先级：env load > configFiles > defaultConfig
+      const mergedConfig = { ...defaultConfig, ...fileConfig, ...loadedConfig };
+      if (options.validate) {
+        options.validate(mergedConfig);
+      }
+      return new ConfigService(mergedConfig, options.namespace);
+    });
+
+    return registerAsyncProviders(
+      ConfigModule,
+      asyncOptions,
+      tokenMap,
+    ) as typeof ConfigModule;
   }
 
   /**
@@ -168,12 +210,10 @@ export class ConfigModule {
               configInfo.namespaceId,
             )
             .then((result) => {
-              // 解析配置内容（支持 JSON）
               try {
-                const parsed = JSON.parse(result.content);
+                const parsed = ConfigService.parseConfigContent(result.content);
                 ConfigModule.setValueByPath(configMap, configPath, parsed);
               } catch {
-                // 如果不是 JSON，直接使用字符串值
                 ConfigModule.setValueByPath(configMap, configPath, result.content);
               }
             })
@@ -220,7 +260,7 @@ export class ConfigModule {
               // 解析配置内容
               let parsedValue: unknown;
               try {
-                parsedValue = JSON.parse(result.content);
+                parsedValue = ConfigService.parseConfigContent(result.content);
               } catch {
                 parsedValue = result.content;
               }

@@ -35,14 +35,14 @@ export class Route {
   public readonly methodName?: string;
 
   /**
-   * 路径模式（用于匹配）
+   * 动态路由匹配用正则（比 URLPattern.exec() 快约 10 倍）
    */
-  private readonly pattern: RegExp;
+  private readonly pattern?: RegExp;
 
   /**
-   * 路径参数名列表
+   * 动态路由参数名列表
    */
-  private readonly paramNames: string[];
+  private readonly paramNames?: string[];
 
   private readonly middlewarePipeline: MiddlewarePipeline | null;
   private readonly staticKey?: string;
@@ -62,23 +62,21 @@ export class Route {
     this.controllerClass = controllerClass;
     this.methodName = methodName;
 
-    // 解析路径参数
-    const { pattern, paramNames } = this.parsePath(path);
-    this.pattern = pattern;
-    this.paramNames = paramNames;
-    this.middlewarePipeline = middlewares.length > 0 ? new MiddlewarePipeline(middlewares) : null;
     this.isStatic = !path.includes(':') && !path.includes('*');
     if (this.isStatic) {
       this.staticKey = `${method}:${path}`;
+    } else {
+      const { pattern, paramNames } = Route.parsePath(path);
+      this.pattern = pattern;
+      this.paramNames = paramNames;
     }
+    this.middlewarePipeline = middlewares.length > 0 ? new MiddlewarePipeline(middlewares) : null;
   }
 
   /**
    * 解析路径，生成匹配模式和参数名列表
-   * @param path - 路由路径
-   * @returns 匹配模式和参数名列表
    */
-  private parsePath(path: string): { pattern: RegExp; paramNames: string[] } {
+  private static parsePath(path: string): { pattern: RegExp; paramNames: string[] } {
     const paramNames: string[] = [];
     const patternString = path
       .replace(/:([^/]+)/g, (_, paramName) => {
@@ -87,8 +85,7 @@ export class Route {
       })
       .replace(/\*/g, '.*');
 
-    const pattern = new RegExp(`^${patternString}$`);
-    return { pattern, paramNames };
+    return { pattern: new RegExp(`^${patternString}$`), paramNames };
   }
 
   /**
@@ -98,21 +95,24 @@ export class Route {
    * @returns 匹配结果
    */
   public match(method: HttpMethod, path: string): RouteMatch {
-    // 方法不匹配
     if (this.method !== method) {
       return { matched: false, params: {} };
     }
 
-    // 路径不匹配
-    const match = path.match(this.pattern);
+    if (this.isStatic) {
+      return path === this.path
+        ? { matched: true, params: {} }
+        : { matched: false, params: {} };
+    }
+
+    const match = path.match(this.pattern!);
     if (!match) {
       return { matched: false, params: {} };
     }
 
-    // 提取路径参数
     const params: Record<string, string> = {};
-    for (let i = 0; i < this.paramNames.length; i++) {
-      params[this.paramNames[i]] = match[i + 1] ?? '';
+    for (let i = 0; i < this.paramNames!.length; i++) {
+      params[this.paramNames![i]] = match[i + 1] ?? '';
     }
 
     return { matched: true, params };
