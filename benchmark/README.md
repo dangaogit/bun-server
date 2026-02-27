@@ -22,7 +22,10 @@ bun benchmark/di.bench.ts
 使用 [wrk](https://github.com/wg/wrk) 对真实 HTTP 端点进行压测，
 覆盖框架核心路径（JSON 响应、路由参数、Body 解析、验证、中间件链、文件 I/O 等）。
 
-**前置条件**：系统需安装 wrk（`brew install wrk` / `apt install wrk`）。
+**前置条件**：
+
+- 系统需安装 wrk（`brew install wrk` / `apt install wrk`）
+- 脚本自动为子进程提升 `ulimit -n` 至 10240（macOS 默认 256 不够用），无需手动调整
 
 | 端点                    | 类型        | 测试目标         |
 | ----------------------- | ----------- | ---------------- |

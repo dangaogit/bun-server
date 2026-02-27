@@ -457,6 +457,9 @@ bun benchmark/di.bench.ts
 响应、路由参数、Body 解析、验证、中间件链、文件 I/O 等核心路径。
 三个并发梯度揭示延迟拐点。
 
+**前置条件：** 需安装 wrk（`brew install wrk` / `apt install wrk`）。脚本会自动
+为子进程提升 `ulimit -n` 至 10240；即使 macOS 默认值仅 256 也无需手动调整。
+
 ```bash
 bun benchmark/run-wrk.ts        # 自动启动服务器、运行 wrk、生成报告
 ```

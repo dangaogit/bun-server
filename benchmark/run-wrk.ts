@@ -95,9 +95,24 @@ async function waitForServer(port: number, timeoutMs: number = 15_000): Promise<
   throw new Error(`Server did not become ready within ${timeoutMs}ms`);
 }
 
-async function getEnvironmentInfo(): Promise<{ os: string; bunVersion: string; cpuModel: string; cores: string }> {
+const MIN_FD_LIMIT = 10240;
+
+async function getCurrentFdLimit(): Promise<number | 'unlimited'> {
+  try {
+    const proc = Bun.spawn(['sh', '-c', 'ulimit -n'], { stdout: 'pipe', stderr: 'pipe' });
+    const raw = (await new Response(proc.stdout).text()).trim();
+    await proc.exited;
+    if (raw === 'unlimited') return 'unlimited';
+    return Number(raw) || 256;
+  } catch {
+    return 256;
+  }
+}
+
+async function getEnvironmentInfo(): Promise<{ os: string; bunVersion: string; cpuModel: string; cores: string; fdLimit: number | 'unlimited' }> {
   const os = `${process.platform} ${process.arch}`;
   const bunVersion = Bun.version;
+  const fdLimit = await getCurrentFdLimit();
 
   let cpuModel = 'unknown';
   let cores = 'unknown';
@@ -115,26 +130,24 @@ async function getEnvironmentInfo(): Promise<{ os: string; bunVersion: string; c
     // fallback
   }
 
-  return { os, bunVersion, cpuModel, cores };
+  return { os, bunVersion, cpuModel, cores, fdLimit };
+}
+
+function shellWithFd(cmd: string): string[] {
+  return ['sh', '-c', `ulimit -n ${MIN_FD_LIMIT} 2>/dev/null; ${cmd}`];
 }
 
 async function runWrk(baseUrl: string, target: BenchTarget, tier: TierConfig): Promise<WrkResult> {
   const url = `${baseUrl}${target.endpoint}`;
-  const args = [
-    'wrk',
-    `-t${tier.threads}`,
-    `-c${tier.connections}`,
-    `-d${tier.duration}`,
-    '--latency',
-  ];
+  let wrkCmd = `wrk -t${tier.threads} -c${tier.connections} -d${tier.duration} --latency`;
 
   if (target.luaScript) {
-    args.push('-s', resolve(WRK_DIR, target.luaScript));
+    wrkCmd += ` -s '${resolve(WRK_DIR, target.luaScript)}'`;
   }
 
-  args.push(url);
+  wrkCmd += ` '${url}'`;
 
-  const proc = Bun.spawn(args, { stdout: 'pipe', stderr: 'pipe' });
+  const proc = Bun.spawn(shellWithFd(wrkCmd), { stdout: 'pipe', stderr: 'pipe' });
   const stdout = await new Response(proc.stdout).text();
   await proc.exited;
 
@@ -144,7 +157,7 @@ async function runWrk(baseUrl: string, target: BenchTarget, tier: TierConfig): P
 
 function generateReport(
   tierResults: TierResult[],
-  env: { os: string; bunVersion: string; cpuModel: string; cores: string },
+  env: { os: string; bunVersion: string; cpuModel: string; cores: string; fdLimit: number | 'unlimited' },
 ): string {
   const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
   const lines: string[] = [
@@ -153,6 +166,7 @@ function generateReport(
     `> Generated: ${now}`,
     `> CPU: ${env.cpuModel} (${env.cores} cores)`,
     `> OS: ${env.os} | Bun ${env.bunVersion} | @dangao/bun-server 1.9.0`,
+    `> ulimit -n: ${env.fdLimit} (child processes raised to ${MIN_FD_LIMIT})`,
     '',
   ];
 
@@ -186,8 +200,16 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  const fdLimit = await getCurrentFdLimit();
+  const maxConn = Math.max(...TIERS.map((t) => t.connections));
+  if (fdLimit !== 'unlimited' && fdLimit < maxConn * 2) {
+    console.log(`[run-wrk] current ulimit -n is ${fdLimit}, raising to ${MIN_FD_LIMIT} for child processes`);
+  } else {
+    console.log(`[run-wrk] ulimit -n: ${fdLimit}`);
+  }
+
   console.log('[run-wrk] starting benchmark server...');
-  const serverProc = Bun.spawn(['bun', 'run', SERVER_SCRIPT], {
+  const serverProc = Bun.spawn(shellWithFd(`exec bun run '${SERVER_SCRIPT}'`), {
     stdout: 'pipe',
     stderr: 'inherit',
     env: { ...process.env, PORT: '0' },

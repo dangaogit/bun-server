@@ -453,6 +453,10 @@ Real HTTP load testing with [wrk](https://github.com/wg/wrk), covering JSON
 responses, route params, body parsing, validation, middleware chains, file I/O,
 and more. Three concurrency tiers expose the latency inflection point.
 
+**Prerequisites:** wrk (`brew install wrk` / `apt install wrk`). The script
+automatically raises `ulimit -n` to 10240 for child processes; if your shell
+default is low (e.g. macOS default 256), no manual action is needed.
+
 ```bash
 bun benchmark/run-wrk.ts        # auto start server, run wrk, generate report
 ```
