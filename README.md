@@ -447,68 +447,45 @@ bun benchmark/router.bench.ts
 bun benchmark/di.bench.ts
 ```
 
-### HTTP End-to-End Benchmark (wrk)
+### Framework Comparison (bun-server vs Express vs NestJS)
 
-Real HTTP load testing with [wrk](https://github.com/wg/wrk), covering JSON
-responses, route params, body parsing, validation, middleware chains, file I/O,
-and more. Three concurrency tiers expose the latency inflection point.
+Real HTTP load testing with [wrk](https://github.com/wg/wrk), comparing
+bun-server against Express 5 and NestJS 11. All frameworks run on the same Bun
+runtime to isolate framework overhead.
 
 **Prerequisites:** wrk (`brew install wrk` / `apt install wrk`). The script
-automatically raises `ulimit -n` to 10240 for child processes; if your shell
-default is low (e.g. macOS default 256), no manual action is needed.
+automatically raises `ulimit -n` to 10240 for child processes.
 
 ```bash
-bun benchmark/run-wrk.ts        # auto start server, run wrk, generate report
+bun benchmark/run-wrk-compare.ts        # full comparison (3 tiers)
+TIER=0 bun benchmark/run-wrk-compare.ts  # Light tier only
+bun benchmark/run-wrk.ts                 # bun-server only (3 tiers)
 ```
 
-> **Environment:** Apple M2 Pro (8P + 4E cores) / darwin arm64 / Bun 1.3.10 / @dangao/bun-server 1.9.0
+> **Environment:** Apple M2 Pro (8P + 4E cores) / darwin arm64 / Bun 1.3.10
 
-#### Light (-t2 -c50 -d10s)
+#### Req/Sec (Light: -t2 -c50 -d10s)
 
-| Endpoint              | Req/Sec  | Avg Latency | P99 Latency | Transfer/sec |
-|-----------------------|----------|-------------|-------------|--------------|
-| GET /ping             | 31.97k   | 784.89us    | 1.56ms      | 20.82MB      |
-| GET /json             | 27.71k   | 0.91ms      | 1.78ms      | 107.44MB     |
-| GET /users/:id        | 30.40k   | 826.46us    | 1.62ms      | 20.77MB      |
-| GET /search?q=        | 29.49k   | 0.86ms      | 1.69ms      | 21.03MB      |
-| POST /users           | 27.51k   | 0.92ms      | 1.77ms      | 18.89MB      |
-| POST /users/validated | 26.55k   | 0.95ms      | 1.84ms      | 19.50MB      |
-| GET /middleware        | 29.69k   | 845.58us    | 1.64ms      | 20.90MB      |
-| GET /headers          | 30.01k   | 847.13us    | 1.69ms      | 19.53MB      |
-| GET /io               | 21.39k   | 1.17ms      | 2.37ms      | 15.05MB      |
+| Endpoint              | bun-server   | Express  | NestJS   |
+|-----------------------|--------------|----------|----------|
+| GET /ping             | **31.41k**   | 30.01k   | 26.52k   |
+| GET /json             | **28.22k**   | 25.99k   | 23.64k   |
+| GET /users/:id        | **30.88k**   | 29.91k   | 25.62k   |
+| GET /search?q=        | **29.96k**   | 28.70k   | 25.17k   |
+| POST /users           | **27.65k**   | 21.37k   | 19.38k   |
+| POST /users/validated | **26.60k**   | 21.28k   | 18.93k   |
+| GET /middleware        | **29.52k**   | 28.57k   | 24.69k   |
+| GET /headers          | **30.98k**   | 29.57k   | 26.43k   |
+| GET /io               | **21.37k**   | 19.46k   | 18.49k   |
 
-#### Medium (-t4 -c200 -d10s)
+Zero errors across all frameworks and tiers. See the full report for Medium and
+Heavy tier results.
 
-| Endpoint              | Req/Sec  | Avg Latency | P99 Latency | Transfer/sec |
-|-----------------------|----------|-------------|-------------|--------------|
-| GET /ping             | 14.76k   | 3.42ms      | 5.05ms      | 19.22MB      |
-| GET /json             | 13.49k   | 3.72ms      | 4.62ms      | 104.33MB     |
-| GET /users/:id        | 14.45k   | 3.49ms      | 4.87ms      | 19.74MB      |
-| GET /search?q=        | 14.16k   | 3.54ms      | 4.34ms      | 20.21MB      |
-| POST /users           | 13.06k   | 3.86ms      | 4.92ms      | 17.95MB      |
-| POST /users/validated | 12.42k   | 4.06ms      | 5.13ms      | 18.25MB      |
-| GET /middleware        | 13.27k   | 4.91ms      | 57.05ms     | 18.60MB      |
-| GET /headers          | 14.38k   | 3.49ms      | 4.19ms      | 18.71MB      |
-| GET /io               | 10.37k   | 4.85ms      | 6.54ms      | 14.60MB      |
-
-#### Heavy (-t8 -c500 -d10s)
-
-| Endpoint              | Req/Sec  | Avg Latency | P99 Latency | Transfer/sec |
-|-----------------------|----------|-------------|-------------|--------------|
-| GET /ping             | 7.34k    | 8.45ms      | 9.64ms      | 19.10MB      |
-| GET /json             | 6.68k    | 9.28ms      | 10.56ms     | 102.82MB     |
-| GET /users/:id        | 7.18k    | 8.62ms      | 9.98ms      | 19.52MB      |
-| GET /search?q=        | 7.09k    | 8.77ms      | 10.16ms     | 20.21MB      |
-| POST /users           | 6.52k    | 9.50ms      | 10.82ms     | 17.77MB      |
-| POST /users/validated | 6.28k    | 9.87ms      | 11.40ms     | 18.43MB      |
-| GET /middleware        | 7.12k    | 8.69ms      | 9.82ms      | 20.06MB      |
-| GET /headers          | 7.26k    | 8.54ms      | 9.77ms      | 18.89MB      |
-| GET /io               | 5.10k    | 12.19ms     | 15.10ms     | 14.35MB      |
-
-**Key takeaways:** zero errors across all tiers; total throughput stays stable
-(~550k reqs/10s) while latency scales linearly with concurrency; file I/O
-endpoint is ~30% slower than pure compute; P99 stays below 15ms even at 500
-concurrent connections.
+> 📊 Full comparison report (3 tiers, latency breakdown, per-framework
+> details): [`benchmark/REPORT_COMPARE.md`](./benchmark/REPORT_COMPARE.md)
+>
+> 📋 Single-framework detailed report:
+> [`benchmark/REPORT.md`](./benchmark/REPORT.md)
 
 ### Multi-process Benchmark (reusePort, Linux only)
 

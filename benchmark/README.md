@@ -67,6 +67,44 @@ WORKERS=4 bun benchmark/run-wrk-cluster.ts
 > **注意**：`SO_REUSEPORT` 仅 Linux 有效。macOS/Windows 会静默忽略该选项，
 > 多个 worker 中只有第一个能成功绑定端口。
 
+### 框架对比基准（bun-server vs Express vs NestJS）
+
+使用 wrk 对三个框架的相同端点进行压测对比，所有框架均运行在 Bun runtime 上，
+以隔离框架本身的开销差异。
+
+```bash
+bun benchmark/run-wrk-compare.ts
+
+# 仅运行 Light 梯度:
+TIER=0 bun benchmark/run-wrk-compare.ts
+
+# 仅运行 Medium 梯度:
+TIER=1 bun benchmark/run-wrk-compare.ts
+```
+
+自动按顺序启动 bun-server、Express、NestJS 测试服务器，对每个框架执行相同的
+wrk 压测，生成对比报告 `benchmark/REPORT_COMPARE.md`。
+
+| 框架       | 服务器脚本             | 说明                          |
+| ---------- | ---------------------- | ----------------------------- |
+| bun-server | `wrk-server.ts`        | 本框架（装饰器 + DI + 中间件） |
+| Express    | `wrk-server-express.ts`| Express 5，手动路由            |
+| NestJS     | `wrk-server-nestjs.ts` | NestJS 11，装饰器控制器        |
+
+报告包含：
+- **Req/Sec 对比表**（最高值加粗）
+- **Avg Latency 对比表**
+- 每个框架的详细结果（延迟分布、P99、错误数等）
+
+### 报告文件索引
+
+| 报告文件 | 说明 | 生成命令 |
+| --- | --- | --- |
+| [`REPORT.md`](./REPORT.md) | bun-server 单框架基准（macOS） | `bun benchmark/run-wrk.ts` |
+| [`REPORT_COMPARE.md`](./REPORT_COMPARE.md) | 框架对比（bun-server / Express / NestJS） | `bun benchmark/run-wrk-compare.ts` |
+| [`REPORT_LINUX.md`](./REPORT_LINUX.md) | bun-server 单框架基准（Linux） | Linux 上运行 `run-wrk.ts` |
+| [`REPORT_LINUX_CLUSTER.md`](./REPORT_LINUX_CLUSTER.md) | 多进程 reusePort 基准（Linux） | Linux 上运行 `run-wrk-cluster.ts` |
+
 ### 添加新基准
 
 在 `benchmark/` 下创建新的 `.bench.ts` 文件并在 `package.json` 中添加对应脚本即可。
