@@ -11,6 +11,8 @@
     "start:context-scope": "bun 01-core-features/context-scope-app.ts",
     "start:full-app": "bun 01-core-features/full-app.ts",
     "start:auth": "bun 02-official-modules/auth-app.ts",
+    "start:validation": "bun 02-official-modules/validation-app.ts",
+    "start:guard": "bun 02-official-modules/guards-app.ts",
     "start:session": "bun 02-official-modules/session-app.ts",
     "start:database": "bun 02-official-modules/database-app.ts",
     "start:orm": "bun 02-official-modules/orm-app.ts",
@@ -29,8 +31,7 @@
   },
   "dependencies": {
     "@dangao/bun-server": "workspace:^",
-    "@dangao/logsmith": "workspace:^",
-    "reflect-metadata": "catalog:"
+    "@dangao/logsmith": "workspace:^"
   },
   "devDependencies": {
     "typescript": "catalog:"

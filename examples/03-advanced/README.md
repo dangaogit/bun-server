@@ -214,7 +214,7 @@ Learn how to build microservice systems with Bun Server.
 
 ### Metadata API
 
-Bun Server uses `reflect-metadata` to store decorator metadata:
+Bun Server uses the Reflect metadata API to store decorator metadata (automatically handled by the framework):
 
 ```typescript
 // Set metadata
@@ -233,7 +233,6 @@ Reflect.deleteMetadata(key, target, propertyKey);
 **Notes**:
 - Metadata stored on prototype chain, instances and prototypes need separate handling
 - Use Symbol keys to avoid naming conflicts
-- Must `import 'reflect-metadata'`
 
 ### Interceptor
 
