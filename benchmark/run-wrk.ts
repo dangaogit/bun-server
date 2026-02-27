@@ -1,10 +1,16 @@
 import { $ } from 'bun';
-import { resolve, dirname } from 'path';
+import { resolve } from 'path';
 
-const BENCH_DIR = dirname(new URL(import.meta.url).pathname);
+const BENCH_DIR = import.meta.dir;
 const WRK_DIR = resolve(BENCH_DIR, 'wrk');
 const SERVER_SCRIPT = resolve(BENCH_DIR, 'wrk-server.ts');
 const REPORT_PATH = resolve(BENCH_DIR, 'REPORT.md');
+
+const MIN_FD_LIMIT = 10240;
+const COOLDOWN_MS = 1500;
+const WARMUP_DURATION = '3s';
+const WARMUP_THREADS = 2;
+const WARMUP_CONNECTIONS = 10;
 
 interface TierConfig {
   label: string;
@@ -29,7 +35,9 @@ interface WrkResult {
   name: string;
   endpoint: string;
   reqPerSec: string;
+  reqPerSecNum: number;
   avgLatency: string;
+  latencyStdev: string;
   p99Latency: string;
   transferPerSec: string;
   totalRequests: string;
@@ -53,6 +61,15 @@ const TARGETS: BenchTarget[] = [
   { name: 'GET /io', endpoint: '/api/io' },
 ];
 
+function toNumeric(val: string): number {
+  const num = parseFloat(val);
+  if (Number.isNaN(num)) return 0;
+  const lower = val.toLowerCase();
+  if (lower.endsWith('k')) return num * 1_000;
+  if (lower.endsWith('m')) return num * 1_000_000;
+  return num;
+}
+
 function parseWrkOutput(stdout: string): Omit<WrkResult, 'name' | 'endpoint'> {
   const latencyLine = stdout.match(/Latency\s+([\d.]+\w+)\s+([\d.]+\w+)\s+([\d.]+\w+)/);
   const reqSecLine = stdout.match(/Req\/Sec\s+([\d.]+\w*)\s+([\d.]+\w*)\s+([\d.]+\w*)/);
@@ -71,10 +88,14 @@ function parseWrkOutput(stdout: string): Omit<WrkResult, 'name' | 'endpoint'> {
     errorCount += Number(nonTwoHundredMatch[1]);
   }
 
+  const reqPerSecRaw = reqSecLine?.[1] ?? 'N/A';
+
   return {
     avgLatency: latencyLine?.[1]?.trim() ?? 'N/A',
+    latencyStdev: latencyLine?.[2]?.trim() ?? 'N/A',
     p99Latency: p99Match?.[1]?.trim() ?? latencyLine?.[3]?.trim() ?? 'N/A',
-    reqPerSec: reqSecLine?.[1] ?? 'N/A',
+    reqPerSec: reqPerSecRaw,
+    reqPerSecNum: toNumeric(reqPerSecRaw),
     transferPerSec: transferLine?.[1] ?? 'N/A',
     totalRequests: totalLine?.[1] ? Number(totalLine[1]).toLocaleString() : 'N/A',
     errors: errorCount > 0 ? String(errorCount) : '0',
@@ -95,8 +116,6 @@ async function waitForServer(port: number, timeoutMs: number = 15_000): Promise<
   throw new Error(`Server did not become ready within ${timeoutMs}ms`);
 }
 
-const MIN_FD_LIMIT = 10240;
-
 async function getCurrentFdLimit(): Promise<number | 'unlimited'> {
   try {
     const proc = Bun.spawn(['sh', '-c', 'ulimit -n'], { stdout: 'pipe', stderr: 'pipe' });
@@ -109,7 +128,13 @@ async function getCurrentFdLimit(): Promise<number | 'unlimited'> {
   }
 }
 
-async function getEnvironmentInfo(): Promise<{ os: string; bunVersion: string; cpuModel: string; cores: string; fdLimit: number | 'unlimited' }> {
+async function getEnvironmentInfo(): Promise<{
+  os: string;
+  bunVersion: string;
+  cpuModel: string;
+  cores: string;
+  fdLimit: number | 'unlimited';
+}> {
   const os = `${process.platform} ${process.arch}`;
   const bunVersion = Bun.version;
   const fdLimit = await getCurrentFdLimit();
@@ -135,6 +160,21 @@ async function getEnvironmentInfo(): Promise<{ os: string; bunVersion: string; c
 
 function shellWithFd(cmd: string): string[] {
   return ['sh', '-c', `ulimit -n ${MIN_FD_LIMIT} 2>/dev/null; ${cmd}`];
+}
+
+async function warmup(baseUrl: string): Promise<void> {
+  console.log(`[run-wrk] warming up (${WARMUP_DURATION}, JIT compile)...`);
+  for (const target of TARGETS) {
+    let wrkCmd = `wrk -t${WARMUP_THREADS} -c${WARMUP_CONNECTIONS} -d${WARMUP_DURATION}`;
+    if (target.luaScript) {
+      wrkCmd += ` -s '${resolve(WRK_DIR, target.luaScript)}'`;
+    }
+    wrkCmd += ` '${baseUrl}${target.endpoint}'`;
+
+    const proc = Bun.spawn(shellWithFd(wrkCmd), { stdout: 'pipe', stderr: 'pipe' });
+    await proc.exited;
+  }
+  console.log('[run-wrk] warmup complete');
 }
 
 async function runWrk(baseUrl: string, target: BenchTarget, tier: TierConfig): Promise<WrkResult> {
@@ -174,13 +214,13 @@ function generateReport(
     lines.push(
       `## ${tier.label} (-t${tier.threads} -c${tier.connections} -d${tier.duration})`,
       '',
-      '| Endpoint | Req/Sec | Avg Latency | P99 Latency | Transfer/sec | Total Reqs | Errors |',
-      '|----------|---------|-------------|-------------|--------------|------------|--------|',
+      '| Endpoint | Req/Sec | Avg Latency | Stdev | P99 Latency | Transfer/sec | Total Reqs | Errors |',
+      '|----------|---------|-------------|-------|-------------|--------------|------------|--------|',
     );
 
     for (const r of results) {
       lines.push(
-        `| ${r.name} | ${r.reqPerSec} | ${r.avgLatency} | ${r.p99Latency} | ${r.transferPerSec} | ${r.totalRequests} | ${r.errors} |`,
+        `| ${r.name} | ${r.reqPerSec} | ${r.avgLatency} | ${r.latencyStdev} | ${r.p99Latency} | ${r.transferPerSec} | ${r.totalRequests} | ${r.errors} |`,
       );
     }
 
@@ -188,6 +228,13 @@ function generateReport(
   }
 
   return lines.join('\n');
+}
+
+async function shutdownServer(serverProc: ReturnType<typeof Bun.spawn>): Promise<void> {
+  serverProc.kill('SIGTERM');
+  const timeout = setTimeout(() => serverProc.kill('SIGKILL'), 5_000);
+  await serverProc.exited;
+  clearTimeout(timeout);
 }
 
 async function main(): Promise<void> {
@@ -203,7 +250,11 @@ async function main(): Promise<void> {
   const fdLimit = await getCurrentFdLimit();
   const maxConn = Math.max(...TIERS.map((t) => t.connections));
   if (fdLimit !== 'unlimited' && fdLimit < maxConn * 2) {
-    console.log(`[run-wrk] current ulimit -n is ${fdLimit}, raising to ${MIN_FD_LIMIT} for child processes`);
+    console.warn(
+      `[run-wrk] WARNING: shell ulimit -n is ${fdLimit} (need >=${maxConn * 2} for -c${maxConn}).`,
+    );
+    console.warn(`[run-wrk] Child processes will be raised to ${MIN_FD_LIMIT}, but the main process stays at ${fdLimit}.`);
+    console.warn(`[run-wrk] For best results, run:  ulimit -n ${MIN_FD_LIMIT} && bun benchmark/run-wrk.ts`);
   } else {
     console.log(`[run-wrk] ulimit -n: ${fdLimit}`);
   }
@@ -241,8 +292,11 @@ async function main(): Promise<void> {
   console.log(`[run-wrk] server ready on port ${port}`);
   await waitForServer(port);
 
-  const env = await getEnvironmentInfo();
   const baseUrl = `http://127.0.0.1:${port}`;
+
+  await warmup(baseUrl);
+
+  const env = await getEnvironmentInfo();
   const tierResults: TierResult[] = [];
 
   for (const tier of TIERS) {
@@ -250,16 +304,17 @@ async function main(): Promise<void> {
     const results: WrkResult[] = [];
 
     for (const target of TARGETS) {
+      await Bun.sleep(COOLDOWN_MS);
       console.log(`[run-wrk]   ${target.name} ...`);
       const result = await runWrk(baseUrl, target, tier);
       results.push(result);
-      console.log(`    -> ${result.reqPerSec} req/s, avg ${result.avgLatency}, p99 ${result.p99Latency}, errors ${result.errors}`);
+      console.log(`    -> ${result.reqPerSec} req/s, avg ${result.avgLatency} (±${result.latencyStdev}), p99 ${result.p99Latency}, errors ${result.errors}`);
     }
 
     tierResults.push({ tier, results });
   }
 
-  serverProc.kill();
+  await shutdownServer(serverProc);
 
   const report = generateReport(tierResults, env);
   console.log('\n' + report);

@@ -117,6 +117,11 @@ async function bootstrap(): Promise<void> {
   await app.listen(port);
   const actualPort = app.getServer()?.getServer()?.port ?? port;
 
+  process.on('SIGTERM', async () => {
+    await app.gracefulShutdown();
+    process.exit(0);
+  });
+
   console.log(`WRK_READY:${actualPort}`);
 }
 
