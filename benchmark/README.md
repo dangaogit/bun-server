@@ -20,7 +20,7 @@ bun benchmark/di.bench.ts
 ### HTTP 端到端基准（wrk）
 
 使用 [wrk](https://github.com/wg/wrk) 对真实 HTTP 端点进行压测，
-覆盖框架核心路径（JSON 响应、路由参数、Body 解析、验证、中间件链等）。
+覆盖框架核心路径（JSON 响应、路由参数、Body 解析、验证、中间件链、文件 I/O 等）。
 
 **前置条件**：系统需安装 wrk（`brew install wrk` / `apt install wrk`）。
 
@@ -34,6 +34,7 @@ bun benchmark/di.bench.ts
 | `POST /users/validated` | Body + 验证 | 验证管道开销     |
 | `GET /middleware`        | 中间件链    | 多中间件叠加开销 |
 | `GET /headers`          | Header 读写 | Header 处理      |
+| `GET /io`               | 文件 I/O   | 真实业务负载     |
 
 运行方式：
 
@@ -41,10 +42,14 @@ bun benchmark/di.bench.ts
 bun benchmark/run-wrk.ts
 ```
 
-脚本会自动启动测试服务器、依次运行 wrk、解析结果并生成
-`benchmark/REPORT.md` 报告文件。
+脚本会自动启动测试服务器，按三个梯度（Light / Medium / Heavy）依次运行
+wrk，解析结果并生成 `benchmark/REPORT.md` 报告文件。
 
-默认参数：`-t2 -c50 -d10s`（2 线程、50 并发连接、持续 10 秒）。
+| 梯度   | 线程 | 并发连接 | 持续时间 |
+| ------ | ---- | -------- | -------- |
+| Light  | 2    | 50       | 10s      |
+| Medium | 4    | 200      | 10s      |
+| Heavy  | 8    | 500      | 10s      |
 
 ### 添加新基准
 

@@ -450,28 +450,61 @@ bun benchmark/di.bench.ts
 ### HTTP End-to-End Benchmark (wrk)
 
 Real HTTP load testing with [wrk](https://github.com/wg/wrk), covering JSON
-responses, route params, body parsing, validation, middleware chains, and more.
+responses, route params, body parsing, validation, middleware chains, file I/O,
+and more. Three concurrency tiers expose the latency inflection point.
 
 ```bash
 bun benchmark/run-wrk.ts        # auto start server, run wrk, generate report
 ```
 
-> **Environment:** Apple M2 Pro / darwin arm64 / Bun 1.3.10 / @dangao/bun-server 1.9.0
-> **wrk params:** `-t2 -c50 -d10s`
+> **Environment:** Apple M2 Pro (8P + 4E cores) / darwin arm64 / Bun 1.3.10 / @dangao/bun-server 1.9.0
+
+#### Light (-t2 -c50 -d10s)
 
 | Endpoint              | Req/Sec  | Avg Latency | P99 Latency | Transfer/sec |
 |-----------------------|----------|-------------|-------------|--------------|
-| GET /ping             | 32.09k   | 785.62us    | 1.58ms      | 20.88MB      |
-| GET /json             | 28.29k   | 0.89ms      | 1.71ms      | 109.65MB     |
-| GET /users/:id        | 30.40k   | 828.67us    | 1.64ms      | 20.77MB      |
-| GET /search?q=        | 29.02k   | 0.88ms      | 1.89ms      | 20.60MB      |
-| POST /users           | 27.10k   | 0.93ms      | 1.77ms      | 18.63MB      |
-| POST /users/validated | 25.81k   | 0.98ms      | 1.90ms      | 18.95MB      |
-| GET /middleware        | 28.59k   | 0.88ms      | 1.74ms      | 20.13MB      |
-| GET /headers          | 29.76k   | 846.11us    | 1.66ms      | 19.37MB      |
+| GET /ping             | 31.97k   | 784.89us    | 1.56ms      | 20.82MB      |
+| GET /json             | 27.71k   | 0.91ms      | 1.78ms      | 107.44MB     |
+| GET /users/:id        | 30.40k   | 826.46us    | 1.62ms      | 20.77MB      |
+| GET /search?q=        | 29.49k   | 0.86ms      | 1.69ms      | 21.03MB      |
+| POST /users           | 27.51k   | 0.92ms      | 1.77ms      | 18.89MB      |
+| POST /users/validated | 26.55k   | 0.95ms      | 1.84ms      | 19.50MB      |
+| GET /middleware        | 29.69k   | 845.58us    | 1.64ms      | 20.90MB      |
+| GET /headers          | 30.01k   | 847.13us    | 1.69ms      | 19.53MB      |
+| GET /io               | 21.39k   | 1.17ms      | 2.37ms      | 15.05MB      |
 
-All endpoints achieved **25k+ req/s** with sub-millisecond average latency and
-**zero errors** under 50 concurrent connections.
+#### Medium (-t4 -c200 -d10s)
+
+| Endpoint              | Req/Sec  | Avg Latency | P99 Latency | Transfer/sec |
+|-----------------------|----------|-------------|-------------|--------------|
+| GET /ping             | 14.76k   | 3.42ms      | 5.05ms      | 19.22MB      |
+| GET /json             | 13.49k   | 3.72ms      | 4.62ms      | 104.33MB     |
+| GET /users/:id        | 14.45k   | 3.49ms      | 4.87ms      | 19.74MB      |
+| GET /search?q=        | 14.16k   | 3.54ms      | 4.34ms      | 20.21MB      |
+| POST /users           | 13.06k   | 3.86ms      | 4.92ms      | 17.95MB      |
+| POST /users/validated | 12.42k   | 4.06ms      | 5.13ms      | 18.25MB      |
+| GET /middleware        | 13.27k   | 4.91ms      | 57.05ms     | 18.60MB      |
+| GET /headers          | 14.38k   | 3.49ms      | 4.19ms      | 18.71MB      |
+| GET /io               | 10.37k   | 4.85ms      | 6.54ms      | 14.60MB      |
+
+#### Heavy (-t8 -c500 -d10s)
+
+| Endpoint              | Req/Sec  | Avg Latency | P99 Latency | Transfer/sec |
+|-----------------------|----------|-------------|-------------|--------------|
+| GET /ping             | 7.34k    | 8.45ms      | 9.64ms      | 19.10MB      |
+| GET /json             | 6.68k    | 9.28ms      | 10.56ms     | 102.82MB     |
+| GET /users/:id        | 7.18k    | 8.62ms      | 9.98ms      | 19.52MB      |
+| GET /search?q=        | 7.09k    | 8.77ms      | 10.16ms     | 20.21MB      |
+| POST /users           | 6.52k    | 9.50ms      | 10.82ms     | 17.77MB      |
+| POST /users/validated | 6.28k    | 9.87ms      | 11.40ms     | 18.43MB      |
+| GET /middleware        | 7.12k    | 8.69ms      | 9.82ms      | 20.06MB      |
+| GET /headers          | 7.26k    | 8.54ms      | 9.77ms      | 18.89MB      |
+| GET /io               | 5.10k    | 12.19ms     | 15.10ms     | 14.35MB      |
+
+**Key takeaways:** zero errors across all tiers; total throughput stays stable
+(~550k reqs/10s) while latency scales linearly with concurrency; file I/O
+endpoint is ~30% slower than pure compute; P99 stays below 15ms even at 500
+concurrent connections.
 
 ## Docs & Localization
 

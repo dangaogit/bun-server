@@ -90,6 +90,14 @@ class MiscController {
   public middleware(): { ok: true } {
     return { ok: true };
   }
+
+  @GET('/io')
+  public async io(): Promise<{ size: number; hash: string }> {
+    const file = Bun.file(import.meta.path);
+    const buf = await file.arrayBuffer();
+    const hash = Bun.hash(buf).toString(16);
+    return { size: buf.byteLength, hash };
+  }
 }
 
 async function bootstrap(): Promise<void> {

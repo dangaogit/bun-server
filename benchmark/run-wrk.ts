@@ -6,9 +6,18 @@ const WRK_DIR = resolve(BENCH_DIR, 'wrk');
 const SERVER_SCRIPT = resolve(BENCH_DIR, 'wrk-server.ts');
 const REPORT_PATH = resolve(BENCH_DIR, 'REPORT.md');
 
-const WRK_THREADS = 2;
-const WRK_CONNECTIONS = 50;
-const WRK_DURATION = '10s';
+interface TierConfig {
+  label: string;
+  threads: number;
+  connections: number;
+  duration: string;
+}
+
+const TIERS: TierConfig[] = [
+  { label: 'Light',  threads: 2,  connections: 50,  duration: '10s' },
+  { label: 'Medium', threads: 4,  connections: 200, duration: '10s' },
+  { label: 'Heavy',  threads: 8,  connections: 500, duration: '10s' },
+];
 
 interface BenchTarget {
   name: string;
@@ -27,6 +36,11 @@ interface WrkResult {
   errors: string;
 }
 
+interface TierResult {
+  tier: TierConfig;
+  results: WrkResult[];
+}
+
 const TARGETS: BenchTarget[] = [
   { name: 'GET /ping', endpoint: '/api/ping' },
   { name: 'GET /json', endpoint: '/api/json' },
@@ -36,18 +50,14 @@ const TARGETS: BenchTarget[] = [
   { name: 'POST /users/validated', endpoint: '/api/users/validated', luaScript: 'post-validate.lua' },
   { name: 'GET /middleware', endpoint: '/api/middleware' },
   { name: 'GET /headers', endpoint: '/api/headers' },
+  { name: 'GET /io', endpoint: '/api/io' },
 ];
-
-function parseLatency(raw: string): string {
-  return raw.trim();
-}
 
 function parseWrkOutput(stdout: string): Omit<WrkResult, 'name' | 'endpoint'> {
   const latencyLine = stdout.match(/Latency\s+([\d.]+\w+)\s+([\d.]+\w+)\s+([\d.]+\w+)/);
   const reqSecLine = stdout.match(/Req\/Sec\s+([\d.]+\w*)\s+([\d.]+\w*)\s+([\d.]+\w*)/);
   const totalLine = stdout.match(/([\d]+)\s+requests in/);
   const transferLine = stdout.match(/Transfer\/sec:\s+([\d.]+\w+)/);
-
   const p99Match = stdout.match(/99%\s+([\d.]+\w+)/);
 
   const errorsMatch = stdout.match(/Socket errors:.*?(\d+)\s+connect.*?(\d+)\s+read.*?(\d+)\s+write.*?(\d+)\s+timeout/);
@@ -62,11 +72,11 @@ function parseWrkOutput(stdout: string): Omit<WrkResult, 'name' | 'endpoint'> {
   }
 
   return {
-    avgLatency: latencyLine ? parseLatency(latencyLine[1]) : 'N/A',
-    p99Latency: p99Match ? parseLatency(p99Match[1]) : (latencyLine ? parseLatency(latencyLine[3]) : 'N/A'),
-    reqPerSec: reqSecLine ? reqSecLine[1] : 'N/A',
-    transferPerSec: transferLine ? transferLine[1] : 'N/A',
-    totalRequests: totalLine ? Number(totalLine[1]).toLocaleString() : 'N/A',
+    avgLatency: latencyLine?.[1]?.trim() ?? 'N/A',
+    p99Latency: p99Match?.[1]?.trim() ?? latencyLine?.[3]?.trim() ?? 'N/A',
+    reqPerSec: reqSecLine?.[1] ?? 'N/A',
+    transferPerSec: transferLine?.[1] ?? 'N/A',
+    totalRequests: totalLine?.[1] ? Number(totalLine[1]).toLocaleString() : 'N/A',
     errors: errorCount > 0 ? String(errorCount) : '0',
   };
 }
@@ -85,33 +95,36 @@ async function waitForServer(port: number, timeoutMs: number = 15_000): Promise<
   throw new Error(`Server did not become ready within ${timeoutMs}ms`);
 }
 
-async function getEnvironmentInfo(): Promise<{ os: string; bunVersion: string; cpuModel: string }> {
+async function getEnvironmentInfo(): Promise<{ os: string; bunVersion: string; cpuModel: string; cores: string }> {
   const os = `${process.platform} ${process.arch}`;
   const bunVersion = Bun.version;
 
   let cpuModel = 'unknown';
+  let cores = 'unknown';
   try {
     if (process.platform === 'darwin') {
-      const result = await $`sysctl -n machdep.cpu.brand_string`.text();
-      cpuModel = result.trim();
+      cpuModel = (await $`sysctl -n machdep.cpu.brand_string`.text()).trim();
+      const pCores = (await $`sysctl -n hw.perflevel0.physicalcpu`.text()).trim();
+      const eCores = (await $`sysctl -n hw.perflevel1.physicalcpu`.text()).trim();
+      cores = `${pCores}P + ${eCores}E`;
     } else if (process.platform === 'linux') {
-      const result = await $`grep -m1 'model name' /proc/cpuinfo`.text();
-      cpuModel = result.replace('model name\t:', '').trim();
+      cpuModel = (await $`grep -m1 'model name' /proc/cpuinfo`.text()).replace('model name\t:', '').trim();
+      cores = (await $`nproc`.text()).trim();
     }
   } catch {
     // fallback
   }
 
-  return { os, bunVersion, cpuModel };
+  return { os, bunVersion, cpuModel, cores };
 }
 
-async function runWrk(baseUrl: string, target: BenchTarget): Promise<WrkResult> {
+async function runWrk(baseUrl: string, target: BenchTarget, tier: TierConfig): Promise<WrkResult> {
   const url = `${baseUrl}${target.endpoint}`;
   const args = [
     'wrk',
-    `-t${WRK_THREADS}`,
-    `-c${WRK_CONNECTIONS}`,
-    `-d${WRK_DURATION}`,
+    `-t${tier.threads}`,
+    `-c${tier.connections}`,
+    `-d${tier.duration}`,
     '--latency',
   ];
 
@@ -129,27 +142,37 @@ async function runWrk(baseUrl: string, target: BenchTarget): Promise<WrkResult> 
   return { name: target.name, endpoint: target.endpoint, ...parsed };
 }
 
-function generateReport(results: WrkResult[], env: { os: string; bunVersion: string; cpuModel: string }): string {
+function generateReport(
+  tierResults: TierResult[],
+  env: { os: string; bunVersion: string; cpuModel: string; cores: string },
+): string {
   const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
   const lines: string[] = [
     '# HTTP Benchmark Report',
     '',
     `> Generated: ${now}`,
-    `> CPU: ${env.cpuModel}`,
+    `> CPU: ${env.cpuModel} (${env.cores} cores)`,
     `> OS: ${env.os} | Bun ${env.bunVersion} | @dangao/bun-server 1.9.0`,
-    `> wrk params: -t${WRK_THREADS} -c${WRK_CONNECTIONS} -d${WRK_DURATION}`,
     '',
-    '| Endpoint | Req/Sec | Avg Latency | P99 Latency | Transfer/sec | Total Reqs | Errors |',
-    '|----------|---------|-------------|-------------|--------------|------------|--------|',
   ];
 
-  for (const r of results) {
+  for (const { tier, results } of tierResults) {
     lines.push(
-      `| ${r.name} | ${r.reqPerSec} | ${r.avgLatency} | ${r.p99Latency} | ${r.transferPerSec} | ${r.totalRequests} | ${r.errors} |`,
+      `## ${tier.label} (-t${tier.threads} -c${tier.connections} -d${tier.duration})`,
+      '',
+      '| Endpoint | Req/Sec | Avg Latency | P99 Latency | Transfer/sec | Total Reqs | Errors |',
+      '|----------|---------|-------------|-------------|--------------|------------|--------|',
     );
+
+    for (const r of results) {
+      lines.push(
+        `| ${r.name} | ${r.reqPerSec} | ${r.avgLatency} | ${r.p99Latency} | ${r.transferPerSec} | ${r.totalRequests} | ${r.errors} |`,
+      );
+    }
+
+    lines.push('');
   }
 
-  lines.push('');
   return lines.join('\n');
 }
 
@@ -198,18 +221,25 @@ async function main(): Promise<void> {
 
   const env = await getEnvironmentInfo();
   const baseUrl = `http://127.0.0.1:${port}`;
-  const results: WrkResult[] = [];
+  const tierResults: TierResult[] = [];
 
-  for (const target of TARGETS) {
-    console.log(`[run-wrk] benchmarking ${target.name} ...`);
-    const result = await runWrk(baseUrl, target);
-    results.push(result);
-    console.log(`  -> ${result.reqPerSec} req/s, avg ${result.avgLatency}, p99 ${result.p99Latency}`);
+  for (const tier of TIERS) {
+    console.log(`\n[run-wrk] === ${tier.label} tier: -t${tier.threads} -c${tier.connections} -d${tier.duration} ===`);
+    const results: WrkResult[] = [];
+
+    for (const target of TARGETS) {
+      console.log(`[run-wrk]   ${target.name} ...`);
+      const result = await runWrk(baseUrl, target, tier);
+      results.push(result);
+      console.log(`    -> ${result.reqPerSec} req/s, avg ${result.avgLatency}, p99 ${result.p99Latency}, errors ${result.errors}`);
+    }
+
+    tierResults.push({ tier, results });
   }
 
   serverProc.kill();
 
-  const report = generateReport(results, env);
+  const report = generateReport(tierResults, env);
   console.log('\n' + report);
 
   await Bun.write(REPORT_PATH, report);
