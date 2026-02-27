@@ -5,11 +5,17 @@
     "bench:router": "bun router.bench.ts",
     "bench:di": "bun di.bench.ts",
     "bench:wrk": "bun run-wrk.ts",
-    "bench:wrk-cluster": "bun run-wrk-cluster.ts"
+    "bench:wrk-cluster": "bun run-wrk-cluster.ts",
+    "bench:compare": "bun run-wrk-compare.ts"
   },
   "dependencies": {
     "@dangao/bun-server": "workspace:^",
-    "@dangao/logsmith": "workspace:^"
+    "@dangao/logsmith": "workspace:^",
+    "@nestjs/common": "^11.1.14",
+    "@nestjs/core": "^11.1.14",
+    "@nestjs/platform-express": "^11.1.14",
+    "express": "^5.2.1",
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "typescript": "catalog:"
