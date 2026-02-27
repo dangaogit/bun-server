@@ -55,6 +55,17 @@ export class ModuleRegistry {
     return this.moduleRefs.get(moduleClass);
   }
 
+  /**
+   * 获取所有模块的子容器（用于异步 provider 初始化）
+   */
+  public getAllModuleContainers(): Container[] {
+    const containers: Container[] = [];
+    for (const [, ref] of this.moduleRefs) {
+      containers.push(ref.container);
+    }
+    return containers;
+  }
+
   public clear(): void {
     this.moduleRefs.clear();
     this.processing.clear();

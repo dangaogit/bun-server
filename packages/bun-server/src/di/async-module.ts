@@ -1,6 +1,7 @@
 import type { ModuleClass, ModuleProvider, ProviderToken } from './module';
 import { MODULE_METADATA_KEY } from './module';
 import type { Container } from './container';
+import { ModuleRegistry } from './module-registry';
 
 /**
  * 异步模块配置选项
@@ -50,12 +51,21 @@ export class AsyncProviderRegistry {
 
   /**
    * 初始化所有异步 providers
+   * 同时注册到根容器和所有模块子容器（覆盖占位 factory）
    * @param container - 根 DI 容器
    */
   public async initializeAll(container: Container): Promise<void> {
+    const moduleContainers = ModuleRegistry.getInstance().getAllModuleContainers();
+
     for (const { token, factory } of this.pendingFactories) {
       const value = await factory(container);
       container.registerInstance(token, value);
+
+      for (const moduleContainer of moduleContainers) {
+        if (moduleContainer.isRegistered(token)) {
+          moduleContainer.registerInstance(token, value);
+        }
+      }
     }
     this.pendingFactories.length = 0;
   }
