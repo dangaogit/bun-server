@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
-import 'reflect-metadata';
 
 import { Reflector, REFLECTOR_TOKEN } from '../../../src/security/guards/reflector';
 

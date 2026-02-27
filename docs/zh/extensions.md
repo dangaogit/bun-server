@@ -511,8 +511,6 @@ app.listen();
 ### 创建装饰器
 
 ```typescript
-import "reflect-metadata";
-
 // 缓存装饰器
 export function Cache(ttl: number) {
   return function (

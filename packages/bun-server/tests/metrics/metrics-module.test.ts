@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
-import 'reflect-metadata';
 
 import { Application } from '../../src/core/application';
 import { MetricsModule, MetricsCollector, createHttpMetricsMiddleware, type CustomMetric } from '../../src/metrics';

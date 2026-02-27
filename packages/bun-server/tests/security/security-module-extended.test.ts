@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
-import 'reflect-metadata';
 
 import { SecurityModule } from '../../src/security/security-module';
 import { MODULE_METADATA_KEY } from '../../src/di/module';

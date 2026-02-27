@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
-import 'reflect-metadata';
 import { ConfigCenterModule, CONFIG_CENTER_TOKEN, type ConfigCenter } from '../../src/microservice/config-center';
 import { Container } from '../../src/di/container';
 import { ModuleRegistry } from '../../src/di/module-registry';

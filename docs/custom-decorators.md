@@ -27,11 +27,9 @@ Bun Server Framework provides a powerful interceptor mechanism that allows you t
 
 ### Basic Decorator Pattern
 
-A custom decorator is a function that returns a `MethodDecorator`. It uses `reflect-metadata` to store metadata on the method.
+A custom decorator is a function that returns a `MethodDecorator`. It uses the Reflect metadata API to store metadata on the method.
 
 ```typescript
-import 'reflect-metadata';
-
 // 1. Define a metadata key (use Symbol for uniqueness)
 export const MY_METADATA_KEY = Symbol('@my-app:my-decorator');
 
@@ -260,8 +258,6 @@ class MyInterceptor extends BaseInterceptor {
 ### Storing Metadata
 
 ```typescript
-import 'reflect-metadata';
-
 const METADATA_KEY = Symbol('my-metadata');
 
 // Store metadata
@@ -337,7 +333,6 @@ class MyInterceptor extends BaseInterceptor {
 ### Example 1: Simple Logging Interceptor
 
 ```typescript
-import 'reflect-metadata';
 import { BaseInterceptor } from '@dangao/bun-server';
 import type { Container } from '@dangao/bun-server';
 import type { Context } from '@dangao/bun-server';
@@ -375,7 +370,6 @@ export class LogInterceptor extends BaseInterceptor {
 ### Example 2: Rate Limiting Interceptor
 
 ```typescript
-import 'reflect-metadata';
 import { BaseInterceptor, HttpException } from '@dangao/bun-server';
 import type { Container } from '@dangao/bun-server';
 import type { Context } from '@dangao/bun-server';

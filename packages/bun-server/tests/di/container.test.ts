@@ -1,4 +1,3 @@
-import 'reflect-metadata';
 import { describe, expect, test, beforeEach } from 'bun:test';
 import { Container } from '../../src/di/container';
 import { Lifecycle } from '../../src/di/types';

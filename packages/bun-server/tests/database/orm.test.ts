@@ -11,7 +11,6 @@ import {
 } from '../../src/database/orm';
 import { DatabaseService, DATABASE_SERVICE_TOKEN } from '../../src/database';
 import { Container } from '../../src/di/container';
-import 'reflect-metadata';
 
 // 测试实体
 @Entity('test_users')

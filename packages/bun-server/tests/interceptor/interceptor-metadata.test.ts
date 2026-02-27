@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
-import 'reflect-metadata';
 
 import { scanInterceptorMetadata } from '../../src/interceptor/metadata';
 import { InterceptorRegistry } from '../../src/interceptor/interceptor-registry';

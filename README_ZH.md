@@ -198,7 +198,6 @@ bun install
 ### Hello World 控制器
 
 ```ts
-import "reflect-metadata";
 import { Application, Controller, GET, Injectable } from "@dangao/bun-server";
 
 @Injectable()

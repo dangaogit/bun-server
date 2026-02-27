@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
-import 'reflect-metadata';
 
 import { ConfigModule } from '../../src/config/config-module';
 import { ConfigService } from '../../src/config/service';

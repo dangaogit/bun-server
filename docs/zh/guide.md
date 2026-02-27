@@ -15,7 +15,6 @@ HTTP 请求 → 中间件 → 安全 → 路由 → 拦截器(前置) → 验证
 ## 1. 初始化应用
 
 ```ts
-import "reflect-metadata";
 import { Application } from "@dangao/bun-server";
 
 const app = new Application({ port: 3000 });

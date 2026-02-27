@@ -1,4 +1,3 @@
-import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import { Application } from '../../src/core/application';

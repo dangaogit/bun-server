@@ -1,7 +1,6 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
 import { SwaggerModule } from '../../src/swagger/swagger-module';
 import { MODULE_METADATA_KEY } from '../../src/di/module';
-import 'reflect-metadata';
 
 describe('SwaggerModule', () => {
   beforeEach(() => {

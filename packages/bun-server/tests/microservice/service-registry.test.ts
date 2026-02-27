@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
-import 'reflect-metadata';
 import { ServiceRegistryModule, SERVICE_REGISTRY_TOKEN, type ServiceRegistry } from '../../src/microservice/service-registry';
 import { MODULE_METADATA_KEY } from '../../src/di/module';
 import { ControllerRegistry } from '../../src/controller/controller';

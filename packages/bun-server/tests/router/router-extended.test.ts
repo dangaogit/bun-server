@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
-import 'reflect-metadata';
 
 import { Router } from '../../src/router/router';
 import { RouteRegistry } from '../../src/router/registry';

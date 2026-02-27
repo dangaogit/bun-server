@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
-import 'reflect-metadata';
 
 import { EventListenerScanner, EVENT_LISTENER_SCANNER_TOKEN } from '../../src/events/event-module';
 import { EventEmitterService } from '../../src/events/service';

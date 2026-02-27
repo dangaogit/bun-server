@@ -9,7 +9,6 @@ import {
 } from '../../src/database/orm';
 import { DatabaseService, DATABASE_SERVICE_TOKEN } from '../../src/database';
 import { Container } from '../../src/di/container';
-import 'reflect-metadata';
 
 describe('TransactionManager', () => {
   let container: Container;

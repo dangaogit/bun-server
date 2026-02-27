@@ -7,8 +7,7 @@
   },
   "dependencies": {
     "@dangao/bun-server": "workspace:^",
-    "@dangao/logsmith": "workspace:^",
-    "reflect-metadata": "catalog:"
+    "@dangao/logsmith": "workspace:^"
   },
   "devDependencies": {
     "typescript": "catalog:"
