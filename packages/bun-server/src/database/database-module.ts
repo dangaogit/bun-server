@@ -4,6 +4,7 @@ import {
   InterceptorRegistry,
   INTERCEPTOR_REGISTRY_TOKEN,
 } from '../interceptor';
+import { type AsyncModuleOptions, registerAsyncProviders } from '../di/async-module';
 
 import { DatabaseExtension } from './database-extension';
 import { DatabaseHealthIndicator } from './health-indicator';
@@ -105,6 +106,25 @@ export class DatabaseModule {
     Reflect.defineMetadata(MODULE_METADATA_KEY, metadata, DatabaseModule);
 
     return DatabaseModule;
+  }
+
+  /**
+   * 异步创建数据库模块
+   * 允许通过工厂函数异步提供配置（如从 ConfigService 获取数据库连接信息）
+   * @param asyncOptions - 异步配置选项
+   */
+  public static forRootAsync(
+    asyncOptions: AsyncModuleOptions<DatabaseModuleOptions>,
+  ): typeof DatabaseModule {
+    const tokenMap = new Map<symbol, (config: DatabaseModuleOptions) => unknown>();
+    tokenMap.set(DATABASE_SERVICE_TOKEN, (config) => new DatabaseService(config));
+    tokenMap.set(DATABASE_OPTIONS_TOKEN, (config) => config);
+
+    return registerAsyncProviders(
+      DatabaseModule,
+      asyncOptions,
+      tokenMap,
+    ) as typeof DatabaseModule;
   }
 
   /**

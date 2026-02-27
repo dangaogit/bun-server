@@ -1,4 +1,5 @@
 import { Module, MODULE_METADATA_KEY, type ModuleProvider } from '../di/module';
+import { type AsyncModuleOptions, registerAsyncProviders } from '../di/async-module';
 
 import { CacheService } from './service';
 import {
@@ -84,6 +85,30 @@ export class CacheModule {
     Reflect.defineMetadata(MODULE_METADATA_KEY, metadata, CacheModule);
 
     return CacheModule;
+  }
+
+  /**
+   * 异步创建缓存模块
+   * @param asyncOptions - 异步配置选项
+   */
+  public static forRootAsync(
+    asyncOptions: AsyncModuleOptions<CacheModuleOptions>,
+  ): typeof CacheModule {
+    const tokenMap = new Map<symbol, (config: CacheModuleOptions) => unknown>();
+    tokenMap.set(CACHE_SERVICE_TOKEN, (config) => {
+      const resolvedConfig: CacheModuleOptions = {
+        ...config,
+        store: config.store ?? new MemoryCacheStore({ cleanupInterval: 60000 }),
+      };
+      return new CacheService(resolvedConfig);
+    });
+    tokenMap.set(CACHE_OPTIONS_TOKEN, (config) => config);
+
+    return registerAsyncProviders(
+      CacheModule,
+      asyncOptions,
+      tokenMap,
+    ) as typeof CacheModule;
   }
 
   /**

@@ -19,6 +19,7 @@ import { ConfigModule } from '../config/config-module';
 import { CacheModule, CACHE_POST_PROCESSOR_TOKEN } from '../cache';
 import { LoggerManager } from '@dangao/logsmith';
 import { EventModule } from '../events/event-module';
+import { AsyncProviderRegistry } from '../di/async-module';
 
 /**
  * 应用配置选项
@@ -105,6 +106,12 @@ export class Application {
       throw new Error('Application is already running');
     }
 
+    // 初始化异步 providers（forRootAsync 注册的工厂）
+    const asyncRegistry = AsyncProviderRegistry.getInstance();
+    if (asyncRegistry.hasPending()) {
+      await asyncRegistry.initializeAll(this.getContainer());
+    }
+
     // 初始化所有扩展（包括数据库连接等）
     await this.initializeExtensions();
 
@@ -113,6 +120,13 @@ export class Application {
 
     // 自动初始化事件监听器（如果 EventModule 已注册且启用了 autoScan）
     this.initializeEventListeners();
+
+    // 调用生命周期钩子：onModuleInit
+    const registry = ModuleRegistry.getInstance();
+    await registry.callModuleInitHooks();
+
+    // 调用生命周期钩子：onApplicationBootstrap
+    await registry.callBootstrapHooks();
 
     const finalPort = port ?? this.options.port ?? 3000;
     const finalHostname = hostname ?? this.options.hostname;
@@ -223,6 +237,13 @@ export class Application {
     // 移除信号处理器
     this.removeSignalHandlers();
 
+    // 调用生命周期钩子：onApplicationShutdown
+    const moduleRegistry = ModuleRegistry.getInstance();
+    await moduleRegistry.callShutdownHooks();
+
+    // 调用生命周期钩子：onModuleDestroy
+    await moduleRegistry.callModuleDestroyHooks();
+
     // 自动注销服务（如果使用了 @ServiceRegistry 装饰器）
     await this.deregisterServices();
 
@@ -240,6 +261,13 @@ export class Application {
   public async gracefulShutdown(timeout?: number): Promise<void> {
     // 移除信号处理器
     this.removeSignalHandlers();
+
+    // 调用生命周期钩子：onApplicationShutdown
+    const moduleRegistry = ModuleRegistry.getInstance();
+    await moduleRegistry.callShutdownHooks();
+
+    // 调用生命周期钩子：onModuleDestroy
+    await moduleRegistry.callModuleDestroyHooks();
 
     // 自动注销服务（如果使用了 @ServiceRegistry 装饰器）
     await this.deregisterServices();

@@ -2,6 +2,7 @@ import { Module, MODULE_METADATA_KEY, type ModuleProvider } from '../di/module';
 import { CONFIG_CENTER_TOKEN } from '../microservice/config-center/types';
 import type { ConfigCenter } from '../microservice/config-center/types';
 import { ControllerRegistry } from '../controller/controller';
+import { type AsyncModuleOptions, registerAsyncProviders } from '../di/async-module';
 
 import { ConfigService } from './service';
 import { CONFIG_SERVICE_TOKEN, type ConfigModuleOptions } from './types';
@@ -68,6 +69,32 @@ export class ConfigModule {
     Reflect.defineMetadata(MODULE_METADATA_KEY, metadata, ConfigModule);
 
     return ConfigModule;
+  }
+
+  /**
+   * 异步创建配置模块
+   * @param asyncOptions - 异步配置选项
+   */
+  public static forRootAsync(
+    asyncOptions: AsyncModuleOptions<ConfigModuleOptions>,
+  ): typeof ConfigModule {
+    const tokenMap = new Map<symbol, (config: ConfigModuleOptions) => unknown>();
+    tokenMap.set(CONFIG_SERVICE_TOKEN, (options) => {
+      const env = ConfigModule.snapshotEnv();
+      const defaultConfig = (options.defaultConfig ?? {}) as Record<string, unknown>;
+      const loadedConfig = (options.load ? options.load(env) : {}) as Record<string, unknown>;
+      const mergedConfig = { ...defaultConfig, ...loadedConfig };
+      if (options.validate) {
+        options.validate(mergedConfig);
+      }
+      return new ConfigService(mergedConfig, options.namespace);
+    });
+
+    return registerAsyncProviders(
+      ConfigModule,
+      asyncOptions,
+      tokenMap,
+    ) as typeof ConfigModule;
   }
 
   /**
