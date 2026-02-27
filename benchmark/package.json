@@ -4,7 +4,8 @@
   "scripts": {
     "bench:router": "bun router.bench.ts",
     "bench:di": "bun di.bench.ts",
-    "bench:wrk": "bun run-wrk.ts"
+    "bench:wrk": "bun run-wrk.ts",
+    "bench:wrk-cluster": "bun run-wrk-cluster.ts"
   },
   "dependencies": {
     "@dangao/bun-server": "workspace:^",

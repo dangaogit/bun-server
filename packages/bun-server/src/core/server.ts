@@ -33,6 +33,14 @@ export interface ServerOptions {
    * 默认 30 秒
    */
   gracefulShutdownTimeout?: number;
+
+  /**
+   * 是否启用 SO_REUSEPORT
+   * 允许多进程绑定同一端口，用于多进程负载均衡
+   * 仅 Linux 有效，macOS/Windows 会忽略
+   * @default false
+   */
+  reusePort?: boolean;
 }
 
 /**
@@ -70,6 +78,7 @@ export class BunServer {
     this.server = Bun.serve({
       port: this.options.port ?? 3000,
       hostname: this.options.hostname,
+      reusePort: this.options.reusePort,
       fetch: (
         request: Request,
         server: Server<WebSocketConnectionData>,

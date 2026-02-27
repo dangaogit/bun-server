@@ -510,6 +510,18 @@ bun benchmark/run-wrk.ts        # auto start server, run wrk, generate report
 endpoint is ~30% slower than pure compute; P99 stays below 15ms even at 500
 concurrent connections.
 
+### Multi-process Benchmark (reusePort, Linux only)
+
+```bash
+bun benchmark/run-wrk-cluster.ts          # default: 1 worker per CPU core
+WORKERS=4 bun benchmark/run-wrk-cluster.ts
+```
+
+Spawns N workers sharing the same port via `SO_REUSEPORT`. The kernel
+distributes connections across processes. Report saved to
+`benchmark/REPORT_CLUSTER.md`. Note: `reusePort` only works on **Linux**;
+macOS/Windows silently ignore it.
+
 ## Docs & Localization
 
 - **English** (default): `docs/api.md`, `docs/guide.md`,
@@ -585,6 +597,6 @@ Released under the [MIT License](./LICENSE).
 
 ## Other Languages
 
-- [中文 README](./readme_zh.md)
+- [中文 README](./README_ZH.md)
 
 Enjoy building on Bun Server!

@@ -511,6 +511,17 @@ bun benchmark/run-wrk.ts        # 自动启动服务器、运行 wrk、生成报
 **核心结论：** 所有梯度零错误；总吞吐量保持稳定（~550k 请求/10s），延迟随并发线性增长；
 文件 I/O 端点比纯计算端点慢约 30%；即使 500 并发连接 P99 仍低于 15ms。
 
+### 多进程基准（reusePort, 仅 Linux）
+
+```bash
+bun benchmark/run-wrk-cluster.ts          # 默认每个 CPU 核心一个 worker
+WORKERS=4 bun benchmark/run-wrk-cluster.ts
+```
+
+启动 N 个 worker 通过 `SO_REUSEPORT` 共享同一端口，内核自动做连接级负载均衡。
+报告保存到 `benchmark/REPORT_CLUSTER.md`。注意：`reusePort` 仅 **Linux** 有效，
+macOS/Windows 会静默忽略。
+
 ## 文档与多语言支持
 
 - **中文文档**：位于 `docs/zh/` 目录
@@ -585,4 +596,4 @@ npm 包分发中包含了完整的源码和测试文件，使 AI 工具能够：
 
 ## 其他语言
 
-- [English README](./readme.md)
+- [English README](./README.md)

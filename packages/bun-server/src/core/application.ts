@@ -45,6 +45,14 @@ export interface ApplicationOptions {
    * 默认 true
    */
   enableSignalHandlers?: boolean;
+
+  /**
+   * 是否启用 SO_REUSEPORT
+   * 允许多进程绑定同一端口，用于多进程负载均衡
+   * 仅 Linux 有效，macOS/Windows 会忽略
+   * @default false
+   */
+  reusePort?: boolean;
 }
 
 /**
@@ -112,6 +120,7 @@ export class Application {
     const serverOptions: ServerOptions = {
       port: finalPort,
       hostname: finalHostname,
+      reusePort: this.options.reusePort,
       fetch: this.handleRequest.bind(this),
       websocketRegistry: this.websocketRegistry,
       gracefulShutdownTimeout: this.options.gracefulShutdownTimeout,

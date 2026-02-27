@@ -39,20 +39,33 @@ bun benchmark/di.bench.ts
 | `GET /headers`          | Header 读写 | Header 处理      |
 | `GET /io`               | 文件 I/O   | 真实业务负载     |
 
-运行方式：
+#### 单进程基准
 
 ```bash
 bun benchmark/run-wrk.ts
 ```
 
-脚本会自动启动测试服务器，按三个梯度（Light / Medium / Heavy）依次运行
-wrk，解析结果并生成 `benchmark/REPORT.md` 报告文件。
+自动启动单个测试服务器，按三个梯度依次运行 wrk，输出 `benchmark/REPORT.md`。
 
 | 梯度   | 线程 | 并发连接 | 持续时间 |
 | ------ | ---- | -------- | -------- |
 | Light  | 2    | 50       | 10s      |
 | Medium | 4    | 200      | 10s      |
 | Heavy  | 8    | 500      | 10s      |
+
+#### 多进程基准（reusePort, Linux only）
+
+```bash
+bun benchmark/run-wrk-cluster.ts
+# 自定义 worker 数量：
+WORKERS=4 bun benchmark/run-wrk-cluster.ts
+```
+
+启动 N 个 worker 进程（默认 = CPU 核心数），每个进程以 `reusePort: true`
+绑定同一端口，内核负责连接级负载均衡。输出 `benchmark/REPORT_CLUSTER.md`。
+
+> **注意**：`SO_REUSEPORT` 仅 Linux 有效。macOS/Windows 会静默忽略该选项，
+> 多个 worker 中只有第一个能成功绑定端口。
 
 ### 添加新基准
 

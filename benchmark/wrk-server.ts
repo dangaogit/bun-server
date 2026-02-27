@@ -102,7 +102,8 @@ class MiscController {
 
 async function bootstrap(): Promise<void> {
   const port = Number(process.env.PORT ?? 3300);
-  const app = new Application({ port });
+  const reusePort = process.env.REUSE_PORT === '1';
+  const app = new Application({ port, reusePort });
 
   app.registerExtension(
     new LoggerExtension({ prefix: 'Bench', level: LogLevel.ERROR }),
