@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import 'reflect-metadata';
 
 import { MODULE_METADATA_KEY } from '../../src/di/module';
 import {

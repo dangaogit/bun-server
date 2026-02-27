@@ -1,4 +1,3 @@
-import 'reflect-metadata';
 import { describe, expect, test, beforeEach } from 'bun:test';
 import { InterceptorRegistry, INTERCEPTOR_REGISTRY_TOKEN } from '../../src/interceptor';
 import type { Interceptor } from '../../src/interceptor';

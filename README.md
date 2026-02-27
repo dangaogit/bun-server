@@ -433,22 +433,45 @@ learning paths, difficulty ratings, and usage scenarios.
 
 ## Benchmark Suite
 
-Benchmarks live in `benchmark/` and rely on `PerformanceHarness` &
-`StressTester`.
+### Internal Micro-benchmarks
+
+`PerformanceHarness` & `StressTester` based benchmarks:
 
 | Script            | Description                                                           |
 | ----------------- | --------------------------------------------------------------------- |
 | `router.bench.ts` | static/dynamic route hits, `router.handle` and stress runs            |
 | `di.bench.ts`     | singleton vs factory resolves, nested dependencies, concurrent stress |
 
-Run directly:
-
 ```bash
 bun benchmark/router.bench.ts
 bun benchmark/di.bench.ts
 ```
 
-Or use `bun run bench*` scripts for convenience.
+### HTTP End-to-End Benchmark (wrk)
+
+Real HTTP load testing with [wrk](https://github.com/wg/wrk), covering JSON
+responses, route params, body parsing, validation, middleware chains, and more.
+
+```bash
+bun benchmark/run-wrk.ts        # auto start server, run wrk, generate report
+```
+
+> **Environment:** Apple M2 Pro / darwin arm64 / Bun 1.3.10 / @dangao/bun-server 1.9.0
+> **wrk params:** `-t2 -c50 -d10s`
+
+| Endpoint              | Req/Sec  | Avg Latency | P99 Latency | Transfer/sec |
+|-----------------------|----------|-------------|-------------|--------------|
+| GET /ping             | 32.09k   | 785.62us    | 1.58ms      | 20.88MB      |
+| GET /json             | 28.29k   | 0.89ms      | 1.71ms      | 109.65MB     |
+| GET /users/:id        | 30.40k   | 828.67us    | 1.64ms      | 20.77MB      |
+| GET /search?q=        | 29.02k   | 0.88ms      | 1.89ms      | 20.60MB      |
+| POST /users           | 27.10k   | 0.93ms      | 1.77ms      | 18.63MB      |
+| POST /users/validated | 25.81k   | 0.98ms      | 1.90ms      | 18.95MB      |
+| GET /middleware        | 28.59k   | 0.88ms      | 1.74ms      | 20.13MB      |
+| GET /headers          | 29.76k   | 846.11us    | 1.66ms      | 19.37MB      |
+
+All endpoints achieved **25k+ req/s** with sub-millisecond average latency and
+**zero errors** under 50 concurrent connections.
 
 ## Docs & Localization
 

@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
-import 'reflect-metadata';
 
 import { MiddlewarePipeline, runMiddlewares } from '../../src/middleware/pipeline';
 import { Context } from '../../src/core/context';

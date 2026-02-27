@@ -3,7 +3,6 @@ import { SecurityModule } from '../../src/security/security-module';
 import { MODULE_METADATA_KEY } from '../../src/di/module';
 import { JWT_UTIL_TOKEN, OAUTH2_SERVICE_TOKEN } from '../../src/auth/controller';
 import { AuthenticationManager } from '../../src/security/authentication-manager';
-import 'reflect-metadata';
 
 describe('SecurityModule', () => {
   beforeEach(() => {

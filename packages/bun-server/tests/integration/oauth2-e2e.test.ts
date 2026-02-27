@@ -1,4 +1,3 @@
-import 'reflect-metadata';
 import { describe, expect, test, afterEach, beforeEach } from 'bun:test';
 import { Application } from '../../src/core/application';
 import { SecurityModule } from '../../src/security/security-module';

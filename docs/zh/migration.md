@@ -12,11 +12,6 @@
     "emitDecoratorMetadata": true
   }
   ```
-- 在应用入口（如 `main.ts`）导入一次 `reflect-metadata`：
-  ```ts
-  import 'reflect-metadata';
-  ```
-
 ## 2. 路由与控制器
 
 - 将旧的函数式注册迁移到装饰器：

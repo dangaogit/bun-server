@@ -175,8 +175,6 @@ class WebhookController {
 在代码中添加调试：
 
 ```typescript
-import "reflect-metadata";
-
 // 在 Controller 定义之后
 console.log(
   "paramTypes:",

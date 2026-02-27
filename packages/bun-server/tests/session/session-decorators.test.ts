@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
-import 'reflect-metadata';
 
 import { Session, getSessionFromContext } from '../../src/session/decorators';
 import { SessionService } from '../../src/session/service';

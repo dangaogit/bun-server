@@ -167,7 +167,7 @@ bun run examples/03-advanced/microservice-app.ts
 
 ### Metadata API
 
-Bun Server 使用 `reflect-metadata` 存储装饰器元数据：
+Bun Server 使用 Reflect 元数据 API 存储装饰器元数据（框架已自动处理）：
 
 ```typescript
 // 设置元数据
@@ -186,7 +186,6 @@ Reflect.deleteMetadata(key, target, propertyKey);
 **注意事项**：
 - 元数据存储在原型链上，实例和原型需要分别处理
 - Symbol key 避免命名冲突
-- 必须 `import 'reflect-metadata'`
 
 ### Interceptor（拦截器）
 

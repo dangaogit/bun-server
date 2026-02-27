@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import 'reflect-metadata';
 
 import { PerformanceHarness } from '../../../src/testing/harness';
 import { InterceptorRegistry } from '../../../src/interceptor/interceptor-registry';

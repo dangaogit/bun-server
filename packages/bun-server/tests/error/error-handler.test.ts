@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
-import 'reflect-metadata';
 
 import { handleError } from '../../src/error/handler';
 import { HttpException, BadRequestException, UnauthorizedException, ForbiddenException, NotFoundException } from '../../src/error';

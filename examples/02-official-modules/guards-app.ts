@@ -11,7 +11,7 @@
  * bun run examples/02-official-modules/guards-app.ts
  */
 
-import 'reflect-metadata';
+;
 import {
   Application,
   Controller,

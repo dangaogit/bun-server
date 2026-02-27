@@ -3,7 +3,6 @@ import { DatabaseModule, DatabaseService, DATABASE_SERVICE_TOKEN } from '../../s
 import { Container } from '../../src/di/container';
 import { ModuleRegistry } from '../../src/di/module-registry';
 import { MODULE_METADATA_KEY } from '../../src/di/module';
-import 'reflect-metadata';
 
 describe('DatabaseModule', () => {
   let container: Container;

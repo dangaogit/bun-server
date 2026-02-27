@@ -1,4 +1,3 @@
-import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import { Controller, ControllerRegistry } from '../../src/controller/controller';

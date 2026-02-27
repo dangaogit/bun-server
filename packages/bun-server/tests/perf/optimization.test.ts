@@ -5,7 +5,6 @@ import { MiddlewarePipeline } from '../../src/middleware/pipeline';
 import { Container } from '../../src/di/container';
 import { Injectable, Inject } from '../../src/di/decorators';
 import { PerformanceHarness } from '../../src/testing/harness';
-import 'reflect-metadata';
 
 /**
  * 性能优化验证测试

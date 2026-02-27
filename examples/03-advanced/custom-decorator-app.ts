@@ -8,8 +8,6 @@
  * - Registering the interceptor
  * - Using the decorator in controllers
  */
-
-import 'reflect-metadata';
 import {
   Application,
   Controller,

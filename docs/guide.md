@@ -15,7 +15,6 @@ For detailed lifecycle documentation, see [Request Lifecycle](./request-lifecycl
 ## 1. Initialize Application
 
 ```ts
-import "reflect-metadata";
 import { Application } from "@dangao/bun-server";
 
 const app = new Application({ port: 3000 });

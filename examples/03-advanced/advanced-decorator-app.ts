@@ -9,7 +9,7 @@
  * - Priority control
  */
 
-import 'reflect-metadata';
+;
 import {
   Application,
   Controller,

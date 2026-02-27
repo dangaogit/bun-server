@@ -3,12 +3,12 @@
   "private": true,
   "scripts": {
     "bench:router": "bun router.bench.ts",
-    "bench:di": "bun di.bench.ts"
+    "bench:di": "bun di.bench.ts",
+    "bench:wrk": "bun run-wrk.ts"
   },
   "dependencies": {
     "@dangao/bun-server": "workspace:^",
-    "@dangao/logsmith": "workspace:^",
-    "reflect-metadata": "catalog:"
+    "@dangao/logsmith": "workspace:^"
   },
   "devDependencies": {
     "typescript": "catalog:"

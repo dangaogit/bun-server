@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
-import 'reflect-metadata';
 
 import { createCorsMiddleware } from '../../../src/middleware/builtin/cors';
 import { createLoggerMiddleware } from '../../../src/middleware/builtin/logger';

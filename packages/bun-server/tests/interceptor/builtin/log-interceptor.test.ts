@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach, mock } from 'bun:test';
-import 'reflect-metadata';
 
 import { Container } from '../../../src/di/container';
 import { Context } from '../../../src/core/context';

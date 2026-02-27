@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
-import 'reflect-metadata';
 
 import { QueueService } from '../../src/queue/service';
 import type { QueueStore, Job, JobData, QueueModuleOptions } from '../../src/queue/types';

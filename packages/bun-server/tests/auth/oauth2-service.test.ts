@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
-import 'reflect-metadata';
 
 import { OAuth2Service } from '../../src/auth/oauth2';
 import { JWTUtil } from '../../src/auth/jwt';

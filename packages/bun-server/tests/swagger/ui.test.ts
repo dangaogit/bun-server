@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
-import 'reflect-metadata';
 
 import { createSwaggerUIMiddleware } from '../../src/swagger/ui';
 import { SwaggerExtension } from '../../src/swagger/swagger-extension';

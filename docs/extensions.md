@@ -499,8 +499,6 @@ You can create custom decorators to extend controller and route functionality.
 ### Creating Decorators
 
 ```typescript
-import 'reflect-metadata';
-
 // Cache decorator
 export function Cache(ttl: number) {
   return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
