@@ -90,11 +90,20 @@ class MiscController {
   public middleware(): { ok: true } {
     return { ok: true };
   }
+
+  @GET('/io')
+  public async io(): Promise<{ size: number; hash: string }> {
+    const file = Bun.file(import.meta.path);
+    const buf = await file.arrayBuffer();
+    const hash = Bun.hash(buf).toString(16);
+    return { size: buf.byteLength, hash };
+  }
 }
 
 async function bootstrap(): Promise<void> {
   const port = Number(process.env.PORT ?? 3300);
-  const app = new Application({ port });
+  const reusePort = process.env.REUSE_PORT === '1';
+  const app = new Application({ port, reusePort });
 
   app.registerExtension(
     new LoggerExtension({ prefix: 'Bench', level: LogLevel.ERROR }),
@@ -108,6 +117,11 @@ async function bootstrap(): Promise<void> {
 
   await app.listen(port);
   const actualPort = app.getServer()?.getServer()?.port ?? port;
+
+  process.on('SIGTERM', async () => {
+    await app.gracefulShutdown();
+    process.exit(0);
+  });
 
   console.log(`WRK_READY:${actualPort}`);
 }

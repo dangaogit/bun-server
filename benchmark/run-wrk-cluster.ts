@@ -1,16 +1,27 @@
-import { $ } from 'bun';
+/**
+ * Multi-process (reusePort) benchmark runner.
+ *
+ * Spawns N worker processes that each bind to the same port via SO_REUSEPORT,
+ * then runs the same wrk test suite against the shared port.
+ *
+ * Linux only -- reusePort is silently ignored on macOS/Windows.
+ */
+
+import { $, spawn } from 'bun';
 import { resolve } from 'path';
 
 const BENCH_DIR = import.meta.dir;
 const WRK_DIR = resolve(BENCH_DIR, 'wrk');
 const SERVER_SCRIPT = resolve(BENCH_DIR, 'wrk-server.ts');
-const REPORT_PATH = resolve(BENCH_DIR, 'REPORT.md');
+const REPORT_PATH = resolve(BENCH_DIR, 'REPORT_CLUSTER.md');
 
 const MIN_FD_LIMIT = 10240;
 const COOLDOWN_MS = 1500;
 const WARMUP_DURATION = '3s';
 const WARMUP_THREADS = 2;
 const WARMUP_CONNECTIONS = 10;
+const CLUSTER_PORT = 9222;
+const DEFAULT_WORKERS = navigator.hardwareConcurrency;
 
 interface TierConfig {
   label: string;
@@ -116,28 +127,14 @@ async function waitForServer(port: number, timeoutMs: number = 15_000): Promise<
   throw new Error(`Server did not become ready within ${timeoutMs}ms`);
 }
 
-async function getCurrentFdLimit(): Promise<number | 'unlimited'> {
-  try {
-    const proc = Bun.spawn(['sh', '-c', 'ulimit -n'], { stdout: 'pipe', stderr: 'pipe' });
-    const raw = (await new Response(proc.stdout).text()).trim();
-    await proc.exited;
-    if (raw === 'unlimited') return 'unlimited';
-    return Number(raw) || 256;
-  } catch {
-    return 256;
-  }
-}
-
 async function getEnvironmentInfo(): Promise<{
   os: string;
   bunVersion: string;
   cpuModel: string;
   cores: string;
-  fdLimit: number | 'unlimited';
 }> {
   const os = `${process.platform} ${process.arch}`;
   const bunVersion = Bun.version;
-  const fdLimit = await getCurrentFdLimit();
 
   let cpuModel = 'unknown';
   let cores = 'unknown';
@@ -155,7 +152,7 @@ async function getEnvironmentInfo(): Promise<{
     // fallback
   }
 
-  return { os, bunVersion, cpuModel, cores, fdLimit };
+  return { os, bunVersion, cpuModel, cores };
 }
 
 function shellWithFd(cmd: string): string[] {
@@ -163,7 +160,7 @@ function shellWithFd(cmd: string): string[] {
 }
 
 async function warmup(baseUrl: string): Promise<void> {
-  console.log(`[run-wrk] warming up (${WARMUP_DURATION}, JIT compile)...`);
+  console.log(`[cluster] warming up (${WARMUP_DURATION}, JIT compile)...`);
   for (const target of TARGETS) {
     let wrkCmd = `wrk -t${WARMUP_THREADS} -c${WARMUP_CONNECTIONS} -d${WARMUP_DURATION}`;
     if (target.luaScript) {
@@ -174,7 +171,7 @@ async function warmup(baseUrl: string): Promise<void> {
     const proc = Bun.spawn(shellWithFd(wrkCmd), { stdout: 'pipe', stderr: 'pipe' });
     await proc.exited;
   }
-  console.log('[run-wrk] warmup complete');
+  console.log('[cluster] warmup complete');
 }
 
 async function runWrk(baseUrl: string, target: BenchTarget, tier: TierConfig): Promise<WrkResult> {
@@ -197,16 +194,18 @@ async function runWrk(baseUrl: string, target: BenchTarget, tier: TierConfig): P
 
 function generateReport(
   tierResults: TierResult[],
-  env: { os: string; bunVersion: string; cpuModel: string; cores: string; fdLimit: number | 'unlimited' },
+  env: { os: string; bunVersion: string; cpuModel: string; cores: string },
+  workerCount: number,
 ): string {
   const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
   const lines: string[] = [
-    '# HTTP Benchmark Report',
+    '# HTTP Benchmark Report (Cluster / reusePort)',
     '',
     `> Generated: ${now}`,
     `> CPU: ${env.cpuModel} (${env.cores} cores)`,
     `> OS: ${env.os} | Bun ${env.bunVersion} | @dangao/bun-server 1.9.0`,
-    `> ulimit -n: ${env.fdLimit} (child processes raised to ${MIN_FD_LIMIT})`,
+    `> Workers: ${workerCount} (reusePort: true)`,
+    `> NOTE: reusePort only effective on Linux`,
     '',
   ];
 
@@ -230,66 +229,55 @@ function generateReport(
   return lines.join('\n');
 }
 
-async function shutdownServer(serverProc: ReturnType<typeof Bun.spawn>): Promise<void> {
-  serverProc.kill('SIGTERM');
-  const timeout = setTimeout(() => serverProc.kill('SIGKILL'), 5_000);
-  await serverProc.exited;
-  clearTimeout(timeout);
-}
-
 async function main(): Promise<void> {
-  console.log('[run-wrk] checking wrk...');
+  if (process.platform !== 'linux') {
+    console.warn('[cluster] WARNING: reusePort only works on Linux.');
+    console.warn('[cluster] On macOS/Windows, all workers except the first will fail to bind.');
+    console.warn('[cluster] Proceeding anyway for testing purposes...\n');
+  }
+
+  console.log('[cluster] checking wrk...');
   try {
     const which = await $`which wrk`.quiet().text();
     if (!which.trim()) throw new Error('not found');
   } catch {
-    console.error('[run-wrk] wrk is not installed. Install via: brew install wrk');
+    console.error('[cluster] wrk is not installed. Install via: brew install wrk');
     process.exit(1);
   }
 
-  const fdLimit = await getCurrentFdLimit();
-  const maxConn = Math.max(...TIERS.map((t) => t.connections));
-  if (fdLimit !== 'unlimited' && fdLimit < maxConn * 2) {
-    console.warn(
-      `[run-wrk] WARNING: shell ulimit -n is ${fdLimit} (need >=${maxConn * 2} for -c${maxConn}).`,
+  const workerCount = Number(process.env.WORKERS ?? DEFAULT_WORKERS);
+  const port = CLUSTER_PORT;
+
+  console.log(`[cluster] starting ${workerCount} workers on port ${port} (reusePort)...`);
+
+  const workers: ReturnType<typeof spawn>[] = [];
+  for (let i = 0; i < workerCount; i++) {
+    workers.push(
+      spawn({
+        cmd: shellWithFd(`exec bun run '${SERVER_SCRIPT}'`),
+        stdout: 'pipe',
+        stderr: 'inherit',
+        env: { ...process.env, PORT: String(port), REUSE_PORT: '1' },
+      }),
     );
-    console.warn(`[run-wrk] Child processes will be raised to ${MIN_FD_LIMIT}, but the main process stays at ${fdLimit}.`);
-    console.warn(`[run-wrk] For best results, run:  ulimit -n ${MIN_FD_LIMIT} && bun benchmark/run-wrk.ts`);
-  } else {
-    console.log(`[run-wrk] ulimit -n: ${fdLimit}`);
   }
 
-  console.log('[run-wrk] starting benchmark server...');
-  const serverProc = Bun.spawn(shellWithFd(`exec bun run '${SERVER_SCRIPT}'`), {
-    stdout: 'pipe',
-    stderr: 'inherit',
-    env: { ...process.env, PORT: '0' },
-  });
-
-  let port: number | null = null;
-  const reader = serverProc.stdout.getReader();
+  // Wait for WRK_READY from the first worker, then probe the port
+  const firstReader = workers[0].stdout.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
-
   while (true) {
-    const { done, value } = await reader.read();
+    const { done, value } = await firstReader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
-    const match = buffer.match(/WRK_READY:(\d+)/);
-    if (match) {
-      port = Number(match[1]);
-      break;
-    }
+    if (buffer.includes('WRK_READY:')) break;
   }
-  reader.releaseLock();
+  firstReader.releaseLock();
 
-  if (!port) {
-    console.error('[run-wrk] failed to detect server port');
-    serverProc.kill();
-    process.exit(1);
-  }
+  // Give remaining workers time to bind
+  await Bun.sleep(1000);
 
-  console.log(`[run-wrk] server ready on port ${port}`);
+  console.log(`[cluster] ${workerCount} workers started`);
   await waitForServer(port);
 
   const baseUrl = `http://127.0.0.1:${port}`;
@@ -300,12 +288,12 @@ async function main(): Promise<void> {
   const tierResults: TierResult[] = [];
 
   for (const tier of TIERS) {
-    console.log(`\n[run-wrk] === ${tier.label} tier: -t${tier.threads} -c${tier.connections} -d${tier.duration} ===`);
+    console.log(`\n[cluster] === ${tier.label} tier: -t${tier.threads} -c${tier.connections} -d${tier.duration} ===`);
     const results: WrkResult[] = [];
 
     for (const target of TARGETS) {
       await Bun.sleep(COOLDOWN_MS);
-      console.log(`[run-wrk]   ${target.name} ...`);
+      console.log(`[cluster]   ${target.name} ...`);
       const result = await runWrk(baseUrl, target, tier);
       results.push(result);
       console.log(`    -> ${result.reqPerSec} req/s, avg ${result.avgLatency} (±${result.latencyStdev}), p99 ${result.p99Latency}, errors ${result.errors}`);
@@ -314,18 +302,25 @@ async function main(): Promise<void> {
     tierResults.push({ tier, results });
   }
 
-  await shutdownServer(serverProc);
+  for (const w of workers) {
+    w.kill('SIGTERM');
+  }
+  const killTimeout = setTimeout(() => {
+    for (const w of workers) w.kill('SIGKILL');
+  }, 5_000);
+  await Promise.all(workers.map((w) => w.exited));
+  clearTimeout(killTimeout);
 
-  const report = generateReport(tierResults, env);
+  const report = generateReport(tierResults, env, workerCount);
   console.log('\n' + report);
 
   await Bun.write(REPORT_PATH, report);
-  console.log(`[run-wrk] report saved to ${REPORT_PATH}`);
+  console.log(`[cluster] report saved to ${REPORT_PATH}`);
 }
 
 if (import.meta.main) {
   main().catch((err) => {
-    console.error('[run-wrk] fatal error:', err);
+    console.error('[cluster] fatal error:', err);
     process.exit(1);
   });
 }

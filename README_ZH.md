@@ -451,30 +451,54 @@ bun benchmark/router.bench.ts
 bun benchmark/di.bench.ts
 ```
 
-### HTTP 端到端基准（wrk）
+### 框架对比（bun-server vs Express vs NestJS）
 
-使用 [wrk](https://github.com/wg/wrk) 对真实 HTTP 端点进行压测，覆盖 JSON
-响应、路由参数、Body 解析、验证、中间件链等核心路径。
+使用 [wrk](https://github.com/wg/wrk) 对真实 HTTP 端点进行压测对比，
+bun-server 与 Express 5、NestJS 11 在相同端点上比较。所有框架均运行在 Bun
+runtime 上，以隔离框架本身的开销差异。
+
+**前置条件：** 需安装 wrk（`brew install wrk` / `apt install wrk`）。脚本会自动
+为子进程提升 `ulimit -n` 至 10240。
 
 ```bash
-bun benchmark/run-wrk.ts        # 自动启动服务器、运行 wrk、生成报告
+bun benchmark/run-wrk-compare.ts        # 完整对比（3 个梯度）
+TIER=0 bun benchmark/run-wrk-compare.ts  # 仅 Light 梯度
+bun benchmark/run-wrk.ts                 # 仅 bun-server（3 个梯度）
 ```
 
-> **环境：** Apple M2 Pro / darwin arm64 / Bun 1.3.10 / @dangao/bun-server 1.9.0
-> **wrk 参数：** `-t2 -c50 -d10s`
+> **环境：** Apple M2 Pro (8P + 4E cores) / darwin arm64 / Bun 1.3.10
 
-| 端点                  | Req/Sec  | 平均延迟    | P99 延迟    | 传输速率     |
-|-----------------------|----------|-------------|-------------|--------------|
-| GET /ping             | 32.09k   | 785.62us    | 1.58ms      | 20.88MB      |
-| GET /json             | 28.29k   | 0.89ms      | 1.71ms      | 109.65MB     |
-| GET /users/:id        | 30.40k   | 828.67us    | 1.64ms      | 20.77MB      |
-| GET /search?q=        | 29.02k   | 0.88ms      | 1.89ms      | 20.60MB      |
-| POST /users           | 27.10k   | 0.93ms      | 1.77ms      | 18.63MB      |
-| POST /users/validated | 25.81k   | 0.98ms      | 1.90ms      | 18.95MB      |
-| GET /middleware        | 28.59k   | 0.88ms      | 1.74ms      | 20.13MB      |
-| GET /headers          | 29.76k   | 846.11us    | 1.66ms      | 19.37MB      |
+#### Req/Sec 对比（Light: -t2 -c50 -d10s）
 
-所有端点在 50 并发连接下均达到 **25k+ req/s**，平均延迟亚毫秒级，**零错误**。
+| 端点                  | bun-server   | Express  | NestJS   |
+|-----------------------|--------------|----------|----------|
+| GET /ping             | **31.41k**   | 30.01k   | 26.52k   |
+| GET /json             | **28.22k**   | 25.99k   | 23.64k   |
+| GET /users/:id        | **30.88k**   | 29.91k   | 25.62k   |
+| GET /search?q=        | **29.96k**   | 28.70k   | 25.17k   |
+| POST /users           | **27.65k**   | 21.37k   | 19.38k   |
+| POST /users/validated | **26.60k**   | 21.28k   | 18.93k   |
+| GET /middleware        | **29.52k**   | 28.57k   | 24.69k   |
+| GET /headers          | **30.98k**   | 29.57k   | 26.43k   |
+| GET /io               | **21.37k**   | 19.46k   | 18.49k   |
+
+三个框架在所有梯度均零错误。Medium 和 Heavy 梯度结果请查看完整报告。
+
+> 📊 **完整报告**（3 个梯度、延迟分布、各框架详情）：
+> [`benchmark/REPORT_COMPARE.md`](./benchmark/REPORT_COMPARE.md)
+>
+> 📋 **单框架报告**：[`benchmark/REPORT.md`](./benchmark/REPORT.md)
+
+### 多进程基准（reusePort, 仅 Linux）
+
+```bash
+bun benchmark/run-wrk-cluster.ts          # 默认每个 CPU 核心一个 worker
+WORKERS=4 bun benchmark/run-wrk-cluster.ts
+```
+
+启动 N 个 worker 通过 `SO_REUSEPORT` 共享同一端口，内核自动做连接级负载均衡。
+报告保存到 `benchmark/REPORT_CLUSTER.md`。注意：`reusePort` 仅 **Linux** 有效，
+macOS/Windows 会静默忽略。
 
 ## 文档与多语言支持
 
@@ -550,4 +574,4 @@ npm 包分发中包含了完整的源码和测试文件，使 AI 工具能够：
 
 ## 其他语言
 
-- [English README](./readme.md)
+- [English README](./README.md)

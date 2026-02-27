@@ -447,31 +447,57 @@ bun benchmark/router.bench.ts
 bun benchmark/di.bench.ts
 ```
 
-### HTTP End-to-End Benchmark (wrk)
+### Framework Comparison (bun-server vs Express vs NestJS)
 
-Real HTTP load testing with [wrk](https://github.com/wg/wrk), covering JSON
-responses, route params, body parsing, validation, middleware chains, and more.
+Real HTTP load testing with [wrk](https://github.com/wg/wrk), comparing
+bun-server against Express 5 and NestJS 11. All frameworks run on the same Bun
+runtime to isolate framework overhead.
+
+**Prerequisites:** wrk (`brew install wrk` / `apt install wrk`). The script
+automatically raises `ulimit -n` to 10240 for child processes.
 
 ```bash
-bun benchmark/run-wrk.ts        # auto start server, run wrk, generate report
+bun benchmark/run-wrk-compare.ts        # full comparison (3 tiers)
+TIER=0 bun benchmark/run-wrk-compare.ts  # Light tier only
+bun benchmark/run-wrk.ts                 # bun-server only (3 tiers)
 ```
 
-> **Environment:** Apple M2 Pro / darwin arm64 / Bun 1.3.10 / @dangao/bun-server 1.9.0
-> **wrk params:** `-t2 -c50 -d10s`
+> **Environment:** Apple M2 Pro (8P + 4E cores) / darwin arm64 / Bun 1.3.10
 
-| Endpoint              | Req/Sec  | Avg Latency | P99 Latency | Transfer/sec |
-|-----------------------|----------|-------------|-------------|--------------|
-| GET /ping             | 32.09k   | 785.62us    | 1.58ms      | 20.88MB      |
-| GET /json             | 28.29k   | 0.89ms      | 1.71ms      | 109.65MB     |
-| GET /users/:id        | 30.40k   | 828.67us    | 1.64ms      | 20.77MB      |
-| GET /search?q=        | 29.02k   | 0.88ms      | 1.89ms      | 20.60MB      |
-| POST /users           | 27.10k   | 0.93ms      | 1.77ms      | 18.63MB      |
-| POST /users/validated | 25.81k   | 0.98ms      | 1.90ms      | 18.95MB      |
-| GET /middleware        | 28.59k   | 0.88ms      | 1.74ms      | 20.13MB      |
-| GET /headers          | 29.76k   | 846.11us    | 1.66ms      | 19.37MB      |
+#### Req/Sec (Light: -t2 -c50 -d10s)
 
-All endpoints achieved **25k+ req/s** with sub-millisecond average latency and
-**zero errors** under 50 concurrent connections.
+| Endpoint              | bun-server   | Express  | NestJS   |
+|-----------------------|--------------|----------|----------|
+| GET /ping             | **31.41k**   | 30.01k   | 26.52k   |
+| GET /json             | **28.22k**   | 25.99k   | 23.64k   |
+| GET /users/:id        | **30.88k**   | 29.91k   | 25.62k   |
+| GET /search?q=        | **29.96k**   | 28.70k   | 25.17k   |
+| POST /users           | **27.65k**   | 21.37k   | 19.38k   |
+| POST /users/validated | **26.60k**   | 21.28k   | 18.93k   |
+| GET /middleware        | **29.52k**   | 28.57k   | 24.69k   |
+| GET /headers          | **30.98k**   | 29.57k   | 26.43k   |
+| GET /io               | **21.37k**   | 19.46k   | 18.49k   |
+
+Zero errors across all frameworks and tiers. See the full report for Medium and
+Heavy tier results.
+
+> 📊 Full comparison report (3 tiers, latency breakdown, per-framework
+> details): [`benchmark/REPORT_COMPARE.md`](./benchmark/REPORT_COMPARE.md)
+>
+> 📋 Single-framework detailed report:
+> [`benchmark/REPORT.md`](./benchmark/REPORT.md)
+
+### Multi-process Benchmark (reusePort, Linux only)
+
+```bash
+bun benchmark/run-wrk-cluster.ts          # default: 1 worker per CPU core
+WORKERS=4 bun benchmark/run-wrk-cluster.ts
+```
+
+Spawns N workers sharing the same port via `SO_REUSEPORT`. The kernel
+distributes connections across processes. Report saved to
+`benchmark/REPORT_CLUSTER.md`. Note: `reusePort` only works on **Linux**;
+macOS/Windows silently ignore it.
 
 ## Docs & Localization
 
@@ -548,6 +574,6 @@ Released under the [MIT License](./LICENSE).
 
 ## Other Languages
 
-- [中文 README](./readme_zh.md)
+- [中文 README](./README_ZH.md)
 
 Enjoy building on Bun Server!

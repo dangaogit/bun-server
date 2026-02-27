@@ -197,10 +197,11 @@ public getUsers() { ... }
 
 **For**: Developers who need production-ready code references
 
-| Directory              | Description                      | Tech Stack                     |
-| ---------------------- | -------------------------------- | ------------------------------ |
-| `database-test-app.ts` | Database connection testing tool | Web UI, multi-database support |
-| `perf/app.ts`          | Performance benchmarking         | High concurrency, optimization |
+| Directory                | Description                      | Tech Stack                          |
+| ------------------------ | -------------------------------- | ----------------------------------- |
+| `database-test-app.ts`   | Database connection testing tool | Web UI, multi-database support      |
+| `perf/app.ts`            | Performance benchmarking         | High concurrency, optimization      |
+| `perf/cluster-app.ts`    | Multi-process cluster            | reusePort, SO_REUSEPORT, Linux only |
 
 **Run**:
 
@@ -209,9 +210,13 @@ public getUsers() { ... }
 bun run examples/04-real-world/database-test-app.ts
 # Visit http://localhost:3000
 
-# Performance benchmarking
+# Performance benchmarking (single process)
 bun run examples/04-real-world/perf/app.ts
 wrk -t4 -c64 -d30s http://localhost:3300/api/ping
+
+# Multi-process cluster (reusePort, Linux only)
+bun run examples/04-real-world/perf/cluster-app.ts
+wrk -t8 -c500 -d30s http://localhost:3300/api/ping
 ```
 
 ---

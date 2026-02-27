@@ -6,7 +6,10 @@
   "license": "MIT",
   "scripts": {
     "preinstall": "npx only-allow bun",
-    "prepare": "git config core.hooksPath .husky"
+    "prepare": "git config core.hooksPath .husky",
+    "build": "bun run build:deps && bun run build:server",
+    "build:deps": "bun run --filter '@dangao/logsmith' build && bun run --filter '@dangao/nacos-client' build",
+    "build:server": "bun run --filter '@dangao/bun-server' build"
   },
   "keywords": [],
   "author": "dangaogit",

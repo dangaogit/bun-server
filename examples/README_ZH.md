@@ -184,6 +184,7 @@ public getUsers() { ... }
 |------|------|--------|
 | `database-test-app.ts` | 数据库连接测试工具 | Web UI、多数据库支持 |
 | `perf/app.ts` | 性能压测基准 | 高并发、性能优化 |
+| `perf/cluster-app.ts` | 多进程集群 | reusePort, SO_REUSEPORT, 仅 Linux |
 
 **运行方式**：
 ```bash
@@ -191,9 +192,13 @@ public getUsers() { ... }
 bun run examples/database-test-app.ts
 # 访问 http://localhost:3000
 
-# 性能压测
-bun run examples/perf/app.ts
+# 性能压测（单进程）
+bun run examples/04-real-world/perf/app.ts
 wrk -t4 -c64 -d30s http://localhost:3300/api/ping
+
+# 多进程集群（reusePort, 仅 Linux）
+bun run examples/04-real-world/perf/cluster-app.ts
+wrk -t8 -c500 -d30s http://localhost:3300/api/ping
 ```
 
 ---
