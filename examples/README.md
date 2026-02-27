@@ -57,6 +57,8 @@ bun run examples/00-quick-start/01-hello-world.ts
 | `basic-router.ts`      | Low-level routing: using RouteRegistry directly             | ⭐⭐       | 3000 |
 | `context-scope-app.ts` | Request scoping: ContextService and Scoped lifecycle        | ⭐⭐⭐     | 3500 |
 | `full-app.ts`          | Full features: validation, uploads, static files, WebSocket | ⭐⭐⭐     | 3200 |
+| `lifecycle-app.ts`     | Lifecycle hooks: OnModuleInit, OnModuleDestroy, etc.        | ⭐⭐       | 3000 |
+| `async-config-app.ts`  | Async module config: forRootAsync with factory injection    | ⭐⭐       | 3000 |
 
 **Core Concepts**:
 
@@ -120,6 +122,7 @@ See [01-core-features/README.md](./01-core-features/README.md) for details.
 | File                        | Description                | Key Features                       | Port |
 | --------------------------- | -------------------------- | ---------------------------------- | ---- |
 | `metrics-rate-limit-app.ts` | Monitoring & Rate Limiting | Prometheus metrics, API throttling | 3000 |
+| `dashboard-app.ts`          | Built-in Dashboard         | System info, routes, health UI     | 3000 |
 
 See [02-official-modules/README.md](./02-official-modules/README.md) for
 details.
@@ -146,10 +149,14 @@ bun run examples/02-official-modules/queue-app.ts
 
 | File                        | Description                                             | Tech Stack                   | Port     |
 | --------------------------- | ------------------------------------------------------- | ---------------------------- | -------- |
-| `custom-decorator-app.ts`   | Custom decorators: @Timing example                      | Metadata, Interceptor        | 3000     |
-| `advanced-decorator-app.ts` | Advanced decorators: Multiple decorator composition     | Decorator chains, priorities | 3000     |
-| `websocket-chat-app.ts`     | Complete WebSocket chat with rooms (Web UI)             | Rooms, broadcast, user list  | 3600     |
-| `microservice-app.ts`       | Microservices architecture: Inter-service communication | Nacos, config center         | Multiple |
+| `custom-decorator-app.ts`      | Custom decorators: @Timing example                      | Metadata, Interceptor        | 3000     |
+| `advanced-decorator-app.ts`    | Advanced decorators: Multiple decorator composition     | Decorator chains, priorities | 3000     |
+| `apply-decorators-app.ts`     | Decorator composition: `applyDecorators()` utility      | Reusable decorator combos    | 3000     |
+| `testing-app.ts`               | Testing module: mock providers, HTTP client             | Test.createTestingModule     | Random   |
+| `type-safe-client-app.ts`     | Type-safe client: generate API clients from controllers | ClientGenerator, createClient| 3001     |
+| `debug-app.ts`                 | Debug module: request recording and replay              | DebugModule, ring buffer     | 3000     |
+| `websocket-chat-app.ts`       | Complete WebSocket chat with rooms (Web UI)             | Rooms, broadcast, user list  | 3600     |
+| `microservice-app.ts`         | Microservices architecture: Inter-service communication | Nacos, config center         | Multiple |
 
 **Key Points**:
 

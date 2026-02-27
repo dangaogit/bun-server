@@ -55,7 +55,10 @@ packages/bun-server/
 │   ├── auth/              # 认证实现（JWT, OAuth2, @Auth 装饰器）
 │   ├── config/            # 配置管理（ConfigModule, ConfigService）
 │   ├── health/            # 健康检查（HealthModule, HealthController）
-│   └── testing/           # 测试工具（PerformanceHarness, StressTester）
+│   ├── testing/           # 测试工具（PerformanceHarness, StressTester, TestingModule）
+│   ├── client/            # 客户端生成（ClientGenerator, createClient）
+│   ├── dashboard/         # 监控仪表盘（DashboardModule, DashboardService）
+│   └── debug/             # 调试模块（DebugModule, RequestRecorder）
 ├── tests/                 # 测试文件（按模块组织）
 └── examples/              # 示例代码
 ```
@@ -322,6 +325,8 @@ Application
     │   ├── SessionModule (会话)
     │   ├── MetricsModule (指标)
     │   ├── HealthModule (健康检查)
+    │   ├── DashboardModule (监控仪表盘)
+    │   ├── DebugModule (调试与请求重放)
     │   └── Microservice/ (微服务)
     │       ├── ConfigCenterModule
     │       ├── ServiceRegistryModule
@@ -383,6 +388,13 @@ tests/
 - `examples/full-app.ts` - 完整示例（验证、文件上传、WebSocket + Config）
 - `examples/multi-module-app.ts` - 多模块示例（模块依赖 + Config）
 - `examples/auth-app.ts` - 认证示例（JWT + OAuth2 + Security + Config）
+- `examples/lifecycle-app.ts` - 生命周期钩子示例
+- `examples/async-config-app.ts` - 异步模块配置示例
+- `examples/testing-app.ts` - 测试模块示例
+- `examples/type-safe-client-app.ts` - 类型安全客户端示例
+- `examples/apply-decorators-app.ts` - 装饰器组合示例
+- `examples/dashboard-app.ts` - 监控仪表盘示例
+- `examples/debug-app.ts` - 调试与请求重放示例
 
 ## 关键文件
 

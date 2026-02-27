@@ -53,6 +53,14 @@
 - 🔐 **安全认证**：内置 SecurityModule，支持 JWT 和 OAuth2 认证，提供 `@Auth()`
   装饰器进行角色权限控制。
 - 📚 **示例与文档**：多语言文档、基础/完整示例、基准脚本与最佳实践。
+- 🧪 **测试模块**：`Test.createTestingModule()` 支持 Provider 覆盖和内置 HTTP 测试客户端。
+- 🔄 **生命周期钩子**：`OnModuleInit`、`OnModuleDestroy`、`OnApplicationBootstrap`、`OnApplicationShutdown`。
+- ⚡ **异步模块配置**：`forRootAsync()` 支持工厂注入，适用于 ConfigModule、DatabaseModule、CacheModule 等。
+- 🔌 **类型安全客户端**：从控制器元数据提取路由清单，生成类型安全的 API 客户端。
+- 🎨 **装饰器组合**：`applyDecorators()` 将多个装饰器合并为一个可复用装饰器。
+- 📊 **内置监控仪表盘**：`DashboardModule` 提供零依赖的 Web 监控 UI。
+- 🐛 **请求录制与重放**：`DebugModule` 使用环形缓冲区录制请求，提供调试 UI 和重放功能。
+- 🖥️ **零配置集群**：`ClusterManager` 自动按 CPU 核心数派生 reusePort 工作进程。
 
 ## 架构总览
 

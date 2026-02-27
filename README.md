@@ -46,6 +46,22 @@
 - 📡 **WebSocket gateways** with `@WebSocketGateway`, `@OnMessage`, etc.
 - 📚 **Docs & samples** including multi-language docs, benchmark scripts and
   best practices.
+- 🧪 **Testing module** with `Test.createTestingModule()`, provider override,
+  and built-in HTTP test client.
+- 🔄 **Lifecycle hooks** — `OnModuleInit`, `OnModuleDestroy`,
+  `OnApplicationBootstrap`, `OnApplicationShutdown`.
+- ⚡ **Async module config** — `forRootAsync()` with factory injection on
+  ConfigModule, DatabaseModule, CacheModule and more.
+- 🔌 **Type-safe client generation** — extract route manifests and create
+  typed API clients from controller metadata.
+- 🎨 **Decorator composition** — `applyDecorators()` to merge multiple
+  decorators into one reusable decorator.
+- 📊 **Built-in dashboard** — `DashboardModule` provides a zero-dependency
+  monitoring web UI with system info, routes and health status.
+- 🐛 **Request replay / debug** — `DebugModule` records requests in a ring
+  buffer with a debug UI for inspection and replay.
+- 🖥️ **Zero-config cluster** — `ClusterManager` auto-spawns reusePort
+  workers matching CPU core count.
 
 ## Architecture
 
