@@ -25,7 +25,7 @@ if (!ClusterManager.isWorker()) {
     port: PORT,
   });
 
-  manager.start();
+  await manager.start();
 
   process.on('SIGINT', async () => {
     await manager.stop();

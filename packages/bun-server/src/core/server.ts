@@ -75,92 +75,105 @@ export class BunServer {
     this.shutdownPromise = undefined;
     this.shutdownResolve = undefined;
 
-    this.server = Bun.serve({
-      port: this.options.port ?? 3000,
-      hostname: this.options.hostname,
-      reusePort: this.options.reusePort,
-      fetch: (
-        request: Request,
-        server: Server<WebSocketConnectionData>,
-      ): Response | Promise<Response> | undefined => {
-        // 如果正在关闭，拒绝新请求
-        if (this.isShuttingDown) {
-          return new Response("Server is shutting down", { status: 503 });
+    const fetchHandler = (
+      request: Request,
+      server: Server<WebSocketConnectionData>,
+    ): Response | Promise<Response> | undefined => {
+      if (this.isShuttingDown) {
+        return new Response("Server is shutting down", { status: 503 });
+      }
+
+      const upgradeHeader = request.headers.get("upgrade");
+      if (
+        this.options.websocketRegistry &&
+        upgradeHeader &&
+        upgradeHeader.toLowerCase() === "websocket"
+      ) {
+        const url = new URL(request.url);
+        if (!this.options.websocketRegistry.hasGateway(url.pathname)) {
+          return new Response("WebSocket gateway not found", { status: 404 });
         }
-
-        const upgradeHeader = request.headers.get("upgrade");
-        if (
-          this.options.websocketRegistry &&
-          upgradeHeader &&
-          upgradeHeader.toLowerCase() === "websocket"
-        ) {
-          const url = new URL(request.url);
-          // 检查是否有匹配的网关（支持动态路径匹配）
-          if (!this.options.websocketRegistry.hasGateway(url.pathname)) {
-            return new Response("WebSocket gateway not found", { status: 404 });
-          }
-          // 创建 Context 以便在 WebSocket 处理器中使用
-          const context = new Context(request);
-          // 创建 Bun 兼容的 URLSearchParams（需要 toJSON 方法）
-          const queryParams = new URLSearchParams(url.searchParams);
-          const upgraded = server.upgrade(request, {
-            data: {
-              path: url.pathname,
-              query: queryParams,
-              context,
-            },
-          });
-          if (upgraded) {
-            return undefined;
-          }
-          return new Response("WebSocket upgrade failed", { status: 400 });
-        }
-
-        // 增加活跃请求计数
-        this.activeRequests++;
-
         const context = new Context(request);
-        const responsePromise = this.options.fetch(context);
-
-        // 处理响应完成后的清理
-        if (responsePromise instanceof Promise) {
-          responsePromise
-            .finally(() => {
-              this.activeRequests--;
-              // 如果正在关闭且没有活跃请求，触发关闭完成
-              if (this.isShuttingDown && this.activeRequests === 0 && this.shutdownResolve) {
-                this.shutdownResolve();
-              }
-            })
-            .catch(() => {
-              // 错误已在中间件中处理，这里只负责计数
-            });
-        } else {
-          // 同步响应
-          this.activeRequests--;
-          if (this.isShuttingDown && this.activeRequests === 0 && this.shutdownResolve) {
-            this.shutdownResolve();
-          }
+        const queryParams = new URLSearchParams(url.searchParams);
+        const upgraded = server.upgrade(request, {
+          data: {
+            path: url.pathname,
+            query: queryParams,
+            context,
+          },
+        });
+        if (upgraded) {
+          return undefined;
         }
+        return new Response("WebSocket upgrade failed", { status: 400 });
+      }
 
-        return responsePromise;
-      },
-      websocket: {
-        open: async (ws) => {
-          await this.options.websocketRegistry?.handleOpen(ws);
-        },
-        message: async (ws, message) => {
-          await this.options.websocketRegistry?.handleMessage(ws, message);
-        },
-        close: async (ws, code, reason) => {
-          await this.options.websocketRegistry?.handleClose(ws, code, reason);
-        },
-      },
-    });
+      this.activeRequests++;
 
-    const hostname = this.options.hostname ?? "localhost";
-    const port = this.server.port;
-    logger.info(`Server started at http://${hostname}:${port}`);
+      const context = new Context(request);
+      const responsePromise = this.options.fetch(context);
+
+      if (responsePromise instanceof Promise) {
+        responsePromise
+          .finally(() => {
+            this.activeRequests--;
+            if (this.isShuttingDown && this.activeRequests === 0 && this.shutdownResolve) {
+              this.shutdownResolve();
+            }
+          })
+          .catch(() => {
+            // errors handled by middleware pipeline
+          });
+      } else {
+        this.activeRequests--;
+        if (this.isShuttingDown && this.activeRequests === 0 && this.shutdownResolve) {
+          this.shutdownResolve();
+        }
+      }
+
+      return responsePromise;
+    };
+
+    const websocketHandlers = {
+      open: async (ws: import("bun").ServerWebSocket<WebSocketConnectionData>) => {
+        await this.options.websocketRegistry?.handleOpen(ws);
+      },
+      message: async (ws: import("bun").ServerWebSocket<WebSocketConnectionData>, message: string | Buffer) => {
+        await this.options.websocketRegistry?.handleMessage(ws, message);
+      },
+      close: async (ws: import("bun").ServerWebSocket<WebSocketConnectionData>, code: number, reason: string) => {
+        await this.options.websocketRegistry?.handleClose(ws, code, reason);
+      },
+    };
+
+    const socketFile = process.env.CLUSTER_SOCKET_FILE;
+
+    if (socketFile) {
+      // Unix socket mode for cluster proxy workers
+      this.server = Bun.serve({
+        unix: socketFile,
+        fetch: fetchHandler,
+        websocket: websocketHandlers,
+      });
+      logger.info(`Server started at unix://${socketFile}`);
+    } else {
+      this.server = Bun.serve({
+        port: this.options.port ?? 3000,
+        hostname: this.options.hostname,
+        reusePort: this.options.reusePort,
+        fetch: fetchHandler,
+        websocket: websocketHandlers,
+      });
+      const hostname = this.options.hostname ?? "localhost";
+      const port = this.server.port;
+      logger.info(`Server started at http://${hostname}:${port}`);
+
+      // In proxy cluster mode (TCP fallback), report port to master
+      const portFile = process.env.CLUSTER_PORT_FILE;
+      if (portFile) {
+        Bun.write(portFile, String(port));
+      }
+    }
   }
 
   /**

@@ -1,7 +1,7 @@
 export { Application, type ApplicationOptions } from './core/application';
 export { applyDecorators } from './core/apply-decorators';
 export { BunServer, type ServerOptions } from './core/server';
-export { ClusterManager, type ClusterOptions } from './core/cluster';
+export { ClusterManager, type ClusterOptions, type ClusterMode } from './core/cluster';
 export { Context } from './core/context';
 export { ContextService, CONTEXT_SERVICE_TOKEN, contextStore } from './core/context-service';
 export { Route, Router, RouteRegistry } from './router';
