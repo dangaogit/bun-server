@@ -6,6 +6,7 @@
     "bench:di": "bun di.bench.ts",
     "bench:wrk": "bun run-wrk.ts",
     "bench:wrk-cluster": "bun run-wrk-cluster.ts",
+    "bench:wrk-worker": "bun run-wrk-worker.ts",
     "bench:compare": "bun run-wrk-compare.ts"
   },
   "dependencies": {
