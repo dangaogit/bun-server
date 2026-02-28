@@ -7,7 +7,8 @@
     "bench:wrk": "bun run-wrk.ts",
     "bench:wrk-cluster": "bun run-wrk-cluster.ts",
     "bench:wrk-worker": "bun run-wrk-worker.ts",
-    "bench:compare": "bun run-wrk-compare.ts"
+    "bench:compare": "bun run-wrk-compare.ts",
+    "bench:wrk-nginx": "bun run-wrk-nginx.ts"
   },
   "dependencies": {
     "@dangao/bun-server": "workspace:^",

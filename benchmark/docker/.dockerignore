@@ -1,0 +1,9 @@
+.git
+node_modules
+.husky
+.cursor
+.changelog
+.roadmap
+benchmark/docker
+benchmark/REPORT*.md
+**/.DS_Store
