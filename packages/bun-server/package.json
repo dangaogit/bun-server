@@ -1,6 +1,6 @@
 {
   "name": "@dangao/bun-server",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -33,7 +33,7 @@
   ],
   "author": "dangaogit",
   "license": "MIT",
-  "homepage": "https://github.com/dangaogit/bun-server",
+  "homepage": "https://bun-server.dangaogm.workers.dev/",
   "bugs": {
     "url": "https://github.com/dangaogit/bun-server/issues"
   },
