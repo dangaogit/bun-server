@@ -109,4 +109,113 @@ const quickStartHighlighted = hljs.highlight(quickStartCode, { language: 'typesc
       </div>
     </div>
   </section>
+
+  <!-- Agent Skills -->
+  <section class="border-t border-zinc-800 py-20">
+    <div class="mx-auto max-w-4xl px-6">
+      <div class="mb-10 text-center">
+        <div class="mb-4 inline-flex items-center rounded-full border border-brand-500/30 bg-brand-500/10 px-4 py-1.5 text-sm font-medium text-brand-300">
+          <span class="mr-2">🤖</span>
+          AI-Assisted Development
+        </div>
+        <h2 class="text-3xl font-bold text-white">Agent Skills for Cursor</h2>
+        <p class="mt-3 text-zinc-400">
+          Install <code class="rounded bg-zinc-800 px-1.5 py-0.5 text-brand-300">bun-server-skills</code> to give your AI assistant deep, up-to-date context about the entire framework — DI, modules, middleware, AI stack, and more.
+        </p>
+      </div>
+
+      <!-- What's included -->
+      <div class="mb-10 grid gap-4 sm:grid-cols-3">
+        {[
+          ['📖', 'Reference Docs', '24 detailed guides covering every module and pattern'],
+          ['🔄', 'Always Current', 'Versioned alongside @dangao/bun-server releases'],
+          ['⚡', 'Instant Context', 'Auto-triggered in Cursor whenever you work on Bun Server'],
+        ].map(([icon, title, desc]) => (
+          <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-5 text-center">
+            <div class="mb-2 text-2xl">{icon}</div>
+            <div class="mb-1 font-semibold text-white">{title}</div>
+            <div class="text-sm text-zinc-400">{desc}</div>
+          </div>
+        ))}
+      </div>
+
+      <!-- Install command -->
+      <div
+        x-data="{ tab: 'bun' }"
+        class="rounded-xl border border-zinc-700 bg-zinc-900 p-6"
+      >
+        <p class="mb-4 text-sm font-semibold text-zinc-300">Install for Cursor</p>
+
+        <!-- Tab bar -->
+        <div class="mb-4 flex flex-wrap gap-2" id="skills-tabs">
+          {[
+            { id: 'bun',  label: 'bun' },
+            { id: 'npx',  label: 'npx' },
+            { id: 'pnpm', label: 'pnpm' },
+            { id: 'yarn', label: 'yarn' },
+            { id: 'git',  label: 'git' },
+          ].map(({ id, label }) => (
+            <button
+              data-tab={id}
+              onclick={`document.querySelectorAll('[data-tab]').forEach(b=>b.classList.remove('border-brand-500','text-brand-300'));this.classList.add('border-brand-500','text-brand-300');document.querySelectorAll('[data-panel]').forEach(p=>p.classList.add('hidden'));document.querySelector('[data-panel="${id}"]').classList.remove('hidden')`}
+              class={`rounded-lg border px-4 py-1.5 text-sm font-medium transition-colors ${id === 'bun' ? 'border-brand-500 text-brand-300' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <!-- Panels -->
+        <div class="space-y-2 font-mono text-sm" data-panel="bun">
+          <div class="flex items-center gap-3 overflow-x-auto rounded-lg bg-zinc-800 px-4 py-2.5">
+            <span class="shrink-0 text-zinc-500">$</span>
+            <span class="text-brand-300 whitespace-nowrap">bunx skills add https://github.com/dangaogit/bun-server-skills --skill bun-server-best-practices</span>
+          </div>
+        </div>
+
+        <div class="hidden space-y-2 font-mono text-sm" data-panel="npx">
+          <div class="flex items-center gap-3 overflow-x-auto rounded-lg bg-zinc-800 px-4 py-2.5">
+            <span class="shrink-0 text-zinc-500">$</span>
+            <span class="text-brand-300 whitespace-nowrap">npx skills add https://github.com/dangaogit/bun-server-skills --skill bun-server-best-practices</span>
+          </div>
+        </div>
+
+        <div class="hidden space-y-2 font-mono text-sm" data-panel="pnpm">
+          <div class="flex items-center gap-3 overflow-x-auto rounded-lg bg-zinc-800 px-4 py-2.5">
+            <span class="shrink-0 text-zinc-500">$</span>
+            <span class="text-brand-300 whitespace-nowrap">pnpm dlx skills add https://github.com/dangaogit/bun-server-skills --skill bun-server-best-practices</span>
+          </div>
+        </div>
+
+        <div class="hidden space-y-2 font-mono text-sm" data-panel="yarn">
+          <div class="flex items-center gap-3 overflow-x-auto rounded-lg bg-zinc-800 px-4 py-2.5">
+            <span class="shrink-0 text-zinc-500">$</span>
+            <span class="text-brand-300 whitespace-nowrap">yarn dlx skills add https://github.com/dangaogit/bun-server-skills --skill bun-server-best-practices</span>
+          </div>
+        </div>
+
+        <div class="hidden space-y-2 font-mono text-sm" data-panel="git">
+          <div class="flex items-center gap-3 overflow-x-auto rounded-lg bg-zinc-800 px-4 py-2.5">
+            <span class="shrink-0 text-zinc-500">$</span>
+            <span class="text-brand-300 whitespace-nowrap">mkdir -p ~/.cursor/skills</span>
+          </div>
+          <div class="flex items-center gap-3 overflow-x-auto rounded-lg bg-zinc-800 px-4 py-2.5">
+            <span class="shrink-0 text-zinc-500">$</span>
+            <span class="text-brand-300 whitespace-nowrap">git clone https://github.com/dangaogit/bun-server-skills.git ~/.cursor/skills/bun-server-skills</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 text-center">
+        <a
+          href="https://github.com/dangaogit/bun-server-skills"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-6 py-3 font-semibold text-zinc-200 hover:border-brand-500 hover:text-brand-300 transition-colors"
+        >
+          View bun-server-skills on GitHub →
+        </a>
+      </div>
+    </div>
+  </section>
 </BaseLayout>

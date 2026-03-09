@@ -1,6 +1,6 @@
 # Bun Server
 
-[![bun](https://img.shields.io/badge/Bun-1.3%2B-000?logo=bun&logoColor=fff)](https://bun.sh/)
+[![bun](https://img.shields.io/badge/Bun-1.3.10%2B-000?logo=bun&logoColor=fff)](https://bun.sh/)
 [![typescript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=fff)](https://www.typescriptlang.org/)
 [![license](https://img.shields.io/badge/license-MIT-blue)](#许可证)
 
@@ -210,7 +210,7 @@ Container
 
 ### 环境要求
 
-- Bun ≥ `1.3.3`
+- Bun >= `1.3.10`
 - Node.js / npm 只在极少数脚手架场景使用
 
 ### TypeScript 配置 ⚠️
@@ -563,15 +563,26 @@ macOS/Windows 会静默忽略。
   - `docs/zh/request-lifecycle.md` - 请求生命周期指南
 - **英文文档**：位于 `docs/`
   目录，为默认文档；如果缺失内容，请优先参考英文版本。
-- **实践问题库**：位于 `skills/` 目录
-  - 记录开发过程中遇到的实际问题、错误和解决方案
-  - 按类别组织（events、di、modules、common）
-  - 每个问题包含完整的错误信息、原因分析和修复步骤
-  - [查看实践问题库](./skills/README.md)
+- **Skills 与问题排查**：
+  - 仓库内问题排查案例：[`skills/`](./skills/README.md)
+  - Agent Skills 仓库：[`bun-server-skills`](https://github.com/dangaogit/bun-server-skills)
+  - Cursor 安装方式（任选一种）：
+    ```bash
+    # bun
+    bunx skills add https://github.com/dangaogit/bun-server-skills --skill bun-server-best-practices
+    # npx
+    npx skills add https://github.com/dangaogit/bun-server-skills --skill bun-server-best-practices
+    # pnpm
+    pnpm dlx skills add https://github.com/dangaogit/bun-server-skills --skill bun-server-best-practices
+    # yarn
+    yarn dlx skills add https://github.com/dangaogit/bun-server-skills --skill bun-server-best-practices
+    # git（手动）
+    mkdir -p ~/.cursor/skills && git clone https://github.com/dangaogit/bun-server-skills.git ~/.cursor/skills/bun-server-skills
+    ```
 
 ## 路线图
 
-详细路线图、阶段目标与完成情况请查阅 [`.roadmap/`](./.roadmap/) 目录。
+发布历史与变更日志请查阅 [`.changelog/`](./.changelog/) 目录。
 
 ## AI 辅助开发
 
