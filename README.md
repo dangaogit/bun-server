@@ -582,7 +582,7 @@ macOS/Windows silently ignore it.
 
 ## Roadmap
 
-Detailed milestones and history are tracked in the [`.roadmap/`](./.roadmap/)
+Release history and changelogs are tracked in the [`.changelog/`](./.changelog/)
 directory.
 
 ## AI-Assisted Development

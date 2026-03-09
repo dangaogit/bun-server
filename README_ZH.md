@@ -582,7 +582,7 @@ macOS/Windows 会静默忽略。
 
 ## 路线图
 
-详细路线图、阶段目标与完成情况请查阅 [`.roadmap/`](./.roadmap/) 目录。
+发布历史与变更日志请查阅 [`.changelog/`](./.changelog/) 目录。
 
 ## AI 辅助开发
 
