@@ -1,0 +1,95 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const versions = [
+  {
+    version: 'v2.0.0',
+    date: '2026-03',
+    tag: 'latest',
+    highlight: true,
+    changes: [
+      { type: 'feat', text: 'AiModule — LLM unified access (OpenAI, Claude, Gemini, Ollama) + Tool Calling + streaming' },
+      { type: 'feat', text: 'ConversationModule — Multi-turn conversation memory (Memory/Redis/Database stores)' },
+      { type: 'feat', text: 'PromptModule — Prompt template management with versioning and variable interpolation' },
+      { type: 'feat', text: 'EmbeddingModule — Text embedding generation (OpenAI, Ollama)' },
+      { type: 'feat', text: 'VectorStoreModule — Vector similarity search (Memory, Pinecone, Qdrant)' },
+      { type: 'feat', text: 'RagModule — Full RAG pipeline with TextChunker and MarkdownChunker' },
+      { type: 'feat', text: 'McpModule — MCP protocol server (JSON-RPC 2.0, SSE transport)' },
+      { type: 'feat', text: 'AiGuardModule — PII detection, prompt injection detection, content moderation' },
+      { type: 'feat', text: 'AI Platform MVP demo — Dify-comparable AI middleware platform example' },
+      { type: 'feat', text: 'packages/web — Promotional portal site (Astro + Tailwind CSS)' },
+      { type: 'docs', text: 'Comprehensive docs/ai.md covering all 9 AI modules' },
+    ],
+  },
+  {
+    version: 'v1.9.0',
+    date: '2025-11',
+    tag: '',
+    highlight: false,
+    changes: [
+      { type: 'feat', text: 'EventModule — @OnEvent() auto-scans at app.listen(), no manual initializeListeners() needed' },
+      { type: 'feat', text: 'Guards system — custom guards with @UseGuards() decorator' },
+      { type: 'fix', text: 'Various bug fixes and performance improvements' },
+    ],
+  },
+  {
+    version: 'v1.8.0',
+    date: '2025-08',
+    tag: '',
+    highlight: false,
+    changes: [
+      { type: 'feat', text: 'DashboardModule — embedded monitoring Web UI' },
+      { type: 'feat', text: 'DebugModule — HTTP request recording and replay' },
+      { type: 'feat', text: 'ClusterManager — zero-config multi-process clustering' },
+    ],
+  },
+];
+
+const typeColors: Record<string, string> = {
+  feat: 'text-brand-400 bg-brand-500/10',
+  fix: 'text-green-400 bg-green-500/10',
+  docs: 'text-blue-400 bg-blue-500/10',
+  chore: 'text-zinc-400 bg-zinc-800',
+};
+---
+
+<BaseLayout title="Changelog" description="Bun Server Framework release history">
+  <div class="mx-auto max-w-3xl px-6 py-12">
+    <h1 class="mb-12 text-4xl font-bold text-white">Changelog</h1>
+
+    <div class="space-y-12">
+      {versions.map((v) => (
+        <div>
+          <div class="mb-4 flex items-center gap-3">
+            <h2 class:list={[
+              'text-2xl font-bold',
+              v.highlight ? 'text-brand-300' : 'text-white',
+            ]}>
+              {v.version}
+            </h2>
+            {v.tag && (
+              <span class="rounded-full bg-brand-500/20 px-3 py-0.5 text-xs font-semibold text-brand-300">
+                {v.tag}
+              </span>
+            )}
+            <span class="text-sm text-zinc-500">{v.date}</span>
+          </div>
+
+          <ul class="space-y-2">
+            {v.changes.map((change) => (
+              <li class="flex items-start gap-3">
+                <span class:list={[
+                  'mt-0.5 shrink-0 rounded px-1.5 py-0.5 font-mono text-xs font-semibold',
+                  typeColors[change.type] ?? 'text-zinc-400 bg-zinc-800',
+                ]}>
+                  {change.type}
+                </span>
+                <span class="text-sm text-zinc-300">{change.text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </div>
+</BaseLayout>

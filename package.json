@@ -9,7 +9,9 @@
     "prepare": "git config core.hooksPath .husky",
     "build": "bun run build:deps && bun run build:server",
     "build:deps": "bun run --filter '@dangao/logsmith' build && bun run --filter '@dangao/nacos-client' build",
-    "build:server": "bun run --filter '@dangao/bun-server' build"
+    "build:server": "bun run --filter '@dangao/bun-server' build",
+    "build:web": "bun run --filter '@dangao/bun-server-web' build",
+    "dev:web": "bun run --filter '@dangao/bun-server-web' dev"
   },
   "keywords": [],
   "author": "dangaogit",

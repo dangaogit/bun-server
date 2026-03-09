@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="bun-server">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b0d10" />
+      <stop offset="100%" stop-color="#121722" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff9b3f" />
+      <stop offset="100%" stop-color="#ed7c18" />
+    </linearGradient>
+  </defs>
+
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="url(#bg)" />
+
+  <path
+    d="M22 16h14c5 0 9 4 9 9 0 4-3 8-7 9 4 1 7 5 7 9 0 5-4 9-9 9H22z"
+    fill="none"
+    stroke="url(#accent)"
+    stroke-width="5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <path d="M31 21l-6 11h5l-3 11 10-14h-5l2-8z" fill="#f9fbff" />
+</svg>
