@@ -1,6 +1,6 @@
 # Bun Server
 
-[![bun](https://img.shields.io/badge/Bun-1.3%2B-000?logo=bun&logoColor=fff)](https://bun.sh/)
+[![bun](https://img.shields.io/badge/Bun-1.3.10%2B-000?logo=bun&logoColor=fff)](https://bun.sh/)
 [![typescript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=fff)](https://www.typescriptlang.org/)
 [![license](https://img.shields.io/badge/license-MIT-blue)](#license)
 
@@ -212,7 +212,7 @@ For detailed lifecycle documentation, see
 
 ### Requirements
 
-- Bun ≥ `1.3.3`
+- Bun >= `1.3.10`
 
 ### TypeScript Configuration ⚠️
 
@@ -563,11 +563,22 @@ macOS/Windows silently ignore it.
   `docs/error-handling.md`, `docs/request-lifecycle.md`.
 - **Chinese**: mirrored under `docs/zh/`. If something is missing, please fall
   back to the English source.
-- **Skills & Troubleshooting**: `skills/` directory
-  - Real-world problems encountered during development with solutions
-  - Organized by category (events, di, modules, common)
-  - Each issue includes complete error info, root cause analysis, and fix steps
-  - [View Skills Repository](./skills/README.md)
+- **Skills & Troubleshooting**:
+  - In-repo troubleshooting cases: [`skills/`](./skills/README.md)
+  - Agent skills repository: [`bun-server-skills`](https://github.com/dangaogit/bun-server-skills)
+  - Install for Cursor (pick one):
+    ```bash
+    # bun
+    bunx skills add https://github.com/dangaogit/bun-server-skills --skill bun-server-best-practices
+    # npx
+    npx skills add https://github.com/dangaogit/bun-server-skills --skill bun-server-best-practices
+    # pnpm
+    pnpm dlx skills add https://github.com/dangaogit/bun-server-skills --skill bun-server-best-practices
+    # yarn
+    yarn dlx skills add https://github.com/dangaogit/bun-server-skills --skill bun-server-best-practices
+    # git (manual)
+    mkdir -p ~/.cursor/skills && git clone https://github.com/dangaogit/bun-server-skills.git ~/.cursor/skills/bun-server-skills
+    ```
 
 ## Roadmap
 
