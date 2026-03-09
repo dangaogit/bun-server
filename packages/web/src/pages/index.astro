@@ -1,0 +1,112 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import FeatureGrid from '../components/FeatureGrid.astro';
+import ModuleShowcase from '../components/ModuleShowcase.astro';
+import hljs from 'highlight.js';
+
+const quickStartCode = `import {
+  Application, Controller, Module,
+  Injectable, Inject, POST, Body,
+  AiModule, AiService, OllamaProvider, AI_SERVICE_TOKEN,
+} from '@dangao/bun-server';
+
+AiModule.forRoot({
+  providers: [{ name: 'ollama', provider: OllamaProvider, config: {}, default: true }],
+});
+
+@Injectable()
+class ChatService {
+  constructor(@Inject(AI_SERVICE_TOKEN) private ai: AiService) {}
+  async chat(msg: string) {
+    return this.ai.complete({ messages: [{ role: 'user', content: msg }] });
+  }
+}
+
+@Controller('/chat')
+class ChatController {
+  constructor(private svc: ChatService) {}
+  @POST('/') async chat(@Body() b: { message: string }) {
+    return this.svc.chat(b.message);
+  }
+}
+
+@Module({ imports: [AiModule], controllers: [ChatController], providers: [ChatService] })
+class AppModule {}
+
+const app = new Application({ port: 3000 });
+app.registerModule(AppModule);
+app.listen();`;
+
+const quickStartHighlighted = hljs.highlight(quickStartCode, { language: 'typescript' }).value;
+---
+
+<BaseLayout
+  title="Bun Server Framework — High-Performance AI-Ready Web Framework"
+  description="Decorator-driven DI web framework for Bun Runtime with 9 official AI modules. Build production-grade AI applications at Bun speed."
+>
+  <Hero />
+  <FeatureGrid />
+  <ModuleShowcase />
+
+  <!-- Quick Start Code Example -->
+  <section class="border-t border-zinc-800 py-20">
+    <div class="mx-auto max-w-4xl px-6">
+      <div class="mb-10 text-center">
+        <h2 class="text-3xl font-bold text-white">Quick Start</h2>
+        <p class="mt-3 text-zinc-400">From zero to AI chat API in 30 lines</p>
+      </div>
+
+      <div class="rounded-xl border border-zinc-700 bg-zinc-900 p-6">
+        <div class="mb-3 flex items-center gap-2 text-sm text-zinc-500">
+          <span class="h-3 w-3 rounded-full bg-red-500"></span>
+          <span class="h-3 w-3 rounded-full bg-yellow-500"></span>
+          <span class="h-3 w-3 rounded-full bg-green-500"></span>
+          <span class="ml-2">app.ts</span>
+        </div>
+        <pre class="overflow-x-auto text-sm"><code class="hljs language-typescript" set:html={quickStartHighlighted} /></pre>
+      </div>
+
+      <div class="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center">
+        <a href="/docs/guide" class="rounded-xl bg-brand-500 px-8 py-3 text-center font-semibold text-white hover:bg-brand-400 transition-colors">
+          Full Documentation
+        </a>
+        <a href="/examples/" class="rounded-xl border border-zinc-700 px-8 py-3 text-center font-semibold text-zinc-200 hover:border-brand-500 transition-colors">
+          See All Examples
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Module Ecosystem Summary -->
+  <section class="border-t border-zinc-800 py-20">
+    <div class="mx-auto max-w-7xl px-6">
+      <h2 class="mb-10 text-center text-3xl font-bold text-white">Complete Module Ecosystem</h2>
+      <div class="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          ['Auth', 'JWT + OAuth2 + RBAC'],
+          ['Config', 'Type-safe config + Nacos'],
+          ['Database', 'SQLite/PG/MySQL + ORM'],
+          ['Cache', 'Memory + Redis stores'],
+          ['Queue', 'Async jobs + Cron'],
+          ['Session', 'Cookie-based sessions'],
+          ['Events', 'Event-driven architecture'],
+          ['Metrics', 'Prometheus + Health checks'],
+          ['Swagger', 'Auto-generated API docs'],
+          ['Security', 'AuthManager + Guards'],
+          ['WebSocket', 'Decorator-based gateways'],
+          ['Microservice', 'Nacos + Circuit breaker'],
+          ['Dashboard', 'Live monitoring UI'],
+          ['Debug', 'Request recording + replay'],
+          ['Testing', 'Isolated test modules'],
+          ['Client', 'Type-safe API clients'],
+        ].map(([name, desc]) => (
+          <div class="rounded-lg border border-zinc-800 px-4 py-3">
+            <span class="font-semibold text-zinc-200">{name}</span>
+            <span class="ml-2 text-zinc-500">{desc}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+</BaseLayout>

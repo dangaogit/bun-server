@@ -63,6 +63,38 @@
 - 🖥️ **Zero-config cluster** — `ClusterManager` auto-spawns reusePort
   workers matching CPU core count.
 
+## AI Modules (v2.0.0)
+
+9 official AI modules for building production-grade LLM applications. All providers use Bun's native `fetch()` — zero external SDK dependencies.
+
+| Module | Purpose |
+|--------|---------|
+| `AiModule` | LLM unified access (OpenAI, Claude, Gemini, Ollama) + Tool Calling + streaming |
+| `ConversationModule` | Multi-turn conversation memory (Memory/Redis/Database stores) |
+| `PromptModule` | Reusable prompt templates with `{{variable}}` interpolation and versioning |
+| `EmbeddingModule` | Text embedding generation (OpenAI, Ollama) |
+| `VectorStoreModule` | Vector similarity search (Memory, Pinecone, Qdrant) |
+| `RagModule` | Full RAG pipeline: ingest → chunk → embed → retrieve |
+| `McpModule` | MCP protocol server (JSON-RPC 2.0, SSE transport) |
+| `AiGuardModule` | PII detection, prompt injection detection, content moderation |
+
+```typescript
+import { AiModule, OllamaProvider, AI_SERVICE_TOKEN, AiService } from '@dangao/bun-server';
+
+AiModule.forRoot({
+  providers: [{ name: 'ollama', provider: OllamaProvider, config: {}, default: true }],
+  fallback: true,
+});
+
+@Injectable()
+class ChatService {
+  constructor(@Inject(AI_SERVICE_TOKEN) private ai: AiService) {}
+  chat(message: string) { return this.ai.complete({ messages: [{ role: 'user', content: message }] }); }
+}
+```
+
+See [docs/ai.md](docs/ai.md) for the complete AI modules guide and [examples/05-ai/](examples/05-ai/) for working examples including the [AI Platform MVP Demo](examples/05-ai/ai-platform-mvp/).
+
 ## Architecture
 
 ### Request Lifecycle

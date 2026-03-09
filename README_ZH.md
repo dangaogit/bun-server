@@ -62,6 +62,38 @@
 - 🐛 **请求录制与重放**：`DebugModule` 使用环形缓冲区录制请求，提供调试 UI 和重放功能。
 - 🖥️ **零配置集群**：`ClusterManager` 自动按 CPU 核心数派生 reusePort 工作进程。
 
+## AI 模块（v2.0.0）
+
+9 个官方 AI 模块，提供构建 LLM 应用所需的完整基础设施。所有 Provider 通过 Bun 原生 `fetch()` 通信，零外部 SDK 依赖。
+
+| 模块 | 功能 |
+|------|------|
+| `AiModule` | LLM 统一接入（OpenAI、Claude、Gemini、Ollama）+ Tool Calling + 流式响应 |
+| `ConversationModule` | 多轮会话历史管理（Memory/Redis/Database 存储） |
+| `PromptModule` | 可复用 Prompt 模板，支持 `{{变量}}` 插值和版本管理 |
+| `EmbeddingModule` | 文本向量嵌入（OpenAI、Ollama） |
+| `VectorStoreModule` | 向量相似度搜索（Memory、Pinecone、Qdrant） |
+| `RagModule` | 完整 RAG 管道：摄取 → 分块 → 嵌入 → 检索 |
+| `McpModule` | MCP 协议服务端（JSON-RPC 2.0、SSE 传输） |
+| `AiGuardModule` | PII 脱敏、Prompt 注入检测、内容审核 |
+
+```typescript
+import { AiModule, OllamaProvider, AI_SERVICE_TOKEN, AiService } from '@dangao/bun-server';
+
+AiModule.forRoot({
+  providers: [{ name: 'ollama', provider: OllamaProvider, config: {}, default: true }],
+  fallback: true,
+});
+
+@Injectable()
+class ChatService {
+  constructor(@Inject(AI_SERVICE_TOKEN) private ai: AiService) {}
+  chat(message: string) { return this.ai.complete({ messages: [{ role: 'user', content: message }] }); }
+}
+```
+
+详见 [docs/zh/ai.md](docs/zh/ai.md) 完整 AI 模块指南，以及 [examples/05-ai/](examples/05-ai/) 包含 [AI 中台 MVP Demo](examples/05-ai/ai-platform-mvp/) 在内的完整示例。
+
 ## 架构总览
 
 ### 请求生命周期

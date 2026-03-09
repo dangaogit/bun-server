@@ -1,0 +1,95 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+
+const versions = [
+  {
+    version: 'v2.0.0',
+    date: '2026-03',
+    tag: 'latest',
+    highlight: true,
+    changes: [
+      { type: 'feat', text: 'AiModule — 统一 LLM 接入（OpenAI、Claude、Gemini、Ollama）+ Tool Calling + 流式响应' },
+      { type: 'feat', text: 'ConversationModule — 多轮会话记忆（Memory/Redis/Database 存储）' },
+      { type: 'feat', text: 'PromptModule — 支持变量插值与版本管理的 Prompt 模板系统' },
+      { type: 'feat', text: 'EmbeddingModule — 文本向量生成（OpenAI、Ollama）' },
+      { type: 'feat', text: 'VectorStoreModule — 向量相似检索（Memory、Pinecone、Qdrant）' },
+      { type: 'feat', text: 'RagModule — 完整 RAG 管道（TextChunker + MarkdownChunker）' },
+      { type: 'feat', text: 'McpModule — MCP 协议服务端（JSON-RPC 2.0，SSE 传输）' },
+      { type: 'feat', text: 'AiGuardModule — PII 检测、Prompt 注入检测、内容审核' },
+      { type: 'feat', text: 'AI 平台 MVP 示例 — 完整 AI 中台能力演示' },
+      { type: 'feat', text: 'packages/web — 宣传门户网站（Astro + Tailwind CSS）' },
+      { type: 'docs', text: '新增 docs/ai.md，完整覆盖 9 个 AI 官方模块' },
+    ],
+  },
+  {
+    version: 'v1.9.0',
+    date: '2025-11',
+    tag: '',
+    highlight: false,
+    changes: [
+      { type: 'feat', text: 'EventModule — @OnEvent() 在 app.listen() 自动扫描，无需手动 initializeListeners()' },
+      { type: 'feat', text: 'Guards 系统 — 支持 @UseGuards() 自定义守卫' },
+      { type: 'fix', text: '修复多项问题并提升性能' },
+    ],
+  },
+  {
+    version: 'v1.8.0',
+    date: '2025-08',
+    tag: '',
+    highlight: false,
+    changes: [
+      { type: 'feat', text: 'DashboardModule — 内置监控 Web UI' },
+      { type: 'feat', text: 'DebugModule — HTTP 请求录制与重放' },
+      { type: 'feat', text: 'ClusterManager — 零配置多进程集群' },
+    ],
+  },
+];
+
+const typeColors: Record<string, string> = {
+  feat: 'text-brand-400 bg-brand-500/10',
+  fix: 'text-green-400 bg-green-500/10',
+  docs: 'text-blue-400 bg-blue-500/10',
+  chore: 'text-zinc-400 bg-zinc-800',
+};
+---
+
+<BaseLayout title="更新日志" description="Bun Server Framework 版本历史">
+  <div class="mx-auto max-w-3xl px-6 py-12">
+    <h1 class="mb-12 text-4xl font-bold text-white">更新日志</h1>
+
+    <div class="space-y-12">
+      {versions.map((v) => (
+        <div>
+          <div class="mb-4 flex items-center gap-3">
+            <h2 class:list={[
+              'text-2xl font-bold',
+              v.highlight ? 'text-brand-300' : 'text-white',
+            ]}>
+              {v.version}
+            </h2>
+            {v.tag && (
+              <span class="rounded-full bg-brand-500/20 px-3 py-0.5 text-xs font-semibold text-brand-300">
+                {v.tag}
+              </span>
+            )}
+            <span class="text-sm text-zinc-500">{v.date}</span>
+          </div>
+
+          <ul class="space-y-2">
+            {v.changes.map((change) => (
+              <li class="flex items-start gap-3">
+                <span class:list={[
+                  'mt-0.5 shrink-0 rounded px-1.5 py-0.5 font-mono text-xs font-semibold',
+                  typeColors[change.type] ?? 'text-zinc-400 bg-zinc-800',
+                ]}>
+                  {change.type}
+                </span>
+                <span class="text-sm text-zinc-300">{change.text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </div>
+</BaseLayout>

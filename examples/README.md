@@ -13,7 +13,8 @@ examples/
 ├── 01-core-features/        # Core Features (Deep dive into framework)
 ├── 02-official-modules/     # Official Modules (Ready-to-use)
 ├── 03-advanced/             # Advanced (Extending the framework)
-└── 04-real-world/           # Real World (Production-ready examples)
+├── 04-real-world/           # Real World (Production-ready examples)
+└── 05-ai/                   # AI Modules (New in v2.0.0)
 ```
 
 ## 🚀 Quick Start
@@ -356,6 +357,34 @@ PORT=4000 bun run examples/basic-app.ts
 ```bash
 bun --inspect-brk examples/basic-app.ts
 ```
+
+---
+
+---
+
+### 05. AI Modules — v2.0.0
+
+**For**: Developers building AI-powered applications
+
+| File | Module | Core Demo | Port |
+|------|--------|-----------|------|
+| `01-basic-chat.ts` | AiModule | Multi-provider chat, Fallback chain | 3100 |
+| `02-streaming-chat.ts` | AiModule | SSE streaming responses | 3101 |
+| `03-tool-calling.ts` | AiModule + @AiTool() | Tool Calling loop | 3102 |
+| `04-conversation-memory.ts` | ConversationModule | Multi-turn conversation memory | 3103 |
+| `05-prompt-templates.ts` | PromptModule | Prompt template management | 3104 |
+| `06-rag-pipeline.ts` | Embedding + VectorStore + RagModule | Full RAG pipeline | 3105 |
+| `07-mcp-server.ts` | McpModule | MCP protocol server | 3106 |
+| `08-ai-guard.ts` | AiGuardModule | PII redaction + content moderation | 3107 |
+| `ai-platform-mvp/` | All AI modules | AI platform MVP | 3500 |
+
+**Quick start (requires Ollama)**:
+```bash
+ollama pull llama3.2
+bun run examples/05-ai/01-basic-chat.ts
+```
+
+See [05-ai/README.md](./05-ai/README.md) for full documentation.
 
 ---
 

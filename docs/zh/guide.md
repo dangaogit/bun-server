@@ -911,7 +911,46 @@ class OrderService {
 
 详细文档请参阅 [微服务架构](./microservice.md)。
 
-## 13. 测试建议
+## 13. AI 模块（v2.0.0）
+
+v2.0.0 起，框架内置 9 个官方 AI 模块，提供构建 LLM 应用所需的完整基础设施。
+
+### 快速配置
+
+```typescript
+import {
+  AiModule, OllamaProvider,
+  ConversationModule, MemoryConversationStore,
+  AiGuardModule,
+} from '@dangao/bun-server';
+
+AiModule.forRoot({
+  providers: [{ name: 'ollama', provider: OllamaProvider, config: {}, default: true }],
+  fallback: true,
+});
+
+ConversationModule.forRoot({ store: new MemoryConversationStore(), maxMessages: 50 });
+AiGuardModule.forRoot({ piiDetection: true, promptInjection: { sensitivity: 'medium' } });
+```
+
+详细文档请参阅 [AI 模块指南](./ai.md)。
+
+### AI 模块一览
+
+| 模块 | 功能 |
+|------|------|
+| `AiModule` | LLM Provider、流式响应、Tool Calling |
+| `ConversationModule` | 多轮会话历史管理 |
+| `PromptModule` | Prompt 模板 + 版本管理 |
+| `EmbeddingModule` | 文本向量嵌入 |
+| `VectorStoreModule` | 向量相似度搜索 |
+| `RagModule` | 完整 RAG 管道 |
+| `McpModule` | MCP 协议服务端 |
+| `AiGuardModule` | PII 检测、内容审核 |
+
+---
+
+## 14. 测试建议
 
 - 使用 `tests/utils/test-port.ts` 获取自增端口，避免本地冲突。
 - 在 `afterEach` 钩子中调用 `RouteRegistry.getInstance().clear()` 和

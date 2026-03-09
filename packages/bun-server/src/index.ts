@@ -562,3 +562,13 @@ export {
   type RegisteredListener,
 } from './events';
 
+// ── AI Modules (v2.0.0) ──────────────────────────────────────────────────────
+
+export * from './ai';
+export * from './conversation';
+export * from './prompt';
+export * from './embedding';
+export * from './vector-store';
+export * from './rag';
+export * from './mcp';
+export * from './ai-guard';

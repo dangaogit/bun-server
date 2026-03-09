@@ -36,7 +36,18 @@
     "start:microservice": "bun 03-advanced/microservice-app.ts",
     "start:database-test": "bun 04-real-world/database-test-app.ts",
     "start:perf": "bun 04-real-world/perf/app.ts",
-    "start:cluster": "bun 04-real-world/perf/cluster-app.ts"
+    "start:cluster": "bun 04-real-world/perf/cluster-app.ts",
+    "start:ai-basic-chat": "bun 05-ai/01-basic-chat.ts",
+    "start:ai-streaming": "bun 05-ai/02-streaming-chat.ts",
+    "start:ai-tools": "bun 05-ai/03-tool-calling.ts",
+    "start:ai-memory": "bun 05-ai/04-conversation-memory.ts",
+    "start:ai-prompts": "bun 05-ai/05-prompt-templates.ts",
+    "start:ai-rag": "bun 05-ai/06-rag-pipeline.ts",
+    "start:ai-mcp": "bun 05-ai/07-mcp-server.ts",
+    "start:ai-guard": "bun 05-ai/08-ai-guard.ts",
+    "start:ai-platform-mvp:api": "bun 05-ai/ai-platform-mvp/index.ts",
+    "start:ai-platform-mvp:web": "cd 05-ai/ai-platform-mvp/web && bun run dev",
+    "start:ai-platform-mvp": "bun run --parallel start:ai-platform-mvp:api start:ai-platform-mvp:web"
   },
   "dependencies": {
     "@dangao/bun-server": "workspace:^",

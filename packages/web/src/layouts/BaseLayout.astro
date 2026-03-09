@@ -1,0 +1,115 @@
+---
+import 'highlight.js/styles/github-dark.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = 'Bun Server Framework',
+  description = 'High-performance decorator-driven DI web framework for Bun Runtime with first-class AI support.',
+} = Astro.props;
+
+const pathname = Astro.url.pathname;
+const isZh = pathname.startsWith('/zh/');
+const docsHref = isZh ? '/zh/docs/' : '/docs/';
+const examplesHref = isZh ? '/zh/examples/' : '/examples/';
+const changelogHref = isZh ? '/zh/changelog/' : '/changelog/';
+const isEnDocsPath = pathname === '/docs' || pathname.startsWith('/docs/');
+const isZhDocsPath = pathname === '/zh/docs' || pathname.startsWith('/zh/docs/');
+const isEnExamplesPath = pathname === '/examples' || pathname.startsWith('/examples/');
+const isZhExamplesPath = pathname === '/zh/examples' || pathname.startsWith('/zh/examples/');
+const isEnChangelogPath = pathname === '/changelog' || pathname.startsWith('/changelog/');
+const isZhChangelogPath = pathname === '/zh/changelog' || pathname.startsWith('/zh/changelog/');
+const languageSwitchHref = (() => {
+  if (isEnDocsPath || isEnExamplesPath || isEnChangelogPath) {
+    return `/zh${pathname}`;
+  }
+  if (isZhDocsPath || isZhExamplesPath || isZhChangelogPath) {
+    return pathname.replace(/^\/zh/, '');
+  }
+  return isZh ? '/docs/' : '/zh/docs/';
+})();
+const languageSwitchLabel = isZh ? 'EN' : '中文';
+const navLabels = isZh
+  ? { docs: '文档', examples: '示例', changelog: '更新日志', github: 'GitHub' }
+  : { docs: 'Docs', examples: 'Examples', changelog: 'Changelog', github: 'GitHub' };
+---
+
+<!doctype html>
+<html lang={isZh ? 'zh-CN' : 'en'} class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content="/og-image.png" />
+    <title>{title} — @dangao/bun-server</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.svg" />
+    <link
+      rel="preload"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap"
+      as="style"
+      onload="this.onload=null;this.rel='stylesheet'"
+    />
+  </head>
+  <body class="bg-zinc-950 text-zinc-100 antialiased">
+    <header class="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
+      <nav class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+        <a href="/" class="flex items-center gap-2 text-lg font-bold text-white">
+          <img src="/favicon.svg" alt="bun-server logo" class="h-5 w-5" />
+          <span>bun-server</span>
+        </a>
+        <div class="hidden items-center gap-6 text-sm font-medium text-zinc-400 md:flex">
+          <a href={docsHref} class="hover:text-white transition-colors">{navLabels.docs}</a>
+          <a href={examplesHref} class="hover:text-white transition-colors">{navLabels.examples}</a>
+          <a href={changelogHref} class="hover:text-white transition-colors">{navLabels.changelog}</a>
+          <a
+            href={languageSwitchHref}
+            class="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
+          >
+            {languageSwitchLabel}
+          </a>
+          <a
+            href="https://github.com/dangaogit/bun-server"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="flex items-center gap-1 hover:text-white transition-colors"
+          >
+            {navLabels.github}
+          </a>
+          <a
+            href="https://www.npmjs.com/package/@dangao/bun-server"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="rounded-full bg-brand-500 px-4 py-1.5 text-white hover:bg-brand-400 transition-colors"
+          >
+            npm
+          </a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer class="border-t border-zinc-800 py-12 text-center text-sm text-zinc-500">
+      <p>
+        Built with
+        <span class="inline-flex items-center gap-1">
+          <img src="/favicon.svg" alt="bun-server logo" class="h-4 w-4" />
+          <span class="text-brand-400">bun-server</span>
+        </span>
+        ·
+        <a href="https://github.com/dangaogit/bun-server" class="hover:text-white transition-colors">
+          Open Source
+        </a>
+        · MIT License
+      </p>
+    </footer>
+  </body>
+</html>

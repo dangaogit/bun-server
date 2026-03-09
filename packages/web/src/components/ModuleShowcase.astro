@@ -1,0 +1,48 @@
+---
+const aiModules = [
+  { name: 'AiModule', icon: '🤖', desc: 'LLM providers (OpenAI, Claude, Gemini, Ollama) + Tool Calling + streaming' },
+  { name: 'ConversationModule', icon: '💬', desc: 'Multi-turn conversation memory with auto-trim and summarization' },
+  { name: 'PromptModule', icon: '📝', desc: 'Reusable prompt templates with {{variable}} interpolation and versioning' },
+  { name: 'EmbeddingModule', icon: '🔢', desc: 'Text embedding generation (OpenAI, Ollama) with batch support' },
+  { name: 'VectorStoreModule', icon: '🗂️', desc: 'Vector similarity search (Memory, Pinecone, Qdrant)' },
+  { name: 'RagModule', icon: '📚', desc: 'RAG pipeline: ingest docs → chunk → embed → retrieve context' },
+  { name: 'McpModule', icon: '🔌', desc: 'MCP protocol server (JSON-RPC 2.0, SSE transport) for AI tool clients' },
+  { name: 'AiGuardModule', icon: '🛡️', desc: 'PII detection, prompt injection detection, content moderation' },
+];
+---
+
+<section class="border-t border-zinc-800 py-20">
+  <div class="mx-auto max-w-7xl px-6">
+    <div class="mb-12 text-center">
+      <div class="mb-3 inline-block rounded-full bg-brand-500/10 px-4 py-1 text-sm font-medium text-brand-300">
+        New in v2.0.0
+      </div>
+      <h2 class="text-3xl font-bold text-white">9 Official AI Modules</h2>
+      <p class="mt-3 text-zinc-400">
+        Build production-grade AI applications. Zero external SDK dependencies — all providers use Bun's native fetch.
+      </p>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {aiModules.map((m) => (
+        <div class="rounded-xl border border-brand-900/50 bg-gradient-to-br from-brand-950/30 to-zinc-900 p-5 hover:border-brand-700/50 transition-all">
+          <div class="mb-2 flex items-center gap-2">
+            <span class="text-2xl">{m.icon}</span>
+            <h3 class="font-mono text-sm font-semibold text-brand-300">{m.name}</h3>
+          </div>
+          <p class="text-xs text-zinc-400">{m.desc}</p>
+        </div>
+      ))}
+    </div>
+
+    <div class="mt-10 text-center">
+      <a
+        href="/docs/ai"
+        class="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-8 py-3 font-semibold text-white hover:bg-brand-400 transition-colors"
+      >
+        Explore AI Modules
+        <span>→</span>
+      </a>
+    </div>
+  </div>
+</section>

@@ -82,7 +82,15 @@ packages/bun-server/
 │   ├── testing/           # 测试工具（PerformanceHarness, StressTester, TestingModule）
 │   ├── client/            # 客户端生成（ClientGenerator, createClient）
 │   ├── dashboard/         # 监控仪表盘（DashboardModule, DashboardService）
-│   └── debug/             # 调试模块（DebugModule, RequestRecorder）
+│   ├── debug/             # 调试模块（DebugModule, RequestRecorder）
+│   ├── ai/                # AI 模块（AiModule, AiService, LlmProvider, @AiTool()）v2.0
+│   ├── conversation/      # 会话记忆（ConversationModule, ConversationService）v2.0
+│   ├── prompt/            # Prompt 模板（PromptModule, PromptService）v2.0
+│   ├── embedding/         # 文本嵌入（EmbeddingModule, EmbeddingService）v2.0
+│   ├── vector-store/      # 向量存储（VectorStoreModule, MemoryVectorStore）v2.0
+│   ├── rag/               # RAG 管道（RagModule, RagService）v2.0
+│   ├── mcp/               # MCP 协议服务端（McpModule, McpServer）v2.0
+│   └── ai-guard/          # AI 安全防护（AiGuardModule, AiGuardService）v2.0
 ├── tests/                 # 测试文件（按模块组织）
 └── examples/              # 示例代码
 ```
@@ -251,6 +259,25 @@ SwaggerModule.forRoot({
 });
 ```
 
+#### AI 模块（v2.0.0）
+
+9 个官方 AI 模块，零外部 SDK 依赖，所有 Provider 通过 Bun 原生 `fetch()` 通信：
+
+```typescript
+import {
+  AiModule, OpenAIProvider, OllamaProvider,  // LLM 接入
+  ConversationModule, MemoryConversationStore,  // 会话记忆
+  PromptModule,                                  // Prompt 模板
+  EmbeddingModule, OpenAIEmbeddingProvider,      // 文本嵌入
+  VectorStoreModule, MemoryVectorStore,           // 向量存储
+  RagModule,                                      // RAG 管道
+  McpModule,                                      // MCP 服务端
+  AiGuardModule,                                  // 内容安全
+} from '@dangao/bun-server';
+```
+
+详见 `docs/ai.md` 完整 AI 模块指南和 `examples/05-ai/` 示例。
+
 ### 4. 中间件系统
 
 支持全局、控制器级和方法级中间件：
@@ -351,12 +378,21 @@ Application
     │   ├── HealthModule (健康检查)
     │   ├── DashboardModule (监控仪表盘)
     │   ├── DebugModule (调试与请求重放)
-    │   └── Microservice/ (微服务)
-    │       ├── ConfigCenterModule
-    │       ├── ServiceRegistryModule
-    │       ├── ServiceClient
-    │       ├── Governance (熔断/限流/重试)
-    │       └── Tracing (链路追踪)
+    │   ├── Microservice/ (微服务)
+    │   │   ├── ConfigCenterModule
+    │   │   ├── ServiceRegistryModule
+    │   │   ├── ServiceClient
+    │   │   ├── Governance (熔断/限流/重试)
+    │   │   └── Tracing (链路追踪)
+    │   └── AI Modules/ (v2.0.0)
+    │       ├── AiModule (LLM + Tool Calling)
+    │       ├── ConversationModule (会话记忆)
+    │       ├── PromptModule (Prompt 模板)
+    │       ├── EmbeddingModule (文本嵌入)
+    │       ├── VectorStoreModule (向量存储)
+    │       ├── RagModule (RAG 管道)
+    │       ├── McpModule (MCP 服务端)
+    │       └── AiGuardModule (内容安全)
     │
     ├── ControllerRegistry
     │   └── 所有模块的控制器

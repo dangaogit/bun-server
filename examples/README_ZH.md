@@ -12,7 +12,8 @@ examples/
 ├── 01-core-features/        # 核心功能（深入理解框架）
 ├── 02-official-modules/     # 官方模块（开箱即用）
 ├── 03-advanced/             # 高级功能（进阶技巧）
-└── 04-real-world/           # 实战案例（生产级示例）
+├── 04-real-world/           # 实战案例（生产级示例）
+└── 05-ai/                   # AI 功能（v2.0.0 新增）
 ```
 
 ## 🚀 快速开始
@@ -322,6 +323,34 @@ PORT=4000 bun run examples/basic-app.ts
 ```bash
 bun --inspect-brk examples/basic-app.ts
 ```
+
+---
+
+---
+
+### 05. AI 模块 (AI Modules) — v2.0.0
+
+**适合人群**：需要构建 AI 应用的开发者
+
+| 文件 | 模块 | 核心功能 | 端口 |
+|------|------|---------|------|
+| `01-basic-chat.ts` | AiModule | 多 Provider 对话、Fallback 链 | 3100 |
+| `02-streaming-chat.ts` | AiModule | SSE 流式响应 | 3101 |
+| `03-tool-calling.ts` | AiModule + @AiTool() | Tool Calling 循环 | 3102 |
+| `04-conversation-memory.ts` | ConversationModule | 多轮会话记忆 | 3103 |
+| `05-prompt-templates.ts` | PromptModule | Prompt 模板管理 | 3104 |
+| `06-rag-pipeline.ts` | EmbeddingModule + VectorStoreModule + RagModule | 完整 RAG 管道 | 3105 |
+| `07-mcp-server.ts` | McpModule | MCP 协议服务端 | 3106 |
+| `08-ai-guard.ts` | AiGuardModule | PII 脱敏 + 内容审核 | 3107 |
+| `ai-platform-mvp/` | 全部 AI 模块 | AI 中台 MVP | 3500 |
+
+**快速开始（需要 Ollama）**：
+```bash
+ollama pull llama3.2
+bun run examples/05-ai/01-basic-chat.ts
+```
+
+详见 [05-ai/README_ZH.md](./05-ai/README_ZH.md)
 
 ---
 
