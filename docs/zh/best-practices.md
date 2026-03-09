@@ -36,3 +36,46 @@
 - **可观测**：建议接入健康检查路由（GET `/health`）以及基础指标导出（如 Prometheus）。
 - **灰度发布**：合理配置中间件，使得灰度流量可按 Header/Token 进行分流。
 
+---
+
+## AI 模块最佳实践（v2.0.0）
+
+### 本地开发使用 Ollama（零费用）
+
+```typescript
+AiModule.forRoot({
+  providers: [
+    { name: 'ollama', provider: OllamaProvider, config: {}, default: true },
+    { name: 'openai', provider: OpenAIProvider, config: { apiKey: env.OPENAI_API_KEY! } },
+  ],
+  fallback: true,
+});
+```
+
+### 缓存 AI 响应降低费用
+
+```typescript
+const key = `ai:${hash(messages)}`;
+return cacheService.getOrSet(key, () => aiService.complete({ messages }), 300_000);
+```
+
+### 追踪 Token 用量
+
+```typescript
+const res = await aiService.complete({ messages });
+metricsService.increment('ai.tokens', res.usage.totalTokens);
+metricsService.gauge('ai.cost_usd', res.usage.estimatedCostUsd ?? 0);
+```
+
+### 生产环境必须检查输入
+
+```typescript
+const safeInput = await guardService.checkOrThrow(userMessage);
+```
+
+### RAG 分块策略
+
+- 纯文本 → `TextChunker`（chunkSize: 512，chunkOverlap: 50）
+- Markdown → `MarkdownChunker`（按标题分割）
+- topK 建议 3-5，minScore 建议 0.5
+

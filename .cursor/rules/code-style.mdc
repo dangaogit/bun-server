@@ -342,6 +342,22 @@ src/
 │   ├── controller.ts    # HealthController
 │   ├── health-module.ts  # HealthModule
 │   └── index.ts
+├── ai/                    # AI 模块（v2.0.0）
+│   ├── types.ts           # LlmProvider 接口 + Token
+│   ├── service.ts         # AiService
+│   ├── providers/         # OpenAI/Anthropic/Ollama/Google
+│   ├── tools/             # ToolRegistry, ToolExecutor
+│   ├── decorators.ts      # @AiTool()
+│   ├── errors.ts          # AI 错误类型
+│   ├── ai-module.ts       # AiModule
+│   └── index.ts
+├── conversation/          # 会话记忆（v2.0.0）
+├── prompt/                # Prompt 模板（v2.0.0）
+├── embedding/             # 文本嵌入（v2.0.0）
+├── vector-store/          # 向量存储（v2.0.0）
+├── rag/                   # RAG 管道（v2.0.0）
+├── mcp/                   # MCP 服务端（v2.0.0）
+└── ai-guard/              # AI 安全防护（v2.0.0）
 ```
 
 ## 错误处理

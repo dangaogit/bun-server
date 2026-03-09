@@ -85,3 +85,42 @@
 
 完成以上步骤即可平滑过渡到最新的 Bun Server Framework。若遇到破坏性变更，可查阅 changelog 或提交 issue。
 
+---
+
+## v1.x → v2.0 迁移说明
+
+**v2.0.0 完全向后兼容**，无破坏性变更。升级只需：
+
+```bash
+bun add @dangao/bun-server@2.0.0
+```
+
+### 新增内容
+
+v2.0.0 以**纯追加**方式新增 9 个官方 AI 模块：
+
+```typescript
+// 新增导入（按需使用，不影响现有代码）
+import {
+  AiModule,           // LLM 统一接入
+  ConversationModule, // 会话记忆
+  PromptModule,       // Prompt 模板
+  EmbeddingModule,    // 文本嵌入
+  VectorStoreModule,  // 向量存储
+  RagModule,          // RAG 管道
+  McpModule,          // MCP 服务端
+  AiGuardModule,      // 内容安全
+} from '@dangao/bun-server';
+```
+
+详细使用方法参阅 [AI 模块指南](./ai.md)。
+
+### 各版本破坏性变更说明
+
+| 版本 | 破坏性变更 |
+|------|----------|
+| v2.0.0 | 无 |
+| v1.9.0 | EventModule：`@OnEvent()` 监听类现在在 `app.listen()` 时自动扫描，删除手动调用 `EventModule.initializeListeners()` |
+| v1.8.0 | ClusterManager：`start()` 接受选项对象参数 |
+| v1.2.0 | `ContextService.getContext()` 返回 `Context \| undefined`，不再抛出异常 |
+

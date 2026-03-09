@@ -4,13 +4,15 @@ Covers key steps for building Bun Server applications from scratch.
 
 ## Request Lifecycle Overview
 
-Before diving into implementation details, it's helpful to understand how Bun Server processes requests:
+Before diving into implementation details, it's helpful to understand how Bun
+Server processes requests:
 
 ```
 HTTP Request → Middleware → Security → Router → Interceptors(Pre) → Validation → Handler → Interceptors(Post) → Exception Filter → HTTP Response
 ```
 
-For detailed lifecycle documentation, see [Request Lifecycle](./request-lifecycle.md).
+For detailed lifecycle documentation, see
+[Request Lifecycle](./request-lifecycle.md).
 
 ## 1. Initialize Application
 
@@ -48,8 +50,8 @@ Use `ContextService` to access the current request context in services:
 
 ```ts
 import {
-  ContextService,
   CONTEXT_SERVICE_TOKEN,
+  ContextService,
   Inject,
   Injectable,
 } from "@dangao/bun-server";
@@ -57,7 +59,8 @@ import {
 @Injectable()
 class UserService {
   public constructor(
-    @Inject(CONTEXT_SERVICE_TOKEN) private readonly contextService: ContextService,
+    @Inject(CONTEXT_SERVICE_TOKEN) private readonly contextService:
+      ContextService,
   ) {}
 
   public getCurrentUser() {
@@ -779,7 +782,8 @@ class UserController {
 
 ## 16. Guards
 
-Guards provide fine-grained access control for your routes. They execute after middleware and before interceptors, deciding whether a request should proceed.
+Guards provide fine-grained access control for your routes. They execute after
+middleware and before interceptors, deciding whether a request should proceed.
 
 ### Built-in Guards
 
@@ -848,17 +852,18 @@ For detailed documentation, see [Guards](./guards.md).
 
 ## 17. Event System
 
-The Event Module provides a powerful event-driven architecture for building loosely coupled applications.
+The Event Module provides a powerful event-driven architecture for building
+loosely coupled applications.
 
 ### Basic Usage
 
 ```ts
 import {
-  EventModule,
-  Injectable,
-  Inject,
-  OnEvent,
   EVENT_EMITTER_TOKEN,
+  EventModule,
+  Inject,
+  Injectable,
+  OnEvent,
 } from "@dangao/bun-server";
 import type { EventEmitter } from "@dangao/bun-server";
 
@@ -958,7 +963,9 @@ For detailed documentation, see [Event System](./events.md).
 
 ## 18. Global Modules
 
-Global modules allow you to share providers across all modules without explicit imports. This is useful for commonly used services like configuration, logging, or caching.
+Global modules allow you to share providers across all modules without explicit
+imports. This is useful for commonly used services like configuration, logging,
+or caching.
 
 ### Creating a Global Module
 
@@ -991,7 +998,8 @@ class GlobalConfigModule {}
 
 ### Using Global Module Exports
 
-Other modules can use the exported providers without importing the global module:
+Other modules can use the exported providers without importing the global
+module:
 
 ```ts
 @Injectable()
@@ -1014,7 +1022,8 @@ class UserModule {}
 
 ### Registering Global Modules
 
-Global modules must be registered with the application, typically in your root module:
+Global modules must be registered with the application, typically in your root
+module:
 
 ```ts
 @Module({
@@ -1033,10 +1042,14 @@ app.registerModule(AppModule);
 
 ### Key Points
 
-- **Single Registration**: Global modules only need to be registered once (usually in the root module)
-- **Automatic Availability**: Exports from global modules are available to all other modules
-- **Singleton Sharing**: Global module providers maintain singleton behavior across the application
-- **No Import Required**: Other modules don't need to add global modules to their `imports` array
+- **Single Registration**: Global modules only need to be registered once
+  (usually in the root module)
+- **Automatic Availability**: Exports from global modules are available to all
+  other modules
+- **Singleton Sharing**: Global module providers maintain singleton behavior
+  across the application
+- **No Import Required**: Other modules don't need to add global modules to
+  their `imports` array
 
 ### Use Cases
 
@@ -1077,14 +1090,16 @@ class AppService {
 
 ## 19. Microservice Support
 
-Bun Server provides comprehensive microservice architecture support, including configuration center, service registry, service client, governance, and observability.
+Bun Server provides comprehensive microservice architecture support, including
+configuration center, service registry, service client, governance, and
+observability.
 
 ### Configuration Center
 
 ```ts
 import {
-  ConfigCenterModule,
   CONFIG_CENTER_TOKEN,
+  ConfigCenterModule,
   Inject,
   Injectable,
 } from "@dangao/bun-server";
@@ -1119,10 +1134,7 @@ class ConfigService {
 ### Service Registry
 
 ```ts
-import {
-  RegisterService,
-  ServiceRegistryModule,
-} from "@dangao/bun-server";
+import { RegisterService, ServiceRegistryModule } from "@dangao/bun-server";
 
 ServiceRegistryModule.forRoot({
   provider: "nacos",
@@ -1149,11 +1161,7 @@ class MyService {
 ### Service Client
 
 ```ts
-import {
-  ServiceClient,
-  ServiceCall,
-  Injectable,
-} from "@dangao/bun-server";
+import { Injectable, ServiceCall, ServiceClient } from "@dangao/bun-server";
 
 @Injectable()
 class OrderService {
@@ -1169,7 +1177,62 @@ class OrderService {
 
 For detailed documentation, see [Microservice Architecture](./microservice.md).
 
-## 20. Testing Recommendations
+## 20. AI Modules (v2.0.0)
+
+Starting from v2.0.0, the framework includes 9 official AI modules for building
+LLM-powered applications.
+
+### Quick Setup
+
+```typescript
+import {
+  AiGuardModule, // Content safety
+  AiModule,
+  ConversationModule,
+  MemoryConversationStore, // Conversation memory
+  OllamaProvider, // LLM access
+  RagModule, // RAG pipeline
+} from "@dangao/bun-server";
+
+AiModule.forRoot({
+  providers: [{
+    name: "ollama",
+    provider: OllamaProvider,
+    config: {},
+    default: true,
+  }],
+  fallback: true,
+});
+
+ConversationModule.forRoot({
+  store: new MemoryConversationStore(),
+  maxMessages: 50,
+});
+AiGuardModule.forRoot({
+  piiDetection: true,
+  promptInjection: { sensitivity: "medium" },
+});
+```
+
+See [AI Modules Documentation](./ai.md) for the complete guide covering all 9
+modules.
+
+### AI Modules at a Glance
+
+| Module               | Purpose                                      |
+| -------------------- | -------------------------------------------- |
+| `AiModule`           | LLM providers, streaming, Tool Calling       |
+| `ConversationModule` | Multi-turn conversation memory               |
+| `PromptModule`       | Prompt templates with variable interpolation |
+| `EmbeddingModule`    | Text embedding generation                    |
+| `VectorStoreModule`  | Vector similarity search                     |
+| `RagModule`          | Full RAG pipeline                            |
+| `McpModule`          | MCP protocol server                          |
+| `AiGuardModule`      | PII detection, content moderation            |
+
+---
+
+## 21. Testing Recommendations
 
 - Use `tests/utils/test-port.ts` to get auto-incrementing ports, avoiding local
   conflicts.
