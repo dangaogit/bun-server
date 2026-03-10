@@ -23,6 +23,16 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 8080,
     strictPort: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3500',
+        changeOrigin: true,
+      },
+      '/mcp': {
+        target: 'http://localhost:3500',
+        changeOrigin: true,
+      },
+    },
     allowedHosts: ['play.dangaogm.com'],
   },
 });
