@@ -2,11 +2,7 @@ import { Graph } from '@antv/x6';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  createWorkflow,
-  deleteWorkflow,
-  listWorkflows,
-  runWorkflow,
-  updateWorkflow,
+  runWorkflowGraph,
 } from '../api/workflows';
 import { streamChat } from '../api/chat';
 import type {
@@ -27,6 +23,34 @@ interface SelectedNodeModel {
 interface PreviewMessage {
   role: 'user' | 'assistant';
   content: string;
+}
+
+const WORKFLOW_CACHE_KEY = 'ai-platform-mvp.workflows';
+
+function readCachedWorkflows(): WorkflowDefinition[] {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+  try {
+    const raw = window.localStorage.getItem(WORKFLOW_CACHE_KEY);
+    if (!raw) {
+      return [];
+    }
+    const parsed = JSON.parse(raw) as WorkflowDefinition[];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed;
+  } catch {
+    return [];
+  }
+}
+
+function writeCachedWorkflows(workflows: WorkflowDefinition[]): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.setItem(WORKFLOW_CACHE_KEY, JSON.stringify(workflows));
 }
 
 function serializeGraph(graph: Graph): WorkflowGraphPayload {
@@ -184,13 +208,12 @@ export function WorkflowPage() {
     };
   }, [selectedNode]);
 
-  const refreshWorkflows = async () => {
-    const list = await listWorkflows();
-    setWorkflows(list);
+  const refreshWorkflows = () => {
+    setWorkflows(readCachedWorkflows());
   };
 
   useEffect(() => {
-    void refreshWorkflows();
+    refreshWorkflows();
   }, []);
 
   const addNode = (nodeType: WorkflowNodeData['nodeType'], point?: { x: number; y: number }) => {
@@ -247,21 +270,24 @@ export function WorkflowPage() {
     setLoading(true);
     try {
       const payload = serializeGraph(graph);
-      if (!workflowId) {
-        const created = await createWorkflow({
-          name: workflowName,
-          description: workflowDescription,
-          graph: payload,
-        });
-        setWorkflowId(created.id);
-      } else {
-        await updateWorkflow(workflowId, {
-          name: workflowName,
-          description: workflowDescription,
-          graph: payload,
-        });
-      }
-      await refreshWorkflows();
+      const now = new Date().toISOString();
+      const nextId = workflowId || crypto.randomUUID();
+      const current = readCachedWorkflows();
+      const existing = current.find((item) => item.id === nextId);
+      const nextWorkflow: WorkflowDefinition = {
+        id: nextId,
+        name: workflowName,
+        description: workflowDescription,
+        graph: payload,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      };
+      const next = existing
+        ? current.map((item) => (item.id === nextId ? nextWorkflow : item))
+        : [nextWorkflow, ...current];
+      writeCachedWorkflows(next);
+      setWorkflows(next);
+      setWorkflowId(nextId);
     } finally {
       setLoading(false);
     }
@@ -289,9 +315,10 @@ export function WorkflowPage() {
     }
     setLoading(true);
     try {
-      await deleteWorkflow(workflowId);
+      const next = readCachedWorkflows().filter((item) => item.id !== workflowId);
+      writeCachedWorkflows(next);
       setWorkflowId('');
-      await refreshWorkflows();
+      setWorkflows(next);
     } finally {
       setLoading(false);
     }
@@ -304,27 +331,13 @@ export function WorkflowPage() {
     }
     setLoading(true);
     try {
-      let currentId = workflowId;
-      if (!currentId) {
-        const created = await createWorkflow({
-          name: workflowName,
-          description: workflowDescription,
-          graph: serializeGraph(graph),
-        });
-        currentId = created.id;
-        setWorkflowId(currentId);
-      } else {
-        await updateWorkflow(currentId, {
-          name: workflowName,
-          description: workflowDescription,
-          graph: serializeGraph(graph),
-        });
-      }
-
       const variables = JSON.parse(variablesJson) as Record<string, string>;
-      const response = await runWorkflow(currentId, { input: runInput, variables });
+      const response = await runWorkflowGraph({
+        graph: serializeGraph(graph),
+        input: runInput,
+        variables,
+      });
       setRunResult(JSON.stringify(response, null, 2));
-      await refreshWorkflows();
     } finally {
       setLoading(false);
     }
@@ -340,23 +353,6 @@ export function WorkflowPage() {
     }
     setPreviewBusy(true);
     try {
-      let currentId = workflowId;
-      if (!currentId) {
-        const created = await createWorkflow({
-          name: workflowName,
-          description: workflowDescription,
-          graph: serializeGraph(graph),
-        });
-        currentId = created.id;
-        setWorkflowId(currentId);
-      } else {
-        await updateWorkflow(currentId, {
-          name: workflowName,
-          description: workflowDescription,
-          graph: serializeGraph(graph),
-        });
-      }
-
       const variables = JSON.parse(variablesJson) as Record<string, string>;
       const messageText = previewInput;
       setPreviewMessages((prev) => [...prev, { role: 'user', content: messageText }]);
@@ -438,11 +434,11 @@ export function WorkflowPage() {
         if (result.conversationId) {
           setPreviewConversationId(result.conversationId);
         }
-        await refreshWorkflows();
         return;
       }
 
-      const response = await runWorkflow(currentId, {
+      const response = await runWorkflowGraph({
+        graph: serializeGraph(graph),
         input: messageText,
         variables,
         conversationId: previewConversationId || undefined,
@@ -468,7 +464,6 @@ export function WorkflowPage() {
       }
 
       setPreviewMessages((prev) => [...prev, { role: 'assistant', content: assistantText }]);
-      await refreshWorkflows();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setPreviewMessages((prev) => [...prev, { role: 'assistant', content: `Error: ${message}` }]);

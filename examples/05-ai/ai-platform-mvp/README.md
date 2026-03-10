@@ -159,6 +159,11 @@ bun run dev
 
 Frontend dev server runs at `http://localhost:8080` and proxies `/api/*` to `http://localhost:3500`.
 
+> Workflow definitions and prompt templates are cached in browser localStorage.
+> They are not persisted in server memory.
+> Server CRUD endpoints for `/api/workflows/*` (except `/api/workflows/run`) and
+> `/api/prompts/*` are disabled in stateless mode.
+
 ## Zeabur Deployment (API + Web)
 
 The Dockerfile runs both services in one container:

@@ -1,8 +1,8 @@
-import { Module, PromptModule } from '@dangao/bun-server';
+import { Module } from '@dangao/bun-server';
 import { PromptAdminController } from './prompt-admin.controller';
 
 @Module({
-  imports: [PromptModule],
+  imports: [],
   controllers: [PromptAdminController],
   providers: [],
 })

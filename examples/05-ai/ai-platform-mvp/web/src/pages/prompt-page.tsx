@@ -1,7 +1,41 @@
 import { FormEvent, useEffect, useState } from 'react';
 
-import { createPrompt, deletePrompt, listPrompts, renderPrompt } from '../api/prompts';
 import type { PromptTemplate } from '../types/api';
+
+const PROMPT_CACHE_KEY = 'ai-platform-mvp.prompts';
+
+function readCachedPrompts(): PromptTemplate[] {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+  try {
+    const raw = window.localStorage.getItem(PROMPT_CACHE_KEY);
+    if (!raw) {
+      return [];
+    }
+    const parsed = JSON.parse(raw) as PromptTemplate[];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed;
+  } catch {
+    return [];
+  }
+}
+
+function writeCachedPrompts(prompts: PromptTemplate[]): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.setItem(PROMPT_CACHE_KEY, JSON.stringify(prompts));
+}
+
+function renderTemplate(content: string, variables: Record<string, string>): string {
+  return content.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, key: string) => {
+    const value = variables[key];
+    return value ?? '';
+  });
+}
 
 export function PromptPage() {
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
@@ -13,8 +47,8 @@ export function PromptPage() {
   const [renderResult, setRenderResult] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const refresh = async () => {
-    const result = await listPrompts();
+  const refresh = () => {
+    const result = readCachedPrompts();
     setTemplates(result);
     if (!renderId && result.length > 0) {
       setRenderId(result[0].id);
@@ -22,15 +56,27 @@ export function PromptPage() {
   };
 
   useEffect(() => {
-    void refresh();
+    refresh();
   }, []);
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
     try {
-      await createPrompt({ name, content, description });
-      await refresh();
+      const now = new Date().toISOString();
+      const nextItem: PromptTemplate = {
+        id: crypto.randomUUID(),
+        name,
+        content,
+        description,
+      };
+      const next = [nextItem, ...readCachedPrompts()];
+      writeCachedPrompts(next);
+      setTemplates(next);
+      if (!renderId) {
+        setRenderId(nextItem.id);
+      }
+      setRenderResult(`Saved locally at ${now}`);
     } finally {
       setLoading(false);
     }
@@ -39,8 +85,12 @@ export function PromptPage() {
   const handleDelete = async (id: string) => {
     setLoading(true);
     try {
-      await deletePrompt(id);
-      await refresh();
+      const next = readCachedPrompts().filter((item) => item.id !== id);
+      writeCachedPrompts(next);
+      setTemplates(next);
+      if (renderId === id) {
+        setRenderId(next[0]?.id ?? '');
+      }
     } finally {
       setLoading(false);
     }
@@ -53,8 +103,11 @@ export function PromptPage() {
     setLoading(true);
     try {
       const parsed = JSON.parse(variables) as Record<string, string>;
-      const result = await renderPrompt(renderId, parsed);
-      setRenderResult(result.rendered);
+      const template = templates.find((item) => item.id === renderId);
+      if (!template) {
+        throw new Error('Template not found in local cache');
+      }
+      setRenderResult(renderTemplate(template.content, parsed));
     } finally {
       setLoading(false);
     }

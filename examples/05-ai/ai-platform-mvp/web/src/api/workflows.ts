@@ -58,3 +58,16 @@ export function runWorkflow(
     body: JSON.stringify(body),
   });
 }
+
+export function runWorkflowGraph(body: {
+  graph: WorkflowGraphPayload;
+  input?: string;
+  variables?: Record<string, string>;
+  provider?: string;
+  conversationId?: string;
+}): Promise<WorkflowRunResponse> {
+  return apiRequest<WorkflowRunResponse>('/api/workflows/run', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}

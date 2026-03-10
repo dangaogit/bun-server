@@ -60,6 +60,10 @@ export interface RunWorkflowRequest {
   conversationId?: string;
 }
 
+export interface RunWorkflowGraphRequest extends RunWorkflowRequest {
+  graph: WorkflowGraph;
+}
+
 export interface WorkflowRunStep {
   nodeId: string;
   nodeType: WorkflowNodeType;
