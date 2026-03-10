@@ -1,5 +1,7 @@
 # @dangao/bun-server-web
 
+> Playground: [https://play.dangaogm.com/](https://play.dangaogm.com/)
+
 > Version: `2.0.2` (aligned with `@dangao/bun-server`)
 
 Promotional portal site for the `@dangao/bun-server` framework.
