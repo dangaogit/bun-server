@@ -40,7 +40,7 @@ export const NODE_TEMPLATES: NodeTemplate[] = [
     data: {
       nodeType: 'prompt_render',
       label: 'Prompt Render',
-      config: { templateId: '' },
+      config: { template: 'Hello {{name}}, input={{input}}' },
     },
   },
   {

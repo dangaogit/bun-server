@@ -1,7 +1,12 @@
-import { Body, Controller, DELETE, GET, POST, PUT, Param } from '@dangao/bun-server';
+import { Body, Controller, DELETE, GET, POST, PUT, Param, HttpException } from '@dangao/bun-server';
 
 import { WorkflowService } from './workflow.service';
-import type { CreateWorkflowRequest, RunWorkflowRequest, UpdateWorkflowRequest } from './types';
+import type {
+  CreateWorkflowRequest,
+  RunWorkflowGraphRequest,
+  RunWorkflowRequest,
+  UpdateWorkflowRequest,
+} from './types';
 
 @Controller('/api/workflows')
 export class WorkflowController {
@@ -9,32 +14,61 @@ export class WorkflowController {
 
   @GET('/')
   public list() {
-    return this.workflowService.list();
+    throw new HttpException(
+      410,
+      'Server-side workflow storage is disabled. Use client cache instead.',
+    );
   }
 
   @GET('/:id')
   public get(@Param('id') id: string) {
-    return this.workflowService.get(id);
+    void id;
+    throw new HttpException(
+      410,
+      'Server-side workflow storage is disabled. Use client cache instead.',
+    );
   }
 
   @POST('/')
   public create(@Body() body: CreateWorkflowRequest) {
-    return this.workflowService.create(body);
+    void body;
+    throw new HttpException(
+      410,
+      'Server-side workflow storage is disabled. Use client cache instead.',
+    );
   }
 
   @PUT('/:id')
   public update(@Param('id') id: string, @Body() body: UpdateWorkflowRequest) {
-    return this.workflowService.update(id, body);
+    void id;
+    void body;
+    throw new HttpException(
+      410,
+      'Server-side workflow storage is disabled. Use client cache instead.',
+    );
   }
 
   @DELETE('/:id')
   public delete(@Param('id') id: string) {
-    const deleted = this.workflowService.delete(id);
-    return { deleted };
+    void id;
+    throw new HttpException(
+      410,
+      'Server-side workflow storage is disabled. Use client cache instead.',
+    );
   }
 
   @POST('/:id/run')
   public async run(@Param('id') id: string, @Body() body: RunWorkflowRequest) {
-    return this.workflowService.run(id, body);
+    void id;
+    void body;
+    throw new HttpException(
+      410,
+      'Workflow execution by persisted ID is disabled. Use POST /api/workflows/run with graph payload.',
+    );
+  }
+
+  @POST('/run')
+  public async runWithGraph(@Body() body: RunWorkflowGraphRequest) {
+    return this.workflowService.runWithGraph(body);
   }
 }

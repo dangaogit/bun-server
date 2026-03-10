@@ -1,12 +1,13 @@
-import { Injectable, Inject } from '@dangao/bun-server';
-import { PromptService, PROMPT_SERVICE_TOKEN } from '@dangao/bun-server';
+import { Injectable } from '@dangao/bun-server';
 
 import type {
   CreateWorkflowRequest,
+  RunWorkflowGraphRequest,
   RunWorkflowRequest,
   RunWorkflowResponse,
   UpdateWorkflowRequest,
   WorkflowDefinition,
+  WorkflowGraph,
   WorkflowGraphNode,
   WorkflowNodeType,
   WorkflowRunStep,
@@ -25,10 +26,6 @@ interface WorkflowRuntimeState {
 export class WorkflowService {
   private readonly workflows = new Map<string, WorkflowDefinition>();
   private readonly baseUrl = process.env['WORKFLOW_EXEC_BASE_URL'] ?? 'http://localhost:3500';
-
-  public constructor(
-    @Inject(PROMPT_SERVICE_TOKEN) private readonly promptService: PromptService,
-  ) {}
 
   /**
    * 列出所有工作流定义
@@ -108,59 +105,16 @@ export class WorkflowService {
     if (!workflow) {
       return null;
     }
+    return this.runGraph(workflow.id, workflow.graph, request);
+  }
 
-    const steps: WorkflowRunStep[] = [];
-    const state: WorkflowRuntimeState = {
-      input: request.input ?? '',
-      variables: request.variables ?? {},
-      provider: request.provider,
-      conversationId: request.conversationId,
-      lastOutput: request.input ?? '',
-      nodeOutputs: {},
-    };
-
-    const nodes = workflow.graph.nodes ?? [];
-    const edges = workflow.graph.edges ?? [];
-    const order = this.resolveExecutionOrder(nodes, edges);
-
-    try {
-      for (const node of order) {
-        const nodeType = node.data?.nodeType ?? 'chat';
-        if (nodeType === 'start' || nodeType === 'end') {
-          continue;
-        }
-
-        const output = await this.executeNode(node, nodeType, state);
-        state.lastOutput = output;
-        state.nodeOutputs[node.id] = output;
-        steps.push({
-          nodeId: node.id,
-          nodeType,
-          output,
-        });
-      }
-
-      return {
-        workflowId: id,
-        status: 'success',
-        steps,
-        finalOutput: state.lastOutput,
-      };
-    } catch (error) {
-      steps.push({
-        nodeId: 'runtime',
-        nodeType: 'agent',
-        output: {
-          error: error instanceof Error ? error.message : 'Unknown workflow error',
-        },
-      });
-      return {
-        workflowId: id,
-        status: 'failed',
-        steps,
-        finalOutput: state.lastOutput,
-      };
-    }
+  /**
+   * 无状态执行工作流：直接使用请求中的 graph，不在服务端存储配置
+   * @param request - 包含 graph 的执行请求
+   * @returns 执行结果
+   */
+  public async runWithGraph(request: RunWorkflowGraphRequest): Promise<RunWorkflowResponse> {
+    return this.runGraph('client-cache', request.graph, request);
   }
 
   private resolveExecutionOrder(nodes: WorkflowGraphNode[], edges: Array<{ source?: { cell?: string }; target?: { cell?: string } }>): WorkflowGraphNode[] {
@@ -219,6 +173,65 @@ export class WorkflowService {
     return nodes;
   }
 
+  private async runGraph(
+    workflowId: string,
+    graph: WorkflowGraph,
+    request: RunWorkflowRequest,
+  ): Promise<RunWorkflowResponse> {
+    const steps: WorkflowRunStep[] = [];
+    const state: WorkflowRuntimeState = {
+      input: request.input ?? '',
+      variables: request.variables ?? {},
+      provider: request.provider,
+      conversationId: request.conversationId,
+      lastOutput: request.input ?? '',
+      nodeOutputs: {},
+    };
+
+    const nodes = graph.nodes ?? [];
+    const edges = graph.edges ?? [];
+    const order = this.resolveExecutionOrder(nodes, edges);
+
+    try {
+      for (const node of order) {
+        const nodeType = node.data?.nodeType ?? 'chat';
+        if (nodeType === 'start' || nodeType === 'end') {
+          continue;
+        }
+
+        const output = await this.executeNode(node, nodeType, state);
+        state.lastOutput = output;
+        state.nodeOutputs[node.id] = output;
+        steps.push({
+          nodeId: node.id,
+          nodeType,
+          output,
+        });
+      }
+
+      return {
+        workflowId,
+        status: 'success',
+        steps,
+        finalOutput: state.lastOutput,
+      };
+    } catch (error) {
+      steps.push({
+        nodeId: 'runtime',
+        nodeType: 'agent',
+        output: {
+          error: error instanceof Error ? error.message : 'Unknown workflow error',
+        },
+      });
+      return {
+        workflowId,
+        status: 'failed',
+        steps,
+        finalOutput: state.lastOutput,
+      };
+    }
+  }
+
   private async executeNode(node: WorkflowGraphNode, nodeType: WorkflowNodeType, state: WorkflowRuntimeState): Promise<unknown> {
     const config = node.data?.config ?? {};
 
@@ -257,14 +270,18 @@ export class WorkflowService {
     }
 
     if (nodeType === 'prompt_render') {
-      const templateRef = this.resolveString(config['templateId'], state);
-      const templateId = await this.resolvePromptTemplateId(templateRef);
-      const rendered = await this.promptService.render(templateId, {
-        ...state.variables,
-        input: state.input,
-        lastOutput: this.stringifyOutput(state.lastOutput),
-      });
-      return { templateId, rendered };
+      const inlineTemplate = this.resolveOptionalString(config['template'], state);
+      if (inlineTemplate) {
+        const rendered = this.renderTemplate(inlineTemplate, {
+          ...state.variables,
+          input: state.input,
+          lastOutput: this.stringifyOutput(state.lastOutput),
+        });
+        return { templateId: 'inline-template', rendered };
+      }
+      throw new Error(
+        'prompt_render requires config.template in stateless mode; server-side prompt store is disabled.',
+      );
     }
 
     if (nodeType === 'agent') {
@@ -308,6 +325,12 @@ export class WorkflowService {
     return undefined;
   }
 
+  private renderTemplate(template: string, variables: Record<string, string>): string {
+    return template.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, key: string) => {
+      return variables[key] ?? '';
+    });
+  }
+
   private stringifyOutput(value: unknown): string {
     if (typeof value === 'string') {
       return value;
@@ -334,26 +357,4 @@ export class WorkflowService {
     return response.json();
   }
 
-  private async resolvePromptTemplateId(templateRef: string): Promise<string> {
-    if (!templateRef) {
-      throw new Error('prompt_render node requires config.templateId');
-    }
-
-    try {
-      const byId = await this.promptService.get(templateRef);
-      if (byId) {
-        return byId.id;
-      }
-    } catch {
-      // fallback to name lookup
-    }
-
-    const templates = await this.promptService.list();
-    const byName = templates.find((item) => item.name === templateRef);
-    if (byName) {
-      return byName.id;
-    }
-
-    throw new Error(`Prompt template "${templateRef}" not found`);
-  }
 }
