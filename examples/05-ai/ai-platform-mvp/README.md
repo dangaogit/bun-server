@@ -157,7 +157,21 @@ bun install
 bun run dev
 ```
 
-Frontend dev server runs at `http://localhost:5173` and proxies `/api/*` to `http://localhost:3500`.
+Frontend dev server runs at `http://localhost:8080` and proxies `/api/*` to `http://localhost:3500`.
+
+## Zeabur Deployment (API + Web)
+
+The Dockerfile runs both services in one container:
+
+- Web: `0.0.0.0:8080` (public entry)
+- API: `3500` inside container (proxied by web server)
+
+Use the Dockerfile in this directory:
+
+```bash
+docker build -f examples/05-ai/ai-platform-mvp/Dockerfile -t ai-platform-mvp .
+docker run --rm -p 8080:8080 ai-platform-mvp
+```
 
 ## AI Capability Coverage
 
