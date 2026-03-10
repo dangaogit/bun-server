@@ -6,7 +6,7 @@ WORKDIR /app
 COPY . .
 
 # Install deps and build required workspace packages for runtime imports.
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile --ignore-scripts
 RUN bun run build:deps && bun run build:server
 
 # Build frontend assets once, then serve via vite preview on 8080.
