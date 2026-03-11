@@ -38,10 +38,13 @@ export class QueueModule {
         useValue: service,
       },
       {
+        provide: QueueService,
+        useValue: service,
+      },
+      {
         provide: QUEUE_OPTIONS_TOKEN,
         useValue: options,
       },
-      QueueService,
     );
 
     // 动态更新模块元数据

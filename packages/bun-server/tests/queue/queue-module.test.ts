@@ -37,6 +37,33 @@ describe('QueueModule', () => {
     expect(queueProvider.useValue).toBeInstanceOf(QueueService);
   });
 
+  test('should reuse same QueueService instance for class and token providers', () => {
+    QueueModule.forRoot({
+      enableWorker: true,
+      concurrency: 1,
+    });
+
+    const metadata = Reflect.getMetadata(MODULE_METADATA_KEY, QueueModule);
+    expect(metadata).toBeDefined();
+    expect(metadata.providers).toBeDefined();
+
+    const tokenProvider = metadata.providers.find(
+      (provider: any) => provider.provide === QUEUE_SERVICE_TOKEN,
+    );
+    const classProvider = metadata.providers.find(
+      (provider: any) => provider.provide === QueueService,
+    );
+
+    expect(tokenProvider).toBeDefined();
+    expect(classProvider).toBeDefined();
+    expect(tokenProvider.useValue).toBeInstanceOf(QueueService);
+    expect(classProvider.useValue).toBe(tokenProvider.useValue);
+
+    // Regression guard: worker path needs an initialized store.
+    const queueService = tokenProvider.useValue as QueueService & { store?: unknown };
+    expect(queueService.store).toBeDefined();
+  });
+
   test('should use custom store when provided', () => {
     const customStore = new MemoryQueueStore();
     QueueModule.forRoot({
