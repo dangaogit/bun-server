@@ -276,8 +276,9 @@ DatabaseModule.forRoot({
 class AppModule {}
 
 // 创建应用
+const port = Number(process.env.PORT ?? 3000);
 const app = new Application({
-  port: 3000,
+  port,
 });
 
 // 注册模块
@@ -285,27 +286,27 @@ app.registerModule(AppModule);
 
 // 启动应用
 app.listen().then(() => {
-  console.log('🚀 Server started on http://localhost:3000');
+  console.log(`🚀 Server started on http://localhost:${port}`);
   console.log('\n📝 Available endpoints:');
   console.log('  POST /api/accounts          - Create account');
   console.log('  POST /api/accounts/transfer - Transfer money');
   console.log('  GET  /api/accounts/:id/balance - Get account balance');
   console.log('\n🧪 Try it with curl:');
   console.log('  # 1. Create account (Alice)');
-  console.log('  curl -X POST http://localhost:3000/api/accounts \\');
+  console.log(`  curl -X POST http://localhost:${port}/api/accounts \\`);
   console.log('       -H "Content-Type: application/json" \\');
   console.log('       -d \'{"name":"Alice","balance":1000}\'');
   console.log('');
   console.log('  # 2. Create account (Bob)');
-  console.log('  curl -X POST http://localhost:3000/api/accounts \\');
+  console.log(`  curl -X POST http://localhost:${port}/api/accounts \\`);
   console.log('       -H "Content-Type: application/json" \\');
   console.log('       -d \'{"name":"Bob","balance":500}\'');
   console.log('');
   console.log('  # 3. Transfer money');
-  console.log('  curl -X POST http://localhost:3000/api/accounts/transfer \\');
+  console.log(`  curl -X POST http://localhost:${port}/api/accounts/transfer \\`);
   console.log('       -H "Content-Type: application/json" \\');
   console.log('       -d \'{"fromId":1,"toId":2,"amount":100}\'');
   console.log('');
   console.log('  # 4. Check balance');
-  console.log('  curl http://localhost:3000/api/accounts/1/balance');
+  console.log(`  curl http://localhost:${port}/api/accounts/1/balance`);
 });

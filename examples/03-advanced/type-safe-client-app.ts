@@ -36,7 +36,8 @@ class UserController {
 })
 class AppModule {}
 
-const app = new Application({ port: 3001, enableSignalHandlers: false });
+const port = Number(process.env.PORT ?? 3001);
+const app = new Application({ port, enableSignalHandlers: false });
 app.registerModule(AppModule);
 await app.listen();
 
@@ -46,7 +47,7 @@ console.log('Route Manifest:', JSON.stringify(manifest, null, 2));
 
 // Create type-safe client
 const client = createClient(manifest, {
-  baseUrl: 'http://localhost:3001',
+  baseUrl: `http://localhost:${port}`,
 });
 
 // Use the client

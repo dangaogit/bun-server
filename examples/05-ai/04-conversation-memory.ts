@@ -127,18 +127,19 @@ class MemoryController {
 })
 class MemoryModule {}
 
-const app = new Application({ port: 3103, enableSignalHandlers: false });
+const port = Number(process.env.PORT ?? 3103);
+const app = new Application({ port, enableSignalHandlers: false });
 app.registerModule(MemoryModule);
 await app.listen();
 
-console.log('Conversation Memory API running on http://localhost:3103');
+console.log(`Conversation Memory API running on http://localhost:${port}`);
 console.log('');
 console.log('Step 1 - Start a conversation:');
-console.log('  curl -X POST http://localhost:3103/api/memory/chat \\');
+console.log(`  curl -X POST http://localhost:${port}/api/memory/chat \\`);
 console.log('    -H "Content-Type: application/json" \\');
 console.log('    -d \'{"message": "My name is Alice"}\'');
 console.log('');
 console.log('Step 2 - Continue the conversation (use the returned conversationId):');
-console.log('  curl -X POST http://localhost:3103/api/memory/chat \\');
+console.log(`  curl -X POST http://localhost:${port}/api/memory/chat \\`);
 console.log('    -H "Content-Type: application/json" \\');
 console.log('    -d \'{"message": "What is my name?", "conversationId": "<ID>"}\'');

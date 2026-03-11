@@ -320,8 +320,9 @@ HealthModule.forRoot({
 class AppModule {}
 
 // 创建应用
+const port = Number(process.env.PORT ?? 3000);
 const app = new Application({
-  port: 3000,
+  port,
 });
 
 // 注册模块
@@ -329,17 +330,17 @@ app.registerModule(AppModule);
 
 // 启动应用
 app.listen().then(() => {
-  console.log('🚀 Server started on http://localhost:3000');
-  console.log('📊 Health check: http://localhost:3000/health');
+  console.log(`🚀 Server started on http://localhost:${port}`);
+  console.log(`📊 Health check: http://localhost:${port}/health`);
   console.log('\n📝 Available endpoints:');
   console.log('  POST /api/users          - Create user');
   console.log('  GET  /api/users/search   - Search users');
   console.log('\n🧪 Try it with curl:');
   console.log('  # Create user');
-  console.log('  curl -X POST http://localhost:3000/api/users \\');
+  console.log(`  curl -X POST http://localhost:${port}/api/users \\`);
   console.log('       -H "Content-Type: application/json" \\');
   console.log('       -d \'{"name":"Alice","email":"alice@example.com","bio":"Developer"}\'');
   console.log('');
   console.log('  # Search users');
-  console.log('  curl "http://localhost:3000/api/users/search?q=Alice"');
+  console.log(`  curl "http://localhost:${port}/api/users/search?q=Alice"`);
 });

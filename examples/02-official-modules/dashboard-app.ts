@@ -30,9 +30,10 @@ class AppController {
 })
 class AppModule {}
 
-const app = new Application({ port: 3000 });
+const port = Number(process.env.PORT ?? 3000);
+const app = new Application({ port });
 app.registerModule(AppModule);
 await app.listen();
-console.log('Dashboard example running at http://localhost:3000');
-console.log('Dashboard UI: http://localhost:3000/_dashboard');
+console.log(`Dashboard example running at http://localhost:${port}`);
+console.log(`Dashboard UI: http://localhost:${port}/_dashboard`);
 console.log('(Auth: admin / admin)');

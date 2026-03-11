@@ -40,10 +40,11 @@ class AppController {
 })
 class AppModule {}
 
-const app = new Application({ port: 3000 });
+const port = Number(process.env.PORT ?? 3000);
+const app = new Application({ port });
 app.registerModule(AppModule);
 await app.listen();
-console.log('Debug example running at http://localhost:3000');
-console.log('Debug UI: http://localhost:3000/_debug');
-console.log('Try: curl http://localhost:3000/api/hello');
+console.log(`Debug example running at http://localhost:${port}`);
+console.log(`Debug UI: http://localhost:${port}/_debug`);
+console.log(`Try: curl http://localhost:${port}/api/hello`);
 console.log('Then check the debug UI to see recorded requests.');

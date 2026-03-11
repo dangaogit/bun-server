@@ -38,7 +38,8 @@ class DemoController {
 })
 class AppModule {}
 
-const app = new Application({ port: 3000 });
+const port = Number(process.env.PORT ?? 3000);
+const app = new Application({ port });
 app.registerModule(AppModule);
 await app.listen();
-console.log('Apply Decorators example running at http://localhost:3000');
+console.log(`Apply Decorators example running at http://localhost:${port}`);

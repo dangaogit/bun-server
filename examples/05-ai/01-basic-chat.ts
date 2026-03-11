@@ -112,15 +112,16 @@ class ChatModule {}
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
-const app = new Application({ port: 3100, enableSignalHandlers: false });
+const port = Number(process.env.PORT ?? 3100);
+const app = new Application({ port, enableSignalHandlers: false });
 app.registerModule(ChatModule);
 await app.listen();
 
-console.log('Basic chat API running on http://localhost:3100');
+console.log(`Basic chat API running on http://localhost:${port}`);
 console.log('');
 console.log('Try:');
-console.log('  curl -X POST http://localhost:3100/api/chat/ \\');
+console.log(`  curl -X POST http://localhost:${port}/api/chat/ \\`);
 console.log('    -H "Content-Type: application/json" \\');
 console.log('    -d \'{"message": "What is 2+2?"}\'');
 console.log('');
-console.log('  curl http://localhost:3100/api/chat/providers');
+console.log(`  curl http://localhost:${port}/api/chat/providers`);

@@ -18,6 +18,22 @@ examples/
 
 ## 🚀 快速开始
 
+### 托管 Examples（单容器）
+
+线上示例统一通过子域名访问：
+
+`https://disb-examples-{example-name}.dangaogm.com`
+
+单容器运行时会读取 [deploy/examples-registry.json](./deploy/examples-registry.json)，按唯一端口并发启动所有启用示例，并根据 `Host` 头进行路由转发。
+
+```bash
+# 在仓库根目录执行
+docker build -f examples/Dockerfile -t bun-server-examples .
+docker run --rm -p 8080:8080 bun-server-examples
+```
+
+> 生产环境请将 `disb-examples-*.dangaogm.com` 的通配 DNS 与入口网关转发到该容器。
+
 ### 推荐学习路径
 
 1. **初学者** → 从 `00-quick-start` 开始

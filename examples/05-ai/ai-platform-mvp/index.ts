@@ -46,7 +46,7 @@ import { WorkflowModule } from './workflow/workflow.module';
 
 // ── Module Configurations ─────────────────────────────────────────────────────
 
-const PORT = 3500;
+const PORT = Number(process.env.PORT ?? 3500);
 const OLLAMA_BASE_URL = process.env['OLLAMA_BASE_URL'] ?? 'http://localhost:11434';
 const OLLAMA_CHAT_MODEL = process.env['OLLAMA_CHAT_MODEL'] ?? 'llama3.2';
 const OLLAMA_EMBEDDING_MODEL = process.env['OLLAMA_EMBEDDING_MODEL'] ?? 'nomic-embed-text';
@@ -198,7 +198,7 @@ console.log('[startup] server is ready');
 
 console.log('');
 console.log('╔══════════════════════════════════════════════════╗');
-console.log('║         AI Platform MVP — Port 3500              ║');
+console.log(`║         AI Platform MVP — Port ${String(PORT).padEnd(18, ' ')}║`);
 console.log('╠══════════════════════════════════════════════════╣');
 console.log('║  POST /api/chat/              Chat (w/ memory)   ║');
 console.log('║  GET  /api/chat/:id/history   Conversation log   ║');
@@ -213,6 +213,6 @@ console.log('║  GET  /mcp                    MCP SSE endpoint   ║');
 console.log('╚══════════════════════════════════════════════════╝');
 console.log('');
 console.log('Quick test:');
-console.log("  curl -X POST http://localhost:3500/api/chat/ \\");
+console.log(`  curl -X POST http://localhost:${PORT}/api/chat/ \\`);
 console.log('    -H "Content-Type: application/json" \\');
 console.log("    -d '{\"message\": \"Hello! What can you do?\"}'");

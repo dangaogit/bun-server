@@ -47,7 +47,8 @@
     "start:ai-guard": "bun 05-ai/08-ai-guard.ts",
     "start:ai-platform-mvp:api": "bun 05-ai/ai-platform-mvp/index.ts",
     "start:ai-platform-mvp:web": "cd 05-ai/ai-platform-mvp/web && bun run dev",
-    "start:ai-platform-mvp": "bun run --parallel start:ai-platform-mvp:api start:ai-platform-mvp:web"
+    "start:ai-platform-mvp": "bun run --parallel start:ai-platform-mvp:api start:ai-platform-mvp:web",
+    "start:examples:container": "bun deploy/run-examples.ts"
   },
   "dependencies": {
     "@dangao/bun-server": "workspace:^",

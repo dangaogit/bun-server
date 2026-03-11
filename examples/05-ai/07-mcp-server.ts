@@ -137,14 +137,15 @@ class McpController {
 })
 class McpDemoModule {}
 
-const app = new Application({ port: 3106, enableSignalHandlers: false });
+const port = Number(process.env.PORT ?? 3106);
+const app = new Application({ port, enableSignalHandlers: false });
 app.registerModule(McpDemoModule);
 await app.listen();
 
-console.log('MCP Server running on http://localhost:3106');
-console.log('SSE endpoint: http://localhost:3106/mcp');
+console.log(`MCP Server running on http://localhost:${port}`);
+console.log(`SSE endpoint: http://localhost:${port}/mcp`);
 console.log('');
 console.log('Test tools directly via JSON-RPC:');
-console.log('  curl -X POST http://localhost:3106/mcp \\');
+console.log(`  curl -X POST http://localhost:${port}/mcp \\`);
 console.log('    -H "Content-Type: application/json" \\');
 console.log("    -d '{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/list\"}'");

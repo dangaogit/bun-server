@@ -19,7 +19,7 @@ import type { Context } from '@dangao/bun-server';
 ConfigModule.forRoot({
   defaultConfig: {
     app: {
-      port: 3000,
+      port: Number(process.env.PORT ?? 3000),
     },
   },
 });

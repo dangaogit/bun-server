@@ -1,6 +1,6 @@
 # Bun Server
 
-> Playground: [https://play.dangaogm.com/](https://play.dangaogm.com/)
+> Examples: `https://disb-examples-{example-name}.dangaogm.com`
 
 [![bun](https://img.shields.io/badge/Bun-1.3.10%2B-000?logo=bun&logoColor=fff)](https://bun.sh/)
 [![typescript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=fff)](https://www.typescriptlang.org/)

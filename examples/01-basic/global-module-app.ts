@@ -278,7 +278,7 @@ class AppModule {}
 const app = new Application();
 app.registerModule(AppModule);
 
-const port = 3000;
+const port = Number(process.env.PORT ?? 3000);
 app.listen(port);
 
 console.log(`🚀 Global Module Demo App running on http://localhost:${port}`);

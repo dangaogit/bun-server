@@ -78,13 +78,14 @@ class StreamingController {
 })
 class StreamingModule {}
 
-const app = new Application({ port: 3101, enableSignalHandlers: false });
+const port = Number(process.env.PORT ?? 3101);
+const app = new Application({ port, enableSignalHandlers: false });
 app.registerModule(StreamingModule);
 await app.listen();
 
-console.log('Streaming chat API running on http://localhost:3101');
+console.log(`Streaming chat API running on http://localhost:${port}`);
 console.log('');
 console.log('Try (curl streams the SSE response):');
-console.log('  curl -X POST http://localhost:3101/api/stream/ \\');
+console.log(`  curl -X POST http://localhost:${port}/api/stream/ \\`);
 console.log('    -H "Content-Type: application/json" \\');
 console.log('    -d \'{"message": "Count slowly from 1 to 5."}\'');
