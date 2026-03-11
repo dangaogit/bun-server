@@ -705,8 +705,9 @@ class FrontendController {
         localStorage.setItem('chat_username', savedUsername);
       }
       
-      // 将用户名作为查询参数传递
-      ws = new WebSocket(\`ws://\${location.host}/ws/chat?username=\${savedUsername}\`);
+      // HTTPS 页面必须使用 wss，HTTP 页面使用 ws
+      const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(\`\${wsProtocol}//\${location.host}/ws/chat?username=\${savedUsername}\`);
       
       ws.onopen = () => {
         document.getElementById('status').textContent = '✅ 已连接';
