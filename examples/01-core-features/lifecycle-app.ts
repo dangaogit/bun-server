@@ -59,9 +59,10 @@ class AppController {
 })
 class AppModule {}
 
-const app = new Application({ port: 3000 });
+const port = Number(process.env.PORT ?? 3000);
+const app = new Application({ port });
 app.registerModule(AppModule);
 await app.listen();
-console.log('Lifecycle Hooks example running at http://localhost:3000');
-console.log('Try: curl http://localhost:3000/api/status');
+console.log(`Lifecycle Hooks example running at http://localhost:${port}`);
+console.log(`Try: curl http://localhost:${port}/api/status`);
 console.log('Press Ctrl+C to see shutdown hooks');

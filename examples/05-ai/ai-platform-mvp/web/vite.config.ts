@@ -2,14 +2,15 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 const API_PROXY_TARGET = process.env['VITE_PROXY_TARGET'] ?? 'http://127.0.0.1:3500';
+const WEB_PORT = Number(process.env['WEB_PORT'] ?? 8080);
 
 export default defineConfig({
   plugins: [react()],
   server: {
     host: '0.0.0.0',
-    port: 8080,
+    port: WEB_PORT,
     strictPort: true,
-    allowedHosts: ['play.dangaogm.com'],
+    allowedHosts: true,
     proxy: {
       '/api': {
         target: API_PROXY_TARGET,
@@ -29,7 +30,7 @@ export default defineConfig({
   },
   preview: {
     host: '0.0.0.0',
-    port: 8080,
+    port: WEB_PORT,
     strictPort: true,
     proxy: {
       '/api': {
@@ -47,6 +48,6 @@ export default defineConfig({
         proxyTimeout: 300000,
       },
     },
-    allowedHosts: ['play.dangaogm.com'],
+    allowedHosts: true,
   },
 });

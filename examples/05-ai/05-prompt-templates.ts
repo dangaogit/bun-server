@@ -121,16 +121,17 @@ class PromptController {
 })
 class PromptDemoModule {}
 
-const app = new Application({ port: 3104, enableSignalHandlers: false });
+const port = Number(process.env.PORT ?? 3104);
+const app = new Application({ port, enableSignalHandlers: false });
 app.registerModule(PromptDemoModule);
 await app.listen();
 
-console.log('Prompt Templates API running on http://localhost:3104');
+console.log(`Prompt Templates API running on http://localhost:${port}`);
 console.log('');
 console.log('List templates:');
-console.log('  curl http://localhost:3104/api/prompts/');
+console.log(`  curl http://localhost:${port}/api/prompts/`);
 console.log('');
 console.log('Render a template:');
-console.log('  curl -X POST http://localhost:3104/api/prompts/greeting/render \\');
+console.log(`  curl -X POST http://localhost:${port}/api/prompts/greeting/render \\`);
 console.log('    -H "Content-Type: application/json" \\');
 console.log('    -d \'{"variables": {"name": "Alice", "app": "BunServer"}}\'');

@@ -135,7 +135,8 @@ class TimingInterceptor implements Interceptor {
 // Step 4: Register Interceptor
 // ============================================================================
 
-const app = new Application({ port: 3000 });
+const port = Number(process.env.PORT ?? 3000);
+const app = new Application({ port });
 
 // Get the interceptor registry from the container
 const registry = app.getContainer().resolve<InterceptorRegistry>(INTERCEPTOR_REGISTRY_TOKEN);
@@ -186,7 +187,6 @@ class UserController {
 app.registerController(UserController);
 
 // Start the server
-const port = 3000;
 app.listen(port);
 
 console.log(`🚀 Server running on http://localhost:${port}`);

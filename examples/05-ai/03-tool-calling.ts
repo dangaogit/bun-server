@@ -140,13 +140,14 @@ class ToolController {
 })
 class ToolsModule {}
 
-const app = new Application({ port: 3102, enableSignalHandlers: false });
+const port = Number(process.env.PORT ?? 3102);
+const app = new Application({ port, enableSignalHandlers: false });
 app.registerModule(ToolsModule);
 await app.listen();
 
-console.log('Tool Calling API running on http://localhost:3102');
+console.log(`Tool Calling API running on http://localhost:${port}`);
 console.log('');
 console.log('Try (asks LLM to use calculator):');
-console.log('  curl -X POST http://localhost:3102/api/tools/chat \\');
+console.log(`  curl -X POST http://localhost:${port}/api/tools/chat \\`);
 console.log('    -H "Content-Type: application/json" \\');
 console.log('    -d \'{"message": "What is 15 * 27 + 334? Also, convert 100km to miles."}\'');

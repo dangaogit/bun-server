@@ -75,7 +75,8 @@ class UserController {
 }
 
 // 4. 创建应用并注册
-const app = new Application({ port: 3100 });
+const port = Number(process.env.PORT ?? 3100);
+const app = new Application({ port });
 
 // 注册服务到容器（必须在注册控制器之前）
 app.getContainer().register(UserService);
@@ -86,13 +87,13 @@ app.registerController(UserController);
 // 启动服务器
 app.listen();
 
-console.log('🚀 Server running on http://localhost:3100');
+console.log(`🚀 Server running on http://localhost:${port}`);
 console.log('\n📝 Available endpoints:');
 console.log('  GET /api/users     - Get all users');
 console.log('  GET /api/users/:id - Get user by ID');
 console.log('\n🧪 Try it with curl:');
-console.log('  curl http://localhost:3100/api/users');
-console.log('  curl http://localhost:3100/api/users/1');
+console.log(`  curl http://localhost:${port}/api/users`);
+console.log(`  curl http://localhost:${port}/api/users/1`);
 console.log('\n💡 Key concepts:');
 console.log('  - @Injectable() marks a class as injectable');
 console.log('  - Constructor injection auto-resolves dependencies');

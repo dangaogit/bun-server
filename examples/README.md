@@ -19,6 +19,22 @@ examples/
 
 ## 🚀 Quick Start
 
+### Hosted Examples (Single Container)
+
+All hosted examples are exposed via subdomains:
+
+`https://disb-examples-{example-name}.dangaogm.com`
+
+The single-container runtime reads [deploy/examples-registry.json](./deploy/examples-registry.json), starts all enabled examples with unique ports, and routes by `Host`.
+
+```bash
+# From repository root
+docker build -f examples/Dockerfile -t bun-server-examples .
+docker run --rm -p 8080:8080 bun-server-examples
+```
+
+> In production, configure wildcard DNS and ingress routing for `disb-examples-*.dangaogm.com` to the container entry.
+
 ### Recommended Learning Path
 
 1. **Beginners** → Start with `00-quick-start`

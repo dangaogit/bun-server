@@ -44,7 +44,7 @@ export function App() {
     <div className='app-shell'>
       <header className='topbar'>
         <h1>AI Platform MVP Console</h1>
-        <p>Backend: http://localhost:3500 · Frontend: http://localhost:5173</p>
+        <p>Backend: /api (proxied) · Frontend: current origin</p>
       </header>
       <nav className='tabs'>
         {tabs.map((tab) => (

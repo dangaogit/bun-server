@@ -245,7 +245,8 @@ class CacheInterceptor extends BaseInterceptor {
 // Application Setup
 // ============================================================================
 
-const app = new Application({ port: 3001 });
+const port = Number(process.env.PORT ?? 3001);
+const app = new Application({ port });
 const registry = app.getContainer().resolve<InterceptorRegistry>(INTERCEPTOR_REGISTRY_TOKEN);
 
 // Register interceptors with different priorities
@@ -306,7 +307,6 @@ class ProductController {
 app.registerController(ProductController);
 
 // Start server
-const port = 3001;
 app.listen(port);
 
 console.log(`🚀 Advanced example server running on http://localhost:${port}`);

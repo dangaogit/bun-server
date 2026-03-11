@@ -28,7 +28,7 @@ import {
 
 // 配置基础模块
 ConfigModule.forRoot({
-  defaultConfig: { app: { name: 'Database Test Tool', port: 3000 } },
+  defaultConfig: { app: { name: 'Database Test Tool', port: Number(process.env.PORT ?? 3000) } },
 });
 
 LoggerModule.forRoot({
@@ -780,8 +780,9 @@ class ApiController {
 class AppModule {}
 
 // 创建应用
+const port = Number(process.env.PORT ?? 3000);
 const app = new Application({
-  port: 3000,
+  port,
 });
 
 // 注册模块
@@ -793,7 +794,7 @@ app.registerModule(AppModule);
 (async () => {
   await app.listen();
   console.log('🚀 数据库测试工具已启动');
-  console.log('📱 访问 http://localhost:3000 使用 Web UI');
+  console.log(`📱 访问 http://localhost:${port} 使用 Web UI`);
   console.log('\n📝 Available endpoints:');
   console.log('  GET  /                 - Web UI');
   console.log('  POST /api/db/connect   - Connect to database');
@@ -806,7 +807,7 @@ app.registerModule(AppModule);
   console.log('  4. 测试完成后点击"断开连接"');
   console.log('\n🧪 Try it with curl:');
   console.log('  # Connect to database');
-  console.log('  curl -X POST http://localhost:3000/api/db/connect \\');
+  console.log(`  curl -X POST http://localhost:${port}/api/db/connect \\`);
   console.log('       -H "Content-Type: application/json" \\');
   console.log('       -d \'{"type":"postgres","host":"localhost","port":5432,"database":"test","username":"user","password":"pass"}\'');
 })();

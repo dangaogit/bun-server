@@ -13,8 +13,9 @@ import {
 async function loadRemoteConfig(): Promise<{ app: { name: string; port: number } }> {
   console.log('[Config] Loading remote config...');
   await new Promise((resolve) => setTimeout(resolve, 200));
+  const port = Number(process.env.PORT ?? 3000);
   return {
-    app: { name: 'AsyncConfigApp', port: 3000 },
+    app: { name: 'AsyncConfigApp', port },
   };
 }
 
@@ -47,8 +48,9 @@ class AppController {
 })
 class AppModule {}
 
-const app = new Application({ port: 3000 });
+const port = Number(process.env.PORT ?? 3000);
+const app = new Application({ port });
 app.registerModule(AppModule);
 await app.listen();
-console.log('Async Config example running at http://localhost:3000');
-console.log('Try: curl http://localhost:3000/api/config');
+console.log(`Async Config example running at http://localhost:${port}`);
+console.log(`Try: curl http://localhost:${port}/api/config`);

@@ -93,11 +93,12 @@ class UserController {
   }
 }
 
-const app = new Application({ port: 3000 });
+const port = Number(process.env.PORT ?? 3000);
+const app = new Application({ port });
 app.registerController(UserController);
 app.listen();
 
-console.log('🚀 Server running on http://localhost:3000');
+console.log(`🚀 Server running on http://localhost:${port}`);
 console.log('\n📝 Available endpoints:');
 console.log('  GET    /api/users     - Get all users');
 console.log('  GET    /api/users/:id - Get user by ID');
@@ -105,8 +106,8 @@ console.log('  POST   /api/users     - Create user');
 console.log('  PUT    /api/users/:id - Update user');
 console.log('  DELETE /api/users/:id - Delete user');
 console.log('\n🧪 Try it with curl:');
-console.log('  curl http://localhost:3000/api/users');
-console.log('  curl http://localhost:3000/api/users/123');
-console.log('  curl -X POST http://localhost:3000/api/users \\');
+console.log(`  curl http://localhost:${port}/api/users`);
+console.log(`  curl http://localhost:${port}/api/users/123`);
+console.log(`  curl -X POST http://localhost:${port}/api/users \\`);
 console.log('       -H "Content-Type: application/json" \\');
 console.log('       -d \'{"name":"Alice"}\'');

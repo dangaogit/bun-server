@@ -142,18 +142,19 @@ class KnowledgeBaseController {
 })
 class KnowledgeBaseModule {}
 
-const app = new Application({ port: 3105, enableSignalHandlers: false });
+const port = Number(process.env.PORT ?? 3105);
+const app = new Application({ port, enableSignalHandlers: false });
 app.registerModule(KnowledgeBaseModule);
 await app.listen();
 
-console.log('RAG Pipeline API running on http://localhost:3105');
+console.log(`RAG Pipeline API running on http://localhost:${port}`);
 console.log('');
 console.log('Step 1 - Ingest some text:');
-console.log('  curl -X POST http://localhost:3105/api/kb/ingest \\');
+console.log(`  curl -X POST http://localhost:${port}/api/kb/ingest \\`);
 console.log('    -H "Content-Type: application/json" \\');
 console.log("    -d '{\"text\": \"Bun is a fast JavaScript runtime. It uses JavaScriptCore engine instead of V8.\"}'");
 console.log('');
 console.log('Step 2 - Query the knowledge base:');
-console.log('  curl -X POST http://localhost:3105/api/kb/query \\');
+console.log(`  curl -X POST http://localhost:${port}/api/kb/query \\`);
 console.log('    -H "Content-Type: application/json" \\');
 console.log("    -d '{\"question\": \"What engine does Bun use?\"}'");

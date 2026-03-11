@@ -22,7 +22,8 @@ class HelloController {
 }
 
 // 2. 创建应用
-const app = new Application({ port: 3000 });
+const port = Number(process.env.PORT ?? 3000);
+const app = new Application({ port });
 
 // 3. 注册控制器
 app.registerController(HelloController);
@@ -30,6 +31,6 @@ app.registerController(HelloController);
 // 4. 启动服务器
 app.listen();
 
-console.log('🚀 Server running on http://localhost:3000');
+console.log(`🚀 Server running on http://localhost:${port}`);
 console.log('\n🧪 Try it with curl:');
-console.log('  curl http://localhost:3000');
+console.log(`  curl http://localhost:${port}`);
