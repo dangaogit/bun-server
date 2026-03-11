@@ -3,10 +3,22 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v2.0.0',
+    version: 'v2.0.3',
     date: '2026-03',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'fix', text: 'Fix websocket upgrade proxying in examples/deploy to correctly forward wss traffic' },
+      { type: 'fix', text: 'Fix websocket example to use wss:// automatically on HTTPS pages' },
+      { type: 'docs', text: 'Rename playground references to examples for a unified examples experience' },
+      { type: 'chore', text: 'Sync web changelog pages and bump packages/web version to 2.0.3' },
+    ],
+  },
+  {
+    version: 'v2.0.0',
+    date: '2026-03',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'feat', text: 'AiModule — LLM unified access (OpenAI, Claude, Gemini, Ollama) + Tool Calling + streaming' },
       { type: 'feat', text: 'ConversationModule — Multi-turn conversation memory (Memory/Redis/Database stores)' },
