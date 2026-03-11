@@ -3,10 +3,22 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v2.0.0',
+    version: 'v2.0.3',
     date: '2026-03',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'fix', text: '修复 examples/deploy 中 WebSocket 升级代理转发，确保 wss 流量正确透传' },
+      { type: 'fix', text: '修复 WebSocket 示例在 HTTPS 页面下自动切换 wss:// 协议' },
+      { type: 'docs', text: '将 playground 文案统一为 examples，保持示例入口命名一致' },
+      { type: 'chore', text: '同步 web 中英文 changelog 页面，并将 packages/web 版本更新为 2.0.3' },
+    ],
+  },
+  {
+    version: 'v2.0.0',
+    date: '2026-03',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'feat', text: 'AiModule — 统一 LLM 接入（OpenAI、Claude、Gemini、Ollama）+ Tool Calling + 流式响应' },
       { type: 'feat', text: 'ConversationModule — 多轮会话记忆（Memory/Redis/Database 存储）' },
