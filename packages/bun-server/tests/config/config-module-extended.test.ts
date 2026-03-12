@@ -167,6 +167,7 @@ describe('ConfigModule.setValueByPath', () => {
     expect(() => setValueByPath(obj, '__proto__.polluted', 'yes')).toThrow();
     expect(() => setValueByPath(obj, 'constructor.prototype.evil', 'yes')).toThrow();
     expect(() => setValueByPath(obj, 'safe.__proto__.value', 'yes')).toThrow();
+    expect(() => setValueByPath(obj, 'safe. __proto__ .value', 'yes')).toThrow();
     expect(({} as any).polluted).toBeUndefined();
     expect(({} as any).evil).toBeUndefined();
   });
@@ -176,5 +177,12 @@ describe('ConfigModule.setValueByPath', () => {
     expect(() => setValueByPath(obj, 'a..b', 'value')).toThrow();
     expect(() => setValueByPath(obj, '.a', 'value')).toThrow();
     expect(() => setValueByPath(obj, 'a.', 'value')).toThrow();
+    expect(() => setValueByPath(obj, 'a.   .b', 'value')).toThrow();
+  });
+
+  test('should normalize whitespace around path segments', () => {
+    const obj: Record<string, unknown> = {};
+    setValueByPath(obj, ' a . b . c ', 'value');
+    expect((obj as any).a.b.c).toBe('value');
   });
 });

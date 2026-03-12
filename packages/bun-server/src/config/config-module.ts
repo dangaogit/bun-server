@@ -16,6 +16,18 @@ export class ConfigModule {
     'prototype',
     'constructor',
   ]);
+
+  private static isPlainObject(value: unknown): value is Record<string, unknown> {
+    if (typeof value !== 'object' || value === null) {
+      return false;
+    }
+    const proto = Object.getPrototypeOf(value);
+    return proto === null || proto === Object.prototype;
+  }
+
+  private static createSafeContainer(): Record<string, unknown> {
+    return Object.create(null) as Record<string, unknown>;
+  }
   /**
    * 创建配置模块
    * @param options - 模块配置
@@ -307,11 +319,15 @@ export class ConfigModule {
     path: string,
     value: unknown,
   ): void {
-    const segments = path.split('.');
-    if (segments.length === 0 || segments.some((segment) => !segment.trim())) {
+    const normalizedSegments = path.split('.').map((segment) => segment.trim());
+    if (
+      normalizedSegments.length === 0 ||
+      normalizedSegments.some((segment) => !segment)
+    ) {
       throw new Error(`[ConfigModule] Invalid config path: "${path}"`);
     }
-    for (const segment of segments) {
+
+    for (const segment of normalizedSegments) {
       if (ConfigModule.DANGEROUS_PATH_SEGMENTS.has(segment)) {
         throw new Error(`[ConfigModule] Unsafe config path segment: "${segment}"`);
       }
@@ -319,21 +335,23 @@ export class ConfigModule {
 
     let current: Record<string, unknown> = obj;
 
-    for (let i = 0; i < segments.length - 1; i++) {
-      const segment = segments[i]!;
-      // 仅允许在自有属性上做路径写入，避免原型链污染风险
+    for (let i = 0; i < normalizedSegments.length - 1; i++) {
+      const segment = normalizedSegments[i]!;
       const hasOwn = Object.prototype.hasOwnProperty.call(current, segment);
-      if (
-        !hasOwn ||
-        current[segment] == null ||
-        typeof current[segment] !== 'object'
-      ) {
-        current[segment] = Object.create(null) as Record<string, unknown>;
+      const existing = hasOwn ? current[segment] : undefined;
+
+      if (!ConfigModule.isPlainObject(existing)) {
+        current[segment] = ConfigModule.createSafeContainer();
       }
+
       current = current[segment] as Record<string, unknown>;
     }
 
-    current[segments[segments.length - 1]!] = value;
+    const lastSegment = normalizedSegments[normalizedSegments.length - 1]!;
+    if (ConfigModule.DANGEROUS_PATH_SEGMENTS.has(lastSegment)) {
+      throw new Error(`[ConfigModule] Unsafe config path segment: "${lastSegment}"`);
+    }
+    current[lastSegment] = value;
   }
 }
 
