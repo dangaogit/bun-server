@@ -3,20 +3,20 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0 --port 8080",
+    "dev": "vite --port 8080",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0 --port 8080"
+    "preview": "vite preview --port 8080"
   },
   "dependencies": {
-    "@antv/x6": "latest",
-    "react": "latest",
-    "react-dom": "latest"
+    "@antv/x6": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "@vitejs/plugin-react": "latest",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
     "typescript": "catalog:",
-    "vite": "latest"
+    "vite": "catalog:"
   }
 }
