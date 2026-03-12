@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "auto-skills": {
+      "source": "dangaogit/auto-skills",
+      "sourceType": "github",
+      "computedHash": "b28c15d8bc946a3b408737bf9209db383b898ef220fdd160be03b3003a1e3953"
+    }
+  }
+}
