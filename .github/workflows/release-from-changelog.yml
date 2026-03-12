@@ -1,0 +1,65 @@
+name: Release from .changelog
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".changelog/CHANGELOG_v*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: write # required to create tags and releases
+
+concurrency:
+  group: release-from-changelog
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history needed for git diff and tagging
+
+      - name: Create tags and releases for newly added changelogs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+
+          # Only process added (A) files to avoid re-releasing on edits to old changelogs
+          ADDED=$(git diff --name-status "$BEFORE" "$AFTER" \
+            | awk '$1=="A"{print $2}' \
+            | grep -E '^\.changelog/CHANGELOG_v[0-9]+\.[0-9]+\.[0-9]+\.md$' || true)
+
+          if [ -z "$ADDED" ]; then
+            echo "No newly added changelog file. Skip."
+            exit 0
+          fi
+
+          while IFS= read -r FILE; do
+            VER=$(echo "$FILE" | sed -E 's#^\.changelog/CHANGELOG_v([0-9]+\.[0-9]+\.[0-9]+)\.md$#\1#')
+            TAG="v$VER"
+
+            echo "Processing: $FILE -> $TAG"
+
+            if git rev-parse "$TAG" >/dev/null 2>&1; then
+              echo "Tag $TAG already exists. Skip tagging."
+            else
+              git tag "$TAG" "$AFTER"
+              git push origin "$TAG"
+              echo "Created and pushed tag $TAG"
+            fi
+
+            gh release create "$TAG" \
+              --title "$TAG" \
+              --notes-file "$FILE" \
+              || echo "Release $TAG already exists or creation failed, skipping."
+          done <<< "$ADDED"
