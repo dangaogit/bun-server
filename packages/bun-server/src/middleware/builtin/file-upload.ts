@@ -25,7 +25,7 @@ export function createFileUploadMiddleware(options: FileUploadOptions = {}): Mid
       for (const file of fileList) {
         if (file.size > maxSize) {
           context.setStatus(413);
-          return context.createResponse({ error: `File ${file.name} exceeds max size` });
+          return context.createErrorResponse({ error: `File ${file.name} exceeds max size` });
         }
       }
     }

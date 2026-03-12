@@ -193,7 +193,7 @@ export function createRateLimitMiddleware(options: RateLimitOptions): Middleware
     // 检查是否超过限制
     if (currentCount > max) {
       context.setStatus(statusCode);
-      return context.createResponse({
+      return context.createErrorResponse({
         error: message,
         retryAfter: Math.ceil(windowMs / 1000),
       });

@@ -3,10 +3,22 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v2.0.3',
+    version: 'v2.0.4',
     date: '2026-03',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'feat', text: 'Add createErrorResponse for error-only response paths with sensitive field redaction' },
+      { type: 'fix', text: 'Harden default error responses to avoid leaking stack/trace/cause in API payloads' },
+      { type: 'chore', text: 'Remove the unused release workflow and bump packages/web version to 2.0.4' },
+      { type: 'test', text: 'Add regression coverage for response redaction and compatibility behavior' },
+    ],
+  },
+  {
+    version: 'v2.0.3',
+    date: '2026-03',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'fix', text: 'Fix websocket upgrade proxying in examples/deploy to correctly forward wss traffic' },
       { type: 'fix', text: 'Fix websocket example to use wss:// automatically on HTTPS pages' },
@@ -62,6 +74,7 @@ const typeColors: Record<string, string> = {
   fix: 'text-green-400 bg-green-500/10',
   docs: 'text-blue-400 bg-blue-500/10',
   chore: 'text-zinc-400 bg-zinc-800',
+  test: 'text-purple-400 bg-purple-500/10',
 };
 ---
 

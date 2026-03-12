@@ -161,4 +161,28 @@ describe('ConfigModule.setValueByPath', () => {
     setValueByPath(obj, 'a.b', 'value');
     expect((obj.a as any).b).toBe('value');
   });
+
+  test('should reject dangerous prototype pollution paths', () => {
+    const obj: Record<string, unknown> = {};
+    expect(() => setValueByPath(obj, '__proto__.polluted', 'yes')).toThrow();
+    expect(() => setValueByPath(obj, 'constructor.prototype.evil', 'yes')).toThrow();
+    expect(() => setValueByPath(obj, 'safe.__proto__.value', 'yes')).toThrow();
+    expect(() => setValueByPath(obj, 'safe. __proto__ .value', 'yes')).toThrow();
+    expect(({} as any).polluted).toBeUndefined();
+    expect(({} as any).evil).toBeUndefined();
+  });
+
+  test('should reject empty path segments', () => {
+    const obj: Record<string, unknown> = {};
+    expect(() => setValueByPath(obj, 'a..b', 'value')).toThrow();
+    expect(() => setValueByPath(obj, '.a', 'value')).toThrow();
+    expect(() => setValueByPath(obj, 'a.', 'value')).toThrow();
+    expect(() => setValueByPath(obj, 'a.   .b', 'value')).toThrow();
+  });
+
+  test('should normalize whitespace around path segments', () => {
+    const obj: Record<string, unknown> = {};
+    setValueByPath(obj, ' a . b . c ', 'value');
+    expect((obj as any).a.b.c).toBe('value');
+  });
 });

@@ -343,7 +343,7 @@ export class Application {
           path: context.path,
         });
         context.setStatus(404);
-        return context.createResponse({ error: 'Not Found' });
+        return context.createErrorResponse({ error: 'Not Found' });
       });
     });
   }

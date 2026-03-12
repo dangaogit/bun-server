@@ -53,12 +53,12 @@ export async function handleError(error: unknown, context: Context): Promise<Res
       responseBody.details = error.details;
     }
 
-    return context.createResponse(responseBody);
+    return context.createErrorResponse(responseBody);
   }
 
   if (error instanceof ValidationError) {
     context.setStatus(400);
-    return context.createResponse({
+    return context.createErrorResponse({
       error: error.message,
       code: 'VALIDATION_FAILED',
       issues: error.issues,
@@ -74,7 +74,7 @@ export async function handleError(error: unknown, context: Context): Promise<Res
     message,
     stack,
   });
-  return context.createResponse({
+  return context.createErrorResponse({
     error: 'Internal Server Error',
     details: process.env.NODE_ENV === 'production' ? undefined : message,
   });

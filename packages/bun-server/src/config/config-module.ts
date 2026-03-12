@@ -11,6 +11,23 @@ import { CONFIG_SERVICE_TOKEN, type ConfigModuleOptions } from './types';
   providers: [],
 })
 export class ConfigModule {
+  private static readonly DANGEROUS_PATH_SEGMENTS = new Set([
+    '__proto__',
+    'prototype',
+    'constructor',
+  ]);
+
+  private static isPlainObject(value: unknown): value is Record<string, unknown> {
+    if (typeof value !== 'object' || value === null) {
+      return false;
+    }
+    const proto = Object.getPrototypeOf(value);
+    return proto === null || proto === Object.prototype;
+  }
+
+  private static createSafeContainer(): Record<string, unknown> {
+    return Object.create(null) as Record<string, unknown>;
+  }
   /**
    * 创建配置模块
    * @param options - 模块配置
@@ -302,24 +319,39 @@ export class ConfigModule {
     path: string,
     value: unknown,
   ): void {
-    const segments = path.split('.');
+    const normalizedSegments = path.split('.').map((segment) => segment.trim());
+    if (
+      normalizedSegments.length === 0 ||
+      normalizedSegments.some((segment) => !segment)
+    ) {
+      throw new Error(`[ConfigModule] Invalid config path: "${path}"`);
+    }
+
+    for (const segment of normalizedSegments) {
+      if (ConfigModule.DANGEROUS_PATH_SEGMENTS.has(segment)) {
+        throw new Error(`[ConfigModule] Unsafe config path segment: "${segment}"`);
+      }
+    }
+
     let current: Record<string, unknown> = obj;
 
-    for (let i = 0; i < segments.length - 1; i++) {
-      const segment = segments[i]!;
-      // 检查是否需要创建嵌套对象
-      // 注意：typeof null === 'object'，所以需要明确排除 null
-      if (
-        !(segment in current) ||
-        current[segment] == null ||
-        typeof current[segment] !== 'object'
-      ) {
-        current[segment] = {};
+    for (let i = 0; i < normalizedSegments.length - 1; i++) {
+      const segment = normalizedSegments[i]!;
+      const hasOwn = Object.prototype.hasOwnProperty.call(current, segment);
+      const existing = hasOwn ? current[segment] : undefined;
+
+      if (!ConfigModule.isPlainObject(existing)) {
+        current[segment] = ConfigModule.createSafeContainer();
       }
+
       current = current[segment] as Record<string, unknown>;
     }
 
-    current[segments[segments.length - 1]!] = value;
+    const lastSegment = normalizedSegments[normalizedSegments.length - 1]!;
+    if (ConfigModule.DANGEROUS_PATH_SEGMENTS.has(lastSegment)) {
+      throw new Error(`[ConfigModule] Unsafe config path segment: "${lastSegment}"`);
+    }
+    current[lastSegment] = value;
   }
 }
 

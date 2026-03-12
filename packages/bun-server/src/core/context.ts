@@ -8,6 +8,7 @@ import { type URLSearchParams, URL } from 'url';
  * 封装 Request 和 Response，提供便捷的访问方法
  */
 export class Context {
+  private static readonly ERROR_REDACTED_KEYS = new Set(['stack', 'trace', 'cause']);
   /**
    * 原始请求对象
    */
@@ -224,6 +225,76 @@ export class Context {
       headers,
       ...init,
     });
+  }
+
+  /**
+   * 创建错误响应（自动过滤敏感字段）
+   * @param body - 错误响应体
+   * @param init - 响应初始化选项
+   * @returns Response 对象
+   */
+  public createErrorResponse(body?: unknown, init?: ResponseInit): Response {
+    const status = init?.status ?? this.statusCode;
+    const errorStatus = status >= 400 ? status : 500;
+    const sanitizedBody = this.sanitizeErrorPayload(body);
+
+    return this.createResponse(sanitizedBody, {
+      ...init,
+      status: errorStatus,
+    });
+  }
+
+  private sanitizeErrorPayload(body: unknown): unknown {
+    if (body === undefined || body === null) {
+      return body;
+    }
+
+    if (body instanceof Error) {
+      return {
+        error: body.message || 'Internal Server Error',
+      };
+    }
+
+    const seen = new WeakSet<object>();
+    return this.sanitizeValue(body, seen);
+  }
+
+  private sanitizeValue(value: unknown, seen: WeakSet<object>): unknown {
+    if (value === null || value === undefined) {
+      return value;
+    }
+
+    if (typeof value !== 'object') {
+      return value;
+    }
+
+    if (value instanceof Date || value instanceof ArrayBuffer || value instanceof Blob) {
+      return value;
+    }
+
+    if (seen.has(value)) {
+      return '[Circular]';
+    }
+    seen.add(value);
+
+    if (Array.isArray(value)) {
+      return value.map((item) => this.sanitizeValue(item, seen));
+    }
+
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) {
+      return value;
+    }
+
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, nestedValue] of Object.entries(value as Record<string, unknown>)) {
+      if (Context.ERROR_REDACTED_KEYS.has(key)) {
+        continue;
+      }
+      sanitized[key] = this.sanitizeValue(nestedValue, seen);
+    }
+
+    return sanitized;
   }
 }
 

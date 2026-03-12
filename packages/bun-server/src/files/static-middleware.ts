@@ -45,7 +45,7 @@ export function createStaticFileMiddleware(options: StaticFileOptions): Middlewa
       if (fallthrough) {
         return await next();
       }
-      return context.createResponse({ error: 'File Not Found' }, { status: 404 });
+      return context.createErrorResponse({ error: 'File Not Found' }, { status: 404 });
     }
   };
 }
