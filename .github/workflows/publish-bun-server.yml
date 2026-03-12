@@ -66,4 +66,4 @@ jobs:
 
       - name: Publish to npm (Bun)
         if: steps.ver.outputs.changed == 'true'
-        run: bun --cwd=packages/bun-server run publish:package
+        run: bun --cwd=packages/bun-server run publish:package:github
