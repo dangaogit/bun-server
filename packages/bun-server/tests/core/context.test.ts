@@ -82,5 +82,57 @@ describe('Context', () => {
     const response = context.createResponse({ error: 'Not Found' });
     expect(response.status).toBe(404);
   });
+
+  test('createResponse should keep business fields unchanged', async () => {
+    const request = new Request('http://localhost:3000/api/users');
+    const context = new Context(request);
+
+    const response = context.createResponse({
+      stack: 'business-stack-value',
+      data: { trace: 'business-trace-value' },
+    });
+    const body = (await response.json()) as {
+      stack: string;
+      data: { trace: string };
+    };
+
+    expect(body.stack).toBe('business-stack-value');
+    expect(body.data.trace).toBe('business-trace-value');
+  });
+
+  test('createErrorResponse should redact sensitive fields', async () => {
+    const request = new Request('http://localhost:3000/api/users');
+    const context = new Context(request);
+    context.setStatus(400);
+
+    const response = context.createErrorResponse({
+      error: 'bad request',
+      stack: 'hidden',
+      details: {
+        trace: 'hidden-trace',
+        cause: 'hidden-cause',
+      },
+      items: [
+        {
+          trace: 'hidden-array-trace',
+          safe: 'value',
+        },
+      ],
+    });
+    const body = (await response.json()) as {
+      error: string;
+      stack?: string;
+      details: { trace?: string; cause?: string };
+      items: Array<{ trace?: string; safe: string }>;
+    };
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe('bad request');
+    expect(body.stack).toBeUndefined();
+    expect(body.details.trace).toBeUndefined();
+    expect(body.details.cause).toBeUndefined();
+    expect(body.items[0]?.trace).toBeUndefined();
+    expect(body.items[0]?.safe).toBe('value');
+  });
 });
 

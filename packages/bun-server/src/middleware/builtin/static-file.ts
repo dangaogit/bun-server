@@ -52,7 +52,7 @@ export function createStaticFileMiddleware(options: StaticFileOptions): Middlewa
     const segments = cleanPath.split('/').filter((segment) => segment.length > 0);
     if (segments.some((segment) => segment === '..')) {
       context.setStatus(403);
-      return context.createResponse({ error: 'Forbidden' });
+      return context.createErrorResponse({ error: 'Forbidden' });
     }
 
     let targetPath = resolve(root, cleanPath);
@@ -62,7 +62,7 @@ export function createStaticFileMiddleware(options: StaticFileOptions): Middlewa
 
     if (!isSubPath(root, targetPath)) {
       context.setStatus(403);
-      return context.createResponse({ error: 'Forbidden' });
+      return context.createErrorResponse({ error: 'Forbidden' });
     }
 
     const file = Bun.file(targetPath);

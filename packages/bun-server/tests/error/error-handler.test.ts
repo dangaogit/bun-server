@@ -140,6 +140,30 @@ describe('handleError', () => {
       expect(body.error).toBe('Internal Server Error');
     });
 
+    test('should not expose stack field in error response body', async () => {
+      const previousNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+      const context = createContext();
+      const error = new Error('Stack should be hidden from response body');
+      error.stack = 'sensitive stack trace';
+
+      try {
+        const response = await handleError(error, context);
+        const body = await response.json() as {
+          error: string;
+          details?: string;
+          stack?: string;
+        };
+
+        expect(response.status).toBe(500);
+        expect(body.error).toBe('Internal Server Error');
+        expect(body.details).toBe('Stack should be hidden from response body');
+        expect(body.stack).toBeUndefined();
+      } finally {
+        process.env.NODE_ENV = previousNodeEnv;
+      }
+    });
+
     test('should handle string error', async () => {
       const context = createContext();
       const error = 'String error message';

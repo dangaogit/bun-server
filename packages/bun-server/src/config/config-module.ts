@@ -11,6 +11,11 @@ import { CONFIG_SERVICE_TOKEN, type ConfigModuleOptions } from './types';
   providers: [],
 })
 export class ConfigModule {
+  private static readonly DANGEROUS_PATH_SEGMENTS = new Set([
+    '__proto__',
+    'prototype',
+    'constructor',
+  ]);
   /**
    * 创建配置模块
    * @param options - 模块配置
@@ -303,18 +308,27 @@ export class ConfigModule {
     value: unknown,
   ): void {
     const segments = path.split('.');
+    if (segments.length === 0 || segments.some((segment) => !segment.trim())) {
+      throw new Error(`[ConfigModule] Invalid config path: "${path}"`);
+    }
+    for (const segment of segments) {
+      if (ConfigModule.DANGEROUS_PATH_SEGMENTS.has(segment)) {
+        throw new Error(`[ConfigModule] Unsafe config path segment: "${segment}"`);
+      }
+    }
+
     let current: Record<string, unknown> = obj;
 
     for (let i = 0; i < segments.length - 1; i++) {
       const segment = segments[i]!;
-      // 检查是否需要创建嵌套对象
-      // 注意：typeof null === 'object'，所以需要明确排除 null
+      // 仅允许在自有属性上做路径写入，避免原型链污染风险
+      const hasOwn = Object.prototype.hasOwnProperty.call(current, segment);
       if (
-        !(segment in current) ||
+        !hasOwn ||
         current[segment] == null ||
         typeof current[segment] !== 'object'
       ) {
-        current[segment] = {};
+        current[segment] = Object.create(null) as Record<string, unknown>;
       }
       current = current[segment] as Record<string, unknown>;
     }

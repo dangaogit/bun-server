@@ -63,7 +63,7 @@ export function createErrorHandlingMiddleware(
       }
 
       if (error instanceof ValidationError) {
-        return context.createResponse(
+        return context.createErrorResponse(
           {
             error: error.message,
             issues: error.issues,
@@ -84,7 +84,7 @@ export function createErrorHandlingMiddleware(
       }
 
       if (error instanceof Error) {
-        return context.createResponse(
+        return context.createErrorResponse(
           {
             error: error.message,
           },

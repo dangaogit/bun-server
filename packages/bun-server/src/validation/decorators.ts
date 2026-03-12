@@ -58,11 +58,79 @@ export function IsNumber(options: RuleOption = {}): ValidationRuleDefinition {
 }
 
 export function IsEmail(options: RuleOption = {}): ValidationRuleDefinition {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return {
     name: 'isEmail',
     message: options.message ?? '必须是合法的邮箱地址',
-    validate: (value) => typeof value === 'string' && emailRegex.test(value),
+    validate: (value) => {
+      if (typeof value !== 'string') {
+        return false;
+      }
+
+      const email = value.trim();
+      if (!email || email.length > 254) {
+        return false;
+      }
+      if (email.includes(' ')) {
+        return false;
+      }
+
+      const atIndex = email.indexOf('@');
+      if (atIndex <= 0 || atIndex !== email.lastIndexOf('@')) {
+        return false;
+      }
+
+      const local = email.slice(0, atIndex);
+      const domain = email.slice(atIndex + 1);
+      if (!local || !domain || local.length > 64) {
+        return false;
+      }
+      if (local.startsWith('.') || local.endsWith('.') || local.includes('..')) {
+        return false;
+      }
+      if (domain.startsWith('.') || domain.endsWith('.') || domain.includes('..')) {
+        return false;
+      }
+      if (!domain.includes('.')) {
+        return false;
+      }
+
+      for (const ch of local) {
+        const code = ch.charCodeAt(0);
+        const isAlphaNum =
+          (code >= 48 && code <= 57) ||
+          (code >= 65 && code <= 90) ||
+          (code >= 97 && code <= 122);
+        const isAllowedSymbol = "!#$%&'*+/=?^_`{|}~.-".includes(ch);
+        if (!isAlphaNum && !isAllowedSymbol) {
+          return false;
+        }
+      }
+
+      const labels = domain.split('.');
+      if (labels.length < 2) {
+        return false;
+      }
+      for (const label of labels) {
+        if (!label || label.length > 63) {
+          return false;
+        }
+        if (label.startsWith('-') || label.endsWith('-')) {
+          return false;
+        }
+        for (const ch of label) {
+          const code = ch.charCodeAt(0);
+          const isAlphaNum =
+            (code >= 48 && code <= 57) ||
+            (code >= 65 && code <= 90) ||
+            (code >= 97 && code <= 122);
+          if (!isAlphaNum && ch !== '-') {
+            return false;
+          }
+        }
+      }
+
+      return labels[labels.length - 1]!.length >= 2;
+    },
   };
 }
 

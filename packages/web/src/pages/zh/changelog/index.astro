@@ -3,10 +3,22 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v2.0.3',
+    version: 'v2.0.4',
     date: '2026-03',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'feat', text: '新增 createErrorResponse，仅用于错误响应路径并自动过滤敏感字段' },
+      { type: 'fix', text: '增强错误响应安全性，避免在返回体中泄露 stack/trace/cause' },
+      { type: 'chore', text: '删除未使用的 release workflow，并将 packages/web 版本升级到 2.0.4' },
+      { type: 'test', text: '补充响应脱敏与兼容性回归测试覆盖' },
+    ],
+  },
+  {
+    version: 'v2.0.3',
+    date: '2026-03',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'fix', text: '修复 examples/deploy 中 WebSocket 升级代理转发，确保 wss 流量正确透传' },
       { type: 'fix', text: '修复 WebSocket 示例在 HTTPS 页面下自动切换 wss:// 协议' },
@@ -62,6 +74,7 @@ const typeColors: Record<string, string> = {
   fix: 'text-green-400 bg-green-500/10',
   docs: 'text-blue-400 bg-blue-500/10',
   chore: 'text-zinc-400 bg-zinc-800',
+  test: 'text-purple-400 bg-purple-500/10',
 };
 ---
 
