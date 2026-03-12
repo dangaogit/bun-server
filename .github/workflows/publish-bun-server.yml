@@ -60,6 +60,10 @@ jobs:
           echo "changed=true" >> "$GITHUB_OUTPUT"
           echo "Version changed. Will publish: $CUR"
 
+      - name: Build project
+        if: steps.ver.outputs.changed == 'true'
+        run: bun run build
+
       - name: Publish to npm (Bun)
         if: steps.ver.outputs.changed == 'true'
         run: bun --cwd=packages/bun-server run publish:package
