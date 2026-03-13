@@ -214,6 +214,93 @@ describe('DatabaseService', () => {
   });
 });
 
+describe('DatabaseService Bun.SQL parameter binding', () => {
+  test('should pass parameters as Bun.SQL template values', async () => {
+    const service = new DatabaseService({
+      database: {
+        type: 'postgres',
+        config: {
+          host: 'localhost',
+          port: 5432,
+          database: 'test',
+          user: 'test',
+          password: 'test',
+        },
+      },
+    });
+
+    let capturedTemplate: TemplateStringsArray | null = null;
+    let capturedValues: unknown[] = [];
+    const mockConnection = async (
+      template: TemplateStringsArray,
+      ...values: unknown[]
+    ): Promise<Array<Record<string, unknown>>> => {
+      capturedTemplate = template;
+      capturedValues = values;
+      return [{ ok: true }];
+    };
+
+    (service as unknown as { getConnection: () => unknown }).getConnection = () =>
+      mockConnection;
+    (
+      service as unknown as {
+        getDatabaseType: () => 'sqlite' | 'postgres' | 'mysql';
+      }
+    ).getDatabaseType = () => 'postgres';
+
+    const result = (await service.query<{ ok: boolean }>(
+      'SELECT * FROM users WHERE id = ? AND name = ?',
+      [1, "O'Reilly"],
+    )) as Array<{ ok: boolean }>;
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result[0]?.ok).toBe(true);
+    expect(capturedValues).toEqual([1, "O'Reilly"]);
+    expect(capturedTemplate).toBeDefined();
+    expect(capturedTemplate?.length).toBe(3);
+    expect(capturedTemplate?.[0]).toBe('SELECT * FROM users WHERE id = ');
+    expect(capturedTemplate?.[1]).toBe(' AND name = ');
+    expect(capturedTemplate?.[2]).toBe('');
+  });
+
+  test('should throw when placeholders do not match params count', async () => {
+    const service = new DatabaseService({
+      database: {
+        type: 'mysql',
+        config: {
+          host: 'localhost',
+          port: 3306,
+          database: 'test',
+          user: 'test',
+          password: 'test',
+        },
+      },
+    });
+
+    const mockConnection = async (): Promise<Array<Record<string, unknown>>> => [];
+    (service as unknown as { getConnection: () => unknown }).getConnection = () =>
+      mockConnection;
+    (
+      service as unknown as {
+        getDatabaseType: () => 'sqlite' | 'postgres' | 'mysql';
+      }
+    ).getDatabaseType = () => 'mysql';
+
+    await expect(
+      service.query('SELECT * FROM users WHERE id = ?', [1, 2]) as Promise<
+        unknown[]
+      >,
+    ).rejects.toThrow(
+      'Bun.SQL parameterized queries are not fully supported. Consider using template string queries.',
+    );
+    await expect(
+      service.query('SELECT * FROM users WHERE id = ?', [1, 2]) as Promise<
+        unknown[]
+      >,
+    ).rejects.toThrow('Original error: SQL placeholders count does not match parameters count');
+  });
+});
+
 describe('ConnectionPool', () => {
   test('should create connection pool', () => {
     const { ConnectionPool } = require('../../src/database/connection-pool');

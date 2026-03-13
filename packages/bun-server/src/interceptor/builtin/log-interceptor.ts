@@ -101,7 +101,7 @@ export class LogInterceptor extends BaseInterceptor {
     let logger: Logger | undefined;
     try {
       logger = container.resolve<Logger>(LOGGER_TOKEN);
-    } catch {
+    } catch (_error) {
       // Logger not available, use console
     }
 

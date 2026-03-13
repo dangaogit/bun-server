@@ -105,7 +105,7 @@ export class ParamBinder {
             (context as unknown as { sessionId: string }).sessionId = newSession.id;
             return newSession;
           }
-        } catch {
+        } catch (_error) {
           // SessionService 未注册，返回 undefined
         }
         return undefined;

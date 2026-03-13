@@ -145,7 +145,7 @@ export class DatabaseService {
 
   /**
    * Bun.SQL 查询实现（PostgreSQL/MySQL）
-   * 注意：Bun.SQL 主要使用模板字符串，但为了兼容性，我们尝试支持参数化查询
+   * 通过模板字符串调用 Bun.SQL，确保参数走 Bun.SQL 转义逻辑
    */
   private async queryBunSQL<T = unknown>(
     connection: unknown,
@@ -153,25 +153,23 @@ export class DatabaseService {
     params?: unknown[],
   ): Promise<T[]> {
     // Bun.SQL 对象可以作为函数调用（模板字符串）
-    // 但我们需要支持参数化查询
     if (connection && typeof connection === 'function') {
-      // Bun.SQL 模板字符串查询
-      // 注意：Bun.SQL 使用模板字符串，参数会自动转义
-      // 这里我们需要将 SQL 和参数组合成模板字符串调用
-      // 但由于 TypeScript 限制，我们使用动态调用
       try {
-        // 尝试使用模板字符串方式
-        // 注意：这需要将参数插入到 SQL 中，但 Bun.SQL 会自动处理 SQL 注入防护
-        const sqlWithParams = this.interpolateParams(sql, params);
+        const { strings, values } = this.buildTemplateFromSql(sql, params);
+        const template = Object.assign(strings, {
+          raw: strings,
+        }) as unknown as TemplateStringsArray;
         const result = await (connection as (
           template: TemplateStringsArray,
           ...values: unknown[]
-        ) => Promise<Array<Record<string, unknown>>>)`${sqlWithParams}`;
+        ) => Promise<Array<Record<string, unknown>>>)(template, ...values);
         return result as T[];
-      } catch {
-        // 如果模板字符串方式失败，尝试其他方式
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        // 如果模板字符串方式失败，保留原始错误，便于排查参数/SQL 构造问题
         throw new Error(
-          'Bun.SQL parameterized queries are not fully supported. Consider using template string queries.',
+          `Bun.SQL parameterized queries are not fully supported. Consider using template string queries. Original error: ${errorMessage}`,
         );
       }
     }
@@ -197,25 +195,24 @@ export class DatabaseService {
   }
 
   /**
-   * 将参数插入到 SQL 中（用于 Bun.SQL 模板字符串）
-   * 注意：这只是临时方案，Bun.SQL 的模板字符串会自动处理 SQL 注入防护
+   * 将 SQL 与 ? 占位符参数转换为模板字符串片段
+   * 让参数通过 Bun.SQL 的 values 通道注入，避免手工拼接 SQL
    */
-  private interpolateParams(sql: string, params?: unknown[]): string {
+  private buildTemplateFromSql(
+    sql: string,
+    params?: unknown[],
+  ): { strings: string[]; values: unknown[] } {
     if (!params || params.length === 0) {
-      return sql;
+      return { strings: [sql], values: [] };
     }
 
-    // 简单的参数替换（实际应该使用 Bun.SQL 的模板字符串）
-    // 这里只是占位实现，实际使用时应该使用模板字符串
-    let result = sql;
-    for (let i = 0; i < params.length; i++) {
-      const param = params[i];
-      const value =
-        typeof param === 'string'
-          ? `'${param.replace(/'/g, "''")}'`
-          : String(param);
-      result = result.replace('?', value);
+    const strings = sql.split('?');
+    if (strings.length !== params.length + 1) {
+      throw new Error(
+        'SQL placeholders count does not match parameters count',
+      );
     }
-    return result;
+
+    return { strings, values: params };
   }
 }

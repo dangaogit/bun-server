@@ -3,10 +3,23 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v2.0.4',
+    version: 'v2.0.8',
     date: '2026-03',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'fix', text: 'Use Bun.SQL template value binding in DatabaseService and preserve original query error context' },
+      { type: 'refactor', text: 'Replace catch-without-binding patterns across src to improve error handling consistency' },
+      { type: 'feat', text: 'Add custom SQL input support in examples/04-real-world database test app' },
+      { type: 'test', text: 'Add regression tests for Bun.SQL placeholder/parameter binding paths' },
+      { type: 'chore', text: 'Bump @dangao/bun-server and @dangao/bun-server-web to 2.0.8 and sync changelog pages' },
+    ],
+  },
+  {
+    version: 'v2.0.4',
+    date: '2026-03',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'feat', text: 'Add createErrorResponse for error-only response paths with sensitive field redaction' },
       { type: 'fix', text: 'Harden default error responses to avoid leaking stack/trace/cause in API payloads' },
@@ -72,6 +85,7 @@ const versions = [
 const typeColors: Record<string, string> = {
   feat: 'text-brand-400 bg-brand-500/10',
   fix: 'text-green-400 bg-green-500/10',
+  refactor: 'text-amber-400 bg-amber-500/10',
   docs: 'text-blue-400 bg-blue-500/10',
   chore: 'text-zinc-400 bg-zinc-800',
   test: 'text-purple-400 bg-purple-500/10',

@@ -191,7 +191,7 @@ export function IsUrl(options: RuleOptions = {}): ValidationRuleDefinition {
       try {
         new URL(value);
         return true;
-      } catch {
+      } catch (_error) {
         return false;
       }
     },
@@ -212,7 +212,7 @@ export function IsJSON(options: RuleOptions = {}): ValidationRuleDefinition {
       try {
         JSON.parse(value);
         return true;
-      } catch {
+      } catch (_error) {
         return false;
       }
     },

@@ -97,7 +97,7 @@ export class TestHttpClient {
     let body: unknown;
     try {
       body = JSON.parse(text);
-    } catch {
+    } catch (_error) {
       body = text;
     }
 

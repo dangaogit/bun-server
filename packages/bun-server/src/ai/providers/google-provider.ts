@@ -139,7 +139,7 @@ export class GoogleProvider implements LlmProvider {
                   const parts = (candidate?.['content'] as Record<string, unknown>)?.['parts'] as Array<Record<string, unknown>> ?? [];
                   const text = parts.map((p) => p['text'] ?? '').join('');
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: text, done: false })}\n\n`));
-                } catch {
+                } catch (_error) {
                   // skip
                 }
               }

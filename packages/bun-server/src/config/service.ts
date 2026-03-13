@@ -24,10 +24,10 @@ export class ConfigService<TConfig extends Record<string, unknown> = Record<stri
 
     try {
       return JSON.parse(content);
-    } catch {
+    } catch (_error) {
       try {
         return Bun.JSONC.parse(content);
-      } catch {
+      } catch (_innerError) {
         return Bun.JSON5.parse(content);
       }
     }

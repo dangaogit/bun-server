@@ -74,7 +74,7 @@ export class FilePromptStore implements PromptStore {
       try {
         const path = `${this.promptsDir}/${id}.json`;
         await Bun.file(path).exists() && Bun.write(path, ''); // Soft delete (empty file)
-      } catch {
+      } catch (_error) {
         // ignore
       }
     }
@@ -105,11 +105,11 @@ export class FilePromptStore implements PromptStore {
           await this.memory.create({ id, ...data }).catch(() => {
             // Template already exists — skip
           });
-        } catch {
+        } catch (_error) {
           // Skip malformed files
         }
       }
-    } catch {
+    } catch (_error) {
       // Directory doesn't exist — start empty
     }
   }
@@ -128,7 +128,7 @@ export class FilePromptStore implements PromptStore {
         2,
       );
       await Bun.write(`${this.promptsDir}/${template.id}.json`, content);
-    } catch {
+    } catch (_error) {
       // Ignore write errors (e.g., read-only filesystem)
     }
   }

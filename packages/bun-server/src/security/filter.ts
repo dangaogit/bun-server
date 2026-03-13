@@ -71,7 +71,7 @@ export function createSecurityFilter(config: SecurityFilterConfig): Middleware {
       const { ControllerRegistry } = require('../controller/controller');
       cachedContainer = ControllerRegistry.getInstance().getContainer();
       return cachedContainer;
-    } catch {
+    } catch (_error) {
       return null;
     }
   };

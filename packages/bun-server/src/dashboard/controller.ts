@@ -75,7 +75,7 @@ export class DashboardService {
       return (
         username === this.auth.username && password === this.auth.password
       );
-    } catch {
+    } catch (_error) {
       return false;
     }
   }
@@ -214,7 +214,7 @@ export class DashboardService {
       return new Response(JSON.stringify(data), {
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
       });
-    } catch {
+    } catch (_error) {
       const data = {
         status: 'up',
         timestamp: Date.now(),

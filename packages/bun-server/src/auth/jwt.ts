@@ -76,7 +76,7 @@ export class JWTUtil {
       }
 
       return payload;
-    } catch {
+    } catch (_error) {
       return null;
     }
   }

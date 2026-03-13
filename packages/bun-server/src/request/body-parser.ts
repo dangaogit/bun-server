@@ -57,10 +57,10 @@ export class BodyParser {
           // 尝试解析为 JSON
           try {
             return JSON.parse(text);
-          } catch {
+          } catch (_error) {
             return text;
           }
-        } catch {
+        } catch (_error) {
           return undefined;
         }
       }
@@ -72,7 +72,7 @@ export class BodyParser {
       }
       try {
         return JSON.parse(fallbackText);
-      } catch {
+      } catch (_error) {
         return fallbackText;
       }
     } catch (error) {

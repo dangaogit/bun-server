@@ -3,10 +3,23 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v2.0.4',
+    version: 'v2.0.8',
     date: '2026-03',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'fix', text: 'DatabaseService 改为通过 Bun.SQL 模板 values 绑定参数，并保留原始查询错误上下文' },
+      { type: 'refactor', text: '统一替换 src 下 catch 无异常绑定写法，提升错误处理一致性' },
+      { type: 'feat', text: 'examples/04-real-world 数据库测试页支持自定义 SQL 输入' },
+      { type: 'test', text: '补充 Bun.SQL 占位符与参数绑定路径的回归测试' },
+      { type: 'chore', text: '将 @dangao/bun-server 与 @dangao/bun-server-web 版本统一升级到 2.0.8，并同步 changelog 页面' },
+    ],
+  },
+  {
+    version: 'v2.0.4',
+    date: '2026-03',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'feat', text: '新增 createErrorResponse，仅用于错误响应路径并自动过滤敏感字段' },
       { type: 'fix', text: '增强错误响应安全性，避免在返回体中泄露 stack/trace/cause' },
@@ -72,6 +85,7 @@ const versions = [
 const typeColors: Record<string, string> = {
   feat: 'text-brand-400 bg-brand-500/10',
   fix: 'text-green-400 bg-green-500/10',
+  refactor: 'text-amber-400 bg-amber-500/10',
   docs: 'text-blue-400 bg-blue-500/10',
   chore: 'text-zinc-400 bg-zinc-800',
   test: 'text-purple-400 bg-purple-500/10',

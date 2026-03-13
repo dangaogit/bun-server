@@ -67,7 +67,7 @@ export function createDebugMiddleware(
     if (recordBody && ['POST', 'PUT', 'PATCH'].includes(context.method)) {
       try {
         requestBody = await context.getBody();
-      } catch {
+      } catch (_error) {
         requestBody = undefined;
       }
     }
@@ -92,7 +92,7 @@ export function createDebugMiddleware(
       if (route) {
         matchedRoute = route.path;
       }
-    } catch {
+    } catch (_error) {
       matchedRoute = undefined;
     }
 

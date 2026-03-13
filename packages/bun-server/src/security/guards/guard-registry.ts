@@ -73,7 +73,7 @@ export class GuardRegistry {
         this.guardInstances.set(guard as Constructor<CanActivate>, instance);
         return instance;
       }
-    } catch {
+    } catch (_error) {
       // 如果容器解析失败，继续尝试手动实例化
     }
 

@@ -125,7 +125,7 @@ export class ConversationService {
       for (const msg of newMessages) {
         await this.store.appendMessage(id, msg);
       }
-    } catch {
+    } catch (_error) {
       // If summarization fails, fall back to simple trim
       await this.store.trim(id, this.maxMessages);
     }

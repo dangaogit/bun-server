@@ -242,7 +242,7 @@ export class ModuleRegistry {
           } else if ('useFactory' in provider) {
             instances.push(ref.container.resolve(provider.provide as Constructor<unknown>));
           }
-        } catch {
+        } catch (_error) {
           // skip providers that can't be resolved (e.g. pending async providers)
         }
       }

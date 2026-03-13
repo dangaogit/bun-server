@@ -88,7 +88,7 @@ export function createClient(
 
         try {
           return JSON.parse(text);
-        } catch {
+        } catch (_error) {
           return text;
         }
       };
