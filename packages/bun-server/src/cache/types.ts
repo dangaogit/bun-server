@@ -246,7 +246,7 @@ export class RedisCacheStore implements CacheStore {
     }
     try {
       return JSON.parse(value) as T;
-    } catch {
+    } catch (_error) {
       return undefined;
     }
   }
@@ -264,7 +264,7 @@ export class RedisCacheStore implements CacheStore {
         await this.client.set(this.getKey(key), serialized);
       }
       return true;
-    } catch {
+    } catch (_error) {
       return false;
     }
   }
@@ -273,7 +273,7 @@ export class RedisCacheStore implements CacheStore {
     try {
       await this.client.del(this.getKey(key));
       return true;
-    } catch {
+    } catch (_error) {
       return false;
     }
   }
@@ -282,7 +282,7 @@ export class RedisCacheStore implements CacheStore {
     try {
       const result = await this.client.exists(this.getKey(key));
       return result === 1;
-    } catch {
+    } catch (_error) {
       return false;
     }
   }
@@ -291,7 +291,7 @@ export class RedisCacheStore implements CacheStore {
     try {
       await this.client.flushdb();
       return true;
-    } catch {
+    } catch (_error) {
       return false;
     }
   }
@@ -313,12 +313,12 @@ export class RedisCacheStore implements CacheStore {
         if (value !== null) {
           try {
             result.set(keys[i], JSON.parse(value) as T);
-          } catch {
+          } catch (_error) {
             // 忽略解析错误
           }
         }
       }
-    } catch {
+    } catch (_error) {
       // 忽略错误，返回空 Map
     }
 
@@ -352,7 +352,7 @@ export class RedisCacheStore implements CacheStore {
       }
 
       return true;
-    } catch {
+    } catch (_error) {
       return false;
     }
   }
@@ -372,13 +372,13 @@ export class RedisCacheStore implements CacheStore {
         try {
           await this.client.del(key);
           deleted.push(key.replace(this.keyPrefix, ''));
-        } catch {
+        } catch (_error) {
           // 忽略单个删除错误
         }
       }
 
       return deleted;
-    } catch {
+    } catch (_error) {
       return [];
     }
   }

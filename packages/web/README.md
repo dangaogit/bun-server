@@ -2,7 +2,7 @@
 
 > Examples: `https://disb-examples-{example-name}.dangaogm.com`
 
-> Version: `2.0.4` (aligned with `@dangao/bun-server`)
+> Version: `2.0.8` (aligned with `@dangao/bun-server`)
 
 Promotional portal site for the `@dangao/bun-server` framework.
 

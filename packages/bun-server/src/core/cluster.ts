@@ -117,7 +117,7 @@ export class ClusterManager {
     if (this.socketDir) {
       try {
         rmSync(this.socketDir, { recursive: true, force: true });
-      } catch {
+      } catch (_error) {
         // ignore cleanup errors
       }
       this.socketDir = undefined;
@@ -186,7 +186,7 @@ export class ClusterManager {
 
     this.socketDir = join(tmpdir(), `bun-cluster-${process.pid}`);
     // Clean up stale directory from a previous run with the same PID
-    try { rmSync(this.socketDir, { recursive: true, force: true }); } catch { /* ignore */ }
+    try { rmSync(this.socketDir, { recursive: true, force: true }); } catch (_error) { /* ignore */ }
     mkdirSync(this.socketDir, { recursive: true });
 
     this.socketPaths = [];
@@ -271,7 +271,7 @@ export class ClusterManager {
             redirect: 'manual',
             unix: socketPath,
           });
-        } catch {
+        } catch (_error) {
           return new Response('Bad Gateway', { status: 502 });
         }
       },
@@ -289,7 +289,7 @@ export class ClusterManager {
           );
 
           const socketPath = this.socketPaths[index]!;
-          try { rmSync(socketPath); } catch { /* ignore */ }
+          try { rmSync(socketPath); } catch (_error) { /* ignore */ }
 
           this.workers[index] = this.spawnProxyWorker(index, socketPath);
 

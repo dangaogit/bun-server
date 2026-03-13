@@ -151,7 +151,7 @@ export class AnthropicProvider implements LlmProvider {
                   } else if (parsed.type === 'message_stop') {
                     controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
                   }
-                } catch {
+                } catch (_error) {
                   // skip
                 }
               }

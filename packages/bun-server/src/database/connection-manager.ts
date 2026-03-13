@@ -104,7 +104,7 @@ export class DatabaseConnectionManager {
         return await this.healthCheckMysql(this.currentConnection);
       }
       return false;
-    } catch {
+    } catch (_error) {
       return false;
     }
   }
@@ -176,7 +176,7 @@ export class DatabaseConnectionManager {
         return true;
       }
       return false;
-    } catch {
+    } catch (_error) {
       return false;
     }
   }
@@ -204,7 +204,7 @@ export class DatabaseConnectionManager {
         return true;
       }
       return false;
-    } catch {
+    } catch (_error) {
       return false;
     }
   }
@@ -232,7 +232,7 @@ export class DatabaseConnectionManager {
         return true;
       }
       return false;
-    } catch {
+    } catch (_error) {
       return false;
     }
   }

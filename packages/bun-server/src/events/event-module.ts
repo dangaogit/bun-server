@@ -217,7 +217,7 @@ export class EventModule {
     if (eventModuleRef) {
       try {
         eventEmitter = eventModuleRef.container.resolve<EventEmitter>(EVENT_EMITTER_TOKEN);
-      } catch {
+      } catch (_error) {
         // 忽略错误
       }
     }
@@ -264,7 +264,7 @@ export class EventModule {
     if (moduleRef) {
       try {
         return moduleRef.container.resolve<EventEmitter>(EVENT_EMITTER_TOKEN);
-      } catch {
+      } catch (_error) {
         // 忽略错误，尝试从传入的容器获取
       }
     }
@@ -273,7 +273,7 @@ export class EventModule {
     if (container) {
       try {
         return container.resolve<EventEmitter>(EVENT_EMITTER_TOKEN);
-      } catch {
+      } catch (_error) {
         // 忽略错误
       }
     }
@@ -307,7 +307,7 @@ export class EventModule {
     let eventEmitter: EventEmitter | undefined;
     try {
       eventEmitter = eventModuleRef.container.resolve<EventEmitter>(EVENT_EMITTER_TOKEN);
-    } catch {
+    } catch (_error) {
       return false;
     }
 

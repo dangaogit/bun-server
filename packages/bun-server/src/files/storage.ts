@@ -18,7 +18,7 @@ async function fileExists(path: string): Promise<boolean> {
   try {
     await access(path, constants.F_OK);
     return true;
-  } catch {
+  } catch (_error) {
     return false;
   }
 }

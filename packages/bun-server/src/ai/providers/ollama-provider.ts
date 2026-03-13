@@ -106,7 +106,7 @@ export class OllamaProvider implements LlmProvider {
                 controller.enqueue(encoder.encode(
                   `data: ${JSON.stringify({ content: msgContent, done: isDone })}\n\n`,
                 ));
-              } catch {
+              } catch (_error) {
                 // skip
               }
             }

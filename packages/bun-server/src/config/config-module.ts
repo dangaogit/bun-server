@@ -230,7 +230,7 @@ export class ConfigModule {
               try {
                 const parsed = ConfigService.parseConfigContent(result.content);
                 ConfigModule.setValueByPath(configMap, configPath, parsed);
-              } catch {
+              } catch (_error) {
                 ConfigModule.setValueByPath(configMap, configPath, result.content);
               }
             })
@@ -278,7 +278,7 @@ export class ConfigModule {
               let parsedValue: unknown;
               try {
                 parsedValue = ConfigService.parseConfigContent(result.content);
-              } catch {
+              } catch (_error) {
                 parsedValue = result.content;
               }
 

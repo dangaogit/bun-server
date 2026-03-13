@@ -231,7 +231,7 @@ export class RedisSessionStore implements SessionStore {
         return undefined;
       }
       return JSON.parse(value) as Session;
-    } catch {
+    } catch (_error) {
       return undefined;
     }
   }
@@ -243,7 +243,7 @@ export class RedisSessionStore implements SessionStore {
         PX: maxAge,
       });
       return true;
-    } catch {
+    } catch (_error) {
       return false;
     }
   }
@@ -252,7 +252,7 @@ export class RedisSessionStore implements SessionStore {
     try {
       await this.client.del(this.getKey(sessionId));
       return true;
-    } catch {
+    } catch (_error) {
       return false;
     }
   }
@@ -261,7 +261,7 @@ export class RedisSessionStore implements SessionStore {
     try {
       const result = await this.client.exists(this.getKey(sessionId));
       return result === 1;
-    } catch {
+    } catch (_error) {
       return false;
     }
   }
@@ -282,7 +282,7 @@ export class RedisSessionStore implements SessionStore {
       }
 
       return false;
-    } catch {
+    } catch (_error) {
       return false;
     }
   }

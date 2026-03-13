@@ -120,7 +120,7 @@ export class CacheableInterceptor extends BaseInterceptor {
     let cacheService: CacheService;
     try {
       cacheService = container.resolve<CacheService>(CACHE_SERVICE_TOKEN);
-    } catch {
+    } catch (_error) {
       // 缓存服务未注册，直接执行原方法
       console.warn('[CacheableInterceptor] CacheService not registered, skipping cache');
       return await Promise.resolve(originalMethod.apply(target, args));
@@ -191,7 +191,7 @@ export class CacheEvictInterceptor extends BaseInterceptor {
     let cacheService: CacheService;
     try {
       cacheService = container.resolve<CacheService>(CACHE_SERVICE_TOKEN);
-    } catch {
+    } catch (_error) {
       // 缓存服务未注册，直接执行原方法
       console.warn('[CacheEvictInterceptor] CacheService not registered, skipping cache eviction');
       return await Promise.resolve(originalMethod.apply(target, args));
@@ -265,7 +265,7 @@ export class CachePutInterceptor extends BaseInterceptor {
     let cacheService: CacheService;
     try {
       cacheService = container.resolve<CacheService>(CACHE_SERVICE_TOKEN);
-    } catch {
+    } catch (_error) {
       // 缓存服务未注册，直接执行原方法
       console.warn('[CachePutInterceptor] CacheService not registered, skipping cache update');
       return await Promise.resolve(originalMethod.apply(target, args));

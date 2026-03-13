@@ -100,18 +100,26 @@ const HTML_PAGE = `<!DOCTYPE html>
       font-size: 14px;
     }
     .form-group input,
-    .form-group select {
+    .form-group select,
+    .form-group textarea {
       width: 100%;
       padding: 12px;
       border: 2px solid #e0e0e0;
       border-radius: 8px;
       font-size: 14px;
       transition: border-color 0.3s;
+      font-family: inherit;
     }
     .form-group input:focus,
-    .form-group select:focus {
+    .form-group select:focus,
+    .form-group textarea:focus {
       outline: none;
       border-color: #667eea;
+    }
+    .query-hint {
+      margin-top: 6px;
+      color: #6b7280;
+      font-size: 12px;
     }
     .form-row {
       display: grid;
@@ -257,6 +265,11 @@ const HTML_PAGE = `<!DOCTYPE html>
 
       <div class="actions" id="actions" style="display: none;">
         <h3>功能检查</h3>
+        <div class="form-group">
+          <label for="querySql">查询 SQL（可自定义）</label>
+          <textarea id="querySql" rows="4" placeholder="留空将使用默认 SQL"></textarea>
+          <div class="query-hint">默认会根据数据库类型自动填充原示例 SQL。</div>
+        </div>
         <button class="btn btn-success" onclick="testConnection()">✅ 连接测试</button>
         <button class="btn btn-success" onclick="testQuery()">📊 查询测试</button>
         <button class="btn btn-success" onclick="testTransaction()">🔄 事务测试</button>
@@ -269,6 +282,31 @@ const HTML_PAGE = `<!DOCTYPE html>
 
   <script>
     let connected = false;
+    const DEFAULT_QUERY_BY_TYPE = {
+      postgres: 'SELECT version() as version, current_database() as database, current_user as user',
+      mysql: 'SELECT VERSION() as version, DATABASE() as \`database\`, USER() as \`user\`',
+      sqlite: 'SELECT 1 as test',
+    };
+
+    function getDefaultQueryByType(dbType) {
+      return DEFAULT_QUERY_BY_TYPE[dbType] || DEFAULT_QUERY_BY_TYPE.postgres;
+    }
+
+    function updateDefaultQuery(forceOverwrite = false) {
+      const queryInput = document.getElementById('querySql');
+      if (!queryInput) return;
+
+      const dbType = document.getElementById('dbType').value;
+      const defaultQuery = getDefaultQueryByType(dbType);
+      queryInput.placeholder = defaultQuery;
+      if (forceOverwrite || !queryInput.value.trim()) {
+        queryInput.value = defaultQuery;
+      }
+    }
+
+    document.getElementById('dbType').addEventListener('change', () => {
+      updateDefaultQuery(false);
+    });
 
     document.getElementById('connectionForm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -299,6 +337,7 @@ const HTML_PAGE = `<!DOCTYPE html>
         if (result.success) {
           connected = true;
           document.getElementById('actions').style.display = 'block';
+          updateDefaultQuery(true);
         }
       } catch (error) {
         showResult(false, '连接失败: ' + error.message);
@@ -313,7 +352,13 @@ const HTML_PAGE = `<!DOCTYPE html>
     }
 
     async function testQuery() {
-      await callApi('/api/test/query', '查询测试');
+      const queryInput = document.getElementById('querySql');
+      const customSql = queryInput ? queryInput.value.trim() : '';
+      const dbType = document.getElementById('dbType').value;
+      const payload = {
+        sql: customSql || getDefaultQueryByType(dbType),
+      };
+      await callApi('/api/test/query', '查询测试', undefined, payload);
     }
 
     async function testTransaction() {
@@ -335,14 +380,19 @@ const HTML_PAGE = `<!DOCTYPE html>
       });
     }
 
-    async function callApi(endpoint, actionName, callback) {
+    async function callApi(endpoint, actionName, callback, payload) {
       const resultDiv = document.getElementById('result');
       resultDiv.className = 'result';
       resultDiv.innerHTML = \`<strong>\${actionName}中...</strong>\`;
       resultDiv.classList.add('show');
 
       try {
-        const response = await fetch(endpoint, { method: 'POST' });
+        const requestOptions = { method: 'POST' };
+        if (payload !== undefined) {
+          requestOptions.headers = { 'Content-Type': 'application/json' };
+          requestOptions.body = JSON.stringify(payload);
+        }
+        const response = await fetch(endpoint, requestOptions);
         const result = await response.json();
         showResult(result.success, result.message || result.error, result.data);
         if (callback) callback();
@@ -528,8 +578,12 @@ class ApiController {
    * 测试查询
    */
   @POST('/test/query')
-  public async testQuery() {
-    if (!currentDatabaseService || !currentSqlConnection) {
+  public async testQuery(
+    @Body() body?: {
+      sql?: string;
+    },
+  ) {
+    if (!currentDatabaseService) {
       return {
         success: false,
         error: '请先连接数据库',
@@ -538,33 +592,18 @@ class ApiController {
 
     try {
       const dbType = currentDatabaseService.getDatabaseType();
+      const customSql =
+        typeof body?.sql === 'string' ? body.sql.trim() : '';
+      const query =
+        customSql.length > 0 ? customSql : this.getDefaultQuery(dbType);
 
-      // 使用 Bun.SQL 模板字符串语法执行查询
-      let result: any[];
-      if (dbType === 'postgres') {
-        // PostgreSQL 查询
-        result = await currentSqlConnection`
-          SELECT version() as version, current_database() as database, current_user as user
-        `;
-      } else if (dbType === 'mysql') {
-        // MySQL 查询（使用反引号包裹列别名，避免与保留字冲突）
-        result = await currentSqlConnection`
-          SELECT VERSION() as version, DATABASE() as \`database\`, USER() as \`user\`
-        `;
-      } else {
-        // SQLite 查询（使用 DatabaseService）
-        result = await currentDatabaseService.query('SELECT 1 as test');
-      }
+      const result = await this.executeRawQuery(dbType, query);
 
       return {
         success: true,
         message: '查询测试成功',
         data: {
-          query: dbType === 'postgres' 
-            ? 'SELECT version() as version, current_database() as database, current_user as user'
-            : dbType === 'mysql'
-            ? 'SELECT VERSION() as version, DATABASE() as `database`, USER() as `user`'
-            : 'SELECT 1 as test',
+          query,
           result,
         },
       };
@@ -577,6 +616,31 @@ class ApiController {
         details: errorStack,
       };
     }
+  }
+
+  private getDefaultQuery(dbType: DatabaseConfig['type']): string {
+    if (dbType === 'postgres') {
+      return 'SELECT version() as version, current_database() as database, current_user as user';
+    }
+    if (dbType === 'mysql') {
+      return 'SELECT VERSION() as version, DATABASE() as `database`, USER() as `user`';
+    }
+    return 'SELECT 1 as test';
+  }
+
+  private async executeRawQuery(
+    dbType: DatabaseConfig['type'],
+    query: string,
+  ): Promise<any[]> {
+    if (dbType === 'postgres' || dbType === 'mysql') {
+      if (!currentSqlConnection || typeof currentSqlConnection !== 'function') {
+        throw new Error('SQL 连接不可用');
+      }
+
+      return await currentDatabaseService!.query(query);
+    }
+
+    return await currentDatabaseService!.query(query);
   }
 
   /**

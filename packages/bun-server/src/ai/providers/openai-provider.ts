@@ -171,7 +171,7 @@ export class OpenAIProvider implements LlmProvider {
                   const delta = parsed.choices?.[0]?.delta;
                   const chunk = { content: delta?.content ?? '', done: false };
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
-                } catch {
+                } catch (_error) {
                   // skip malformed lines
                 }
               }
@@ -229,7 +229,7 @@ export class OpenAIProvider implements LlmProvider {
         return parsed as Record<string, unknown>;
       }
       return {};
-    } catch {
+    } catch (_error) {
       return {};
     }
   }

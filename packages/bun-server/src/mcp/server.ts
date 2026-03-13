@@ -69,7 +69,7 @@ export class McpServer {
         const pingInterval = setInterval(() => {
           try {
             controller.enqueue(encoder.encode(': ping\n\n'));
-          } catch {
+          } catch (_error) {
             clearInterval(pingInterval);
           }
         }, 15000);

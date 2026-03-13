@@ -17,7 +17,7 @@ export function createSessionMiddleware(
       sessionService = container.resolve<SessionService>(
         SESSION_SERVICE_TOKEN,
       );
-    } catch {
+    } catch (_error) {
       // 如果 SessionService 未注册，跳过 Session 处理
       return await next();
     }

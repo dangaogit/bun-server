@@ -41,7 +41,7 @@ export function createStaticFileMiddleware(options: StaticFileOptions): Middlewa
           'Content-Type': file.type || 'application/octet-stream',
         },
       });
-    } catch {
+    } catch (_error) {
       if (fallthrough) {
         return await next();
       }
