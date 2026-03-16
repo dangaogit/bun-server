@@ -15,6 +15,11 @@ Bun Server 提供四个生命周期接口，用于在模块和应用启动、关
 
 **关闭阶段**：`onApplicationShutdown` → `onModuleDestroy`（均为反向顺序，即后注册的先执行）
 
+## Provider 去重行为
+
+当同一个 provider 实例通过多个 token 重复注册/导出时，`onModuleInit`
+现只会执行一次，避免共享单例出现重复初始化副作用。
+
 ## 示例：DatabaseService 的初始化和销毁
 
 ```ts

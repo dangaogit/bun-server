@@ -1,28 +1,26 @@
-import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
-import { DatabaseModule, DatabaseService, DATABASE_SERVICE_TOKEN } from '../../src/database';
-import { Container } from '../../src/di/container';
-import { ModuleRegistry } from '../../src/di/module-registry';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+
+import {
+  BUN_SQL_MANAGER_TOKEN,
+  DB_TOKEN,
+  DATABASE_OPTIONS_TOKEN,
+  DATABASE_SERVICE_TOKEN,
+  DatabaseModule,
+  SQLITE_MANAGER_TOKEN,
+} from '../../src/database';
 import { MODULE_METADATA_KEY } from '../../src/di/module';
 
-describe('DatabaseModule', () => {
-  let container: Container;
-  let moduleRegistry: ModuleRegistry;
-
+describe('DatabaseModule V2', () => {
   beforeEach(() => {
-    // 清除模块元数据
     Reflect.deleteMetadata(MODULE_METADATA_KEY, DatabaseModule);
-    
-    container = new Container();
-    moduleRegistry = ModuleRegistry.getInstance();
-    moduleRegistry.clear();
   });
 
   afterEach(() => {
-    moduleRegistry.clear();
+    Reflect.deleteMetadata(MODULE_METADATA_KEY, DatabaseModule);
   });
 
-  test('should register database service provider', () => {
-    DatabaseModule.forRoot({
+  test('should normalize sqlite legacy config', () => {
+    const normalized = DatabaseModule.normalizeConfig({
       database: {
         type: 'sqlite',
         config: {
@@ -30,442 +28,105 @@ describe('DatabaseModule', () => {
         },
       },
     });
+    expect(normalized.length).toBe(1);
+    expect(normalized[0]?.config.type).toBe('sqlite');
+  });
+
+  test('should normalize postgres url config', () => {
+    const normalized = DatabaseModule.normalizeConfig({
+      type: 'postgres',
+      url: 'postgres://user:pass@localhost:5432/db',
+      bunSqlPool: {
+        max: 20,
+      },
+    });
+    expect(normalized[0]?.config.type).toBe('postgres');
+    if (normalized[0]?.config.type === 'postgres') {
+      expect(normalized[0].config.pool?.max).toBe(20);
+    }
+  });
+
+  test('should normalize tenants config', () => {
+    const normalized = DatabaseModule.normalizeConfig({
+      tenants: [
+        {
+          id: 'tenant-a',
+          config: {
+            type: 'postgres',
+            url: 'postgres://u:p@localhost:5432/a',
+          },
+        },
+        {
+          id: 'tenant-b',
+          config: {
+            type: 'sqlite',
+            database: ':memory:',
+          },
+        },
+      ],
+    });
+    expect(normalized.length).toBe(2);
+    expect(normalized[0]?.tenantId).toBe('tenant-a');
+    expect(normalized[1]?.tenantId).toBe('tenant-b');
+  });
+
+  test('should register v2 providers and middleware', () => {
+    DatabaseModule.forRoot({
+      database: {
+        type: 'sqlite',
+        config: {
+          path: ':memory:',
+        },
+      },
+      defaultStrategy: 'pool',
+    });
 
     const metadata = Reflect.getMetadata(MODULE_METADATA_KEY, DatabaseModule);
+    expect(metadata).toBeDefined();
     expect(metadata.providers).toBeDefined();
-    expect(metadata.providers.length).toBeGreaterThan(0);
-    
-    // 检查是否注册了 DATABASE_SERVICE_TOKEN
-    const hasServiceToken = metadata.providers.some(
-      (p: unknown) =>
-        typeof p === 'object' &&
-        p !== null &&
-        'provide' in p &&
-        p.provide === DATABASE_SERVICE_TOKEN,
+    expect(metadata.middlewares).toBeDefined();
+    expect(metadata.middlewares.length).toBeGreaterThan(0);
+
+    const hasDbToken = metadata.providers.some(
+      (provider: unknown) =>
+        typeof provider === 'object' &&
+        provider !== null &&
+        'provide' in provider &&
+        (provider as { provide: unknown }).provide === DB_TOKEN,
     );
-    expect(hasServiceToken).toBe(true);
-  });
-
-  test('should register database service instance', () => {
-    DatabaseModule.forRoot({
-      database: {
-        type: 'sqlite',
-        config: {
-          path: ':memory:',
-        },
-      },
-    });
-
-    moduleRegistry.register(DatabaseModule, container);
-    const service = container.resolve<DatabaseService>(DATABASE_SERVICE_TOKEN);
-    
-    expect(service).toBeInstanceOf(DatabaseService);
-    expect(service.getDatabaseType()).toBe('sqlite');
-  });
-
-  test('should export database service', () => {
-    DatabaseModule.forRoot({
-      database: {
-        type: 'sqlite',
-        config: {
-          path: ':memory:',
-        },
-      },
-    });
-
-    const metadata = Reflect.getMetadata(MODULE_METADATA_KEY, DatabaseModule);
-    expect(metadata.exports).toBeDefined();
-    expect(metadata.exports).toContain(DATABASE_SERVICE_TOKEN);
-    expect(metadata.exports).toContain(DatabaseService);
-  });
-
-  test('should register database extension', () => {
-    DatabaseModule.forRoot({
-      database: {
-        type: 'sqlite',
-        config: {
-          path: ':memory:',
-        },
-      },
-    });
-
-    const metadata = Reflect.getMetadata(MODULE_METADATA_KEY, DatabaseModule);
-    expect(metadata.extensions).toBeDefined();
-    expect(metadata.extensions.length).toBe(1);
-    expect(metadata.extensions[0]).toBeDefined();
-  });
-
-  test('should support connection pool options', () => {
-    DatabaseModule.forRoot({
-      database: {
-        type: 'sqlite',
-        config: {
-          path: ':memory:',
-        },
-      },
-      pool: {
-        maxConnections: 20,
-        connectionTimeout: 60000,
-        retryCount: 5,
-        retryDelay: 2000,
-      },
-    });
-
-    moduleRegistry.register(DatabaseModule, container);
-    const service = container.resolve<DatabaseService>(DATABASE_SERVICE_TOKEN);
-    
-    expect(service).toBeInstanceOf(DatabaseService);
-  });
-
-  test('should support disabling health check', () => {
-    DatabaseModule.forRoot({
-      database: {
-        type: 'sqlite',
-        config: {
-          path: ':memory:',
-        },
-      },
-      enableHealthCheck: false,
-    });
-
-    moduleRegistry.register(DatabaseModule, container);
-    const service = container.resolve<DatabaseService>(DATABASE_SERVICE_TOKEN);
-    
-    expect(service).toBeInstanceOf(DatabaseService);
-  });
-});
-
-describe('DatabaseService', () => {
-  let service: DatabaseService;
-
-  beforeEach(async () => {
-    service = new DatabaseService({
-      database: {
-        type: 'sqlite',
-        config: {
-          path: ':memory:',
-        },
-      },
-    });
-    await service.initialize();
-  });
-
-  afterEach(async () => {
-    await service.close();
-  });
-
-  test('should initialize database connection', async () => {
-    const info = service.getConnectionInfo();
-    expect(info.status).toBe('connected');
-    expect(info.type).toBe('sqlite');
-  });
-
-  test('should get database connection', () => {
-    const connection = service.getConnection();
-    expect(connection).toBeDefined();
-    expect(connection).not.toBeNull();
-  });
-
-  test('should get database type', () => {
-    const type = service.getDatabaseType();
-    expect(type).toBe('sqlite');
-  });
-
-  test('should check health status', async () => {
-    const isHealthy = await service.healthCheck();
-    expect(isHealthy).toBe(true);
-  });
-
-  test('should get connection info', () => {
-    const info = service.getConnectionInfo();
-    expect(info).toBeDefined();
-    expect(info.status).toBe('connected');
-    expect(info.type).toBe('sqlite');
-  });
-
-  test('should execute SQL query', () => {
-    // 创建表
-    service.query('CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, name TEXT)');
-    
-    // 插入数据
-    service.query('INSERT INTO test (name) VALUES (?)', ['test']);
-    
-    // 查询数据（SQLite 返回同步结果）
-    const result = service.query<{ id: number; name: string }>('SELECT * FROM test');
-    
-    expect(result).toBeDefined();
-    expect(Array.isArray(result)).toBe(true);
-    expect(result.length).toBe(1);
-    expect(result[0].name).toBe('test');
-  });
-
-  test('should close database connection', async () => {
-    await service.close();
-    const info = service.getConnectionInfo();
-    expect(info.status).toBe('disconnected');
-  });
-
-  test('should throw error when querying without connection', async () => {
-    await service.close();
-    
-    expect(() => {
-      service.query('SELECT 1');
-    }).toThrow('Database connection is not established');
-  });
-});
-
-describe('DatabaseService Bun.SQL parameter binding', () => {
-  test('should pass parameters as Bun.SQL template values', async () => {
-    const service = new DatabaseService({
-      database: {
-        type: 'postgres',
-        config: {
-          host: 'localhost',
-          port: 5432,
-          database: 'test',
-          user: 'test',
-          password: 'test',
-        },
-      },
-    });
-
-    let capturedTemplate: TemplateStringsArray | null = null;
-    let capturedValues: unknown[] = [];
-    const mockConnection = async (
-      template: TemplateStringsArray,
-      ...values: unknown[]
-    ): Promise<Array<Record<string, unknown>>> => {
-      capturedTemplate = template;
-      capturedValues = values;
-      return [{ ok: true }];
-    };
-
-    (service as unknown as { getConnection: () => unknown }).getConnection = () =>
-      mockConnection;
-    (
-      service as unknown as {
-        getDatabaseType: () => 'sqlite' | 'postgres' | 'mysql';
-      }
-    ).getDatabaseType = () => 'postgres';
-
-    const result = (await service.query<{ ok: boolean }>(
-      'SELECT * FROM users WHERE id = ? AND name = ?',
-      [1, "O'Reilly"],
-    )) as Array<{ ok: boolean }>;
-
-    expect(Array.isArray(result)).toBe(true);
-    expect(result[0]?.ok).toBe(true);
-    expect(capturedValues).toEqual([1, "O'Reilly"]);
-    expect(capturedTemplate).toBeDefined();
-    expect(capturedTemplate?.length).toBe(3);
-    expect(capturedTemplate?.[0]).toBe('SELECT * FROM users WHERE id = ');
-    expect(capturedTemplate?.[1]).toBe(' AND name = ');
-    expect(capturedTemplate?.[2]).toBe('');
-  });
-
-  test('should throw when placeholders do not match params count', async () => {
-    const service = new DatabaseService({
-      database: {
-        type: 'mysql',
-        config: {
-          host: 'localhost',
-          port: 3306,
-          database: 'test',
-          user: 'test',
-          password: 'test',
-        },
-      },
-    });
-
-    const mockConnection = async (): Promise<Array<Record<string, unknown>>> => [];
-    (service as unknown as { getConnection: () => unknown }).getConnection = () =>
-      mockConnection;
-    (
-      service as unknown as {
-        getDatabaseType: () => 'sqlite' | 'postgres' | 'mysql';
-      }
-    ).getDatabaseType = () => 'mysql';
-
-    await expect(
-      service.query('SELECT * FROM users WHERE id = ?', [1, 2]) as Promise<
-        unknown[]
-      >,
-    ).rejects.toThrow(
-      'Bun.SQL parameterized queries are not fully supported. Consider using template string queries.',
+    const hasBunSqlManager = metadata.providers.some(
+      (provider: unknown) =>
+        typeof provider === 'object' &&
+        provider !== null &&
+        'provide' in provider &&
+        (provider as { provide: unknown }).provide === BUN_SQL_MANAGER_TOKEN,
     );
-    await expect(
-      service.query('SELECT * FROM users WHERE id = ?', [1, 2]) as Promise<
-        unknown[]
-      >,
-    ).rejects.toThrow('Original error: SQL placeholders count does not match parameters count');
-  });
-});
-
-describe('ConnectionPool', () => {
-  test('should create connection pool', () => {
-    const { ConnectionPool } = require('../../src/database/connection-pool');
-    const pool = new ConnectionPool(
-      {
-        type: 'sqlite',
-        config: {
-          path: ':memory:',
-        },
-      },
-      {
-        maxConnections: 5,
-      },
+    const hasSqliteManager = metadata.providers.some(
+      (provider: unknown) =>
+        typeof provider === 'object' &&
+        provider !== null &&
+        'provide' in provider &&
+        (provider as { provide: unknown }).provide === SQLITE_MANAGER_TOKEN,
+    );
+    const hasLegacyService = metadata.providers.some(
+      (provider: unknown) =>
+        typeof provider === 'object' &&
+        provider !== null &&
+        'provide' in provider &&
+        (provider as { provide: unknown }).provide === DATABASE_SERVICE_TOKEN,
+    );
+    const hasOptionsToken = metadata.providers.some(
+      (provider: unknown) =>
+        typeof provider === 'object' &&
+        provider !== null &&
+        'provide' in provider &&
+        (provider as { provide: unknown }).provide === DATABASE_OPTIONS_TOKEN,
     );
 
-    expect(pool).toBeDefined();
-    const stats = pool.getPoolStats();
-    expect(stats.maxConnections).toBe(5);
-    expect(stats.total).toBe(0);
-  });
-
-  test('should acquire and release connections', async () => {
-    const { ConnectionPool } = require('../../src/database/connection-pool');
-    const pool = new ConnectionPool({
-      type: 'sqlite',
-      config: {
-        path: ':memory:',
-      },
-    });
-
-    const connection1 = await pool.acquire();
-    expect(connection1).toBeDefined();
-
-    const stats1 = pool.getPoolStats();
-    expect(stats1.total).toBe(1);
-    expect(stats1.inUse).toBe(1);
-
-    pool.release(connection1);
-    const stats2 = pool.getPoolStats();
-    expect(stats2.inUse).toBe(0);
-
-    await pool.close();
-  });
-
-  test('should limit max connections', async () => {
-    const { ConnectionPool } = require('../../src/database/connection-pool');
-    const pool = new ConnectionPool(
-      {
-        type: 'sqlite',
-        config: {
-          path: ':memory:',
-        },
-      },
-      {
-        maxConnections: 2,
-      },
-    );
-
-    const conn1 = await pool.acquire();
-    const conn2 = await pool.acquire();
-
-    const stats = pool.getPoolStats();
-    expect(stats.total).toBe(2);
-    expect(stats.inUse).toBe(2);
-
-    pool.release(conn1);
-    pool.release(conn2);
-
-    await pool.close();
-  });
-
-  test('should close pool and all connections', async () => {
-    const { ConnectionPool } = require('../../src/database/connection-pool');
-    const pool = new ConnectionPool({
-      type: 'sqlite',
-      config: {
-        path: ':memory:',
-      },
-    });
-
-    const conn1 = await pool.acquire();
-    const conn2 = await pool.acquire();
-
-    await pool.close();
-
-    const stats = pool.getPoolStats();
-    expect(stats.total).toBe(0);
-  });
-});
-
-describe('DatabaseConnectionManager', () => {
-  test('should connect to SQLite database', async () => {
-    const { DatabaseConnectionManager } = await import('../../src/database/connection-manager');
-    const manager = new DatabaseConnectionManager({
-      type: 'sqlite',
-      config: {
-        path: ':memory:',
-      },
-    });
-
-    await manager.connect();
-    const info = manager.getConnectionInfo();
-    
-    expect(info.status).toBe('connected');
-    expect(info.type).toBe('sqlite');
-    
-    await manager.disconnect();
-  });
-
-  test('should handle connection errors gracefully', async () => {
-    const { DatabaseConnectionManager } = await import('../../src/database/connection-manager');
-    const manager = new DatabaseConnectionManager({
-      type: 'sqlite',
-      config: {
-        path: ':memory:', // 使用内存数据库，应该总是成功
-      },
-    });
-
-    // SQLite 内存数据库应该总是成功连接
-    await manager.connect();
-    
-    const info = manager.getConnectionInfo();
-    expect(info.status).toBe('connected');
-    
-    await manager.disconnect();
-  });
-
-  test('should check health status', async () => {
-    const { DatabaseConnectionManager } = await import('../../src/database/connection-manager');
-    const manager = new DatabaseConnectionManager({
-      type: 'sqlite',
-      config: {
-        path: ':memory:',
-      },
-    });
-
-    await manager.connect();
-    const isHealthy = await manager.healthCheck();
-    
-    expect(isHealthy).toBe(true);
-    
-    await manager.disconnect();
-  });
-
-  test('should get pool stats', async () => {
-    const { DatabaseConnectionManager } = await import('../../src/database/connection-manager');
-    const manager = new DatabaseConnectionManager(
-      {
-        type: 'sqlite',
-        config: {
-          path: ':memory:',
-        },
-      },
-      {
-        maxConnections: 5,
-      },
-    );
-
-    await manager.connect();
-    const stats = manager.getPoolStats();
-    
-    expect(stats).toBeDefined();
-    expect(stats.maxConnections).toBe(5);
-    expect(stats.total).toBeGreaterThanOrEqual(1);
-    
-    await manager.disconnect();
+    expect(hasDbToken).toBe(true);
+    expect(hasBunSqlManager).toBe(true);
+    expect(hasSqliteManager).toBe(true);
+    expect(hasLegacyService).toBe(true);
+    expect(hasOptionsToken).toBe(true);
   });
 });

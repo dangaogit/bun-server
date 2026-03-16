@@ -18,6 +18,7 @@ This directory contains examples for Bun Server Framework's official modules - r
 | File | Module | Key Features | Port |
 |------|--------|--------------|------|
 | `database-app.ts` | DatabaseModule | SQLite, queries, health checks | 3000 |
+| `nacos-auto-register-app.ts` | ServiceRegistryModule | Nacos autoRegister switch | 3010 |
 | `orm-app.ts` | DatabaseModule (ORM) | Entity + Repository pattern | 3000 |
 | `cache-app.ts` | CacheModule | Cache decorators | 3200 |
 | `transaction-app.ts` | DatabaseModule (TX) | `@Transactional` decorator | 3000 |
@@ -188,17 +189,9 @@ public async addToCart(
 **Configuration**:
 ```typescript
 DatabaseModule.forRoot({
-  database: {
-    type: 'sqlite',
-    config: {
-      path: './data.db',  // or ':memory:' for in-memory
-    },
-  },
-  pool: {
-    maxConnections: 10,
-    connectionTimeout: 30000,
-  },
-  enableHealthCheck: true,
+  type: 'sqlite',
+  databasePath: './data.db',
+  defaultStrategy: 'pool',
 })
 ```
 
@@ -225,6 +218,18 @@ class UserService {
     );
   }
 }
+```
+
+### ServiceRegistryModule (nacos-auto-register-app.ts)
+
+Demonstrates `autoRegister: false` to disable listen-time automatic registration.
+
+```typescript
+ServiceRegistryModule.forRoot({
+  provider: 'nacos',
+  autoRegister: false,
+  nacos: { client: { serverList: ['http://localhost:8848'] } },
+});
 ```
 
 ---

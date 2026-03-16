@@ -3,6 +3,7 @@ import type { Constructor } from '../core/types';
 import type { HttpMethod, RouteHandler, RouteMatch } from './types';
 import { MiddlewarePipeline } from '../middleware/pipeline';
 import type { Middleware } from '../middleware';
+import { HttpException } from '../error';
 
 /**
  * 路由类
@@ -47,6 +48,7 @@ export class Route {
   private readonly middlewarePipeline: MiddlewarePipeline | null;
   private readonly staticKey?: string;
   public readonly isStatic: boolean;
+  private readonly timeout?: number;
 
   public constructor(
     method: HttpMethod,
@@ -55,12 +57,14 @@ export class Route {
     middlewares: Middleware[] = [],
     controllerClass?: Constructor<unknown>,
     methodName?: string,
+    timeout?: number,
   ) {
     this.method = method;
     this.path = path;
     this.handler = handler;
     this.controllerClass = controllerClass;
     this.methodName = methodName;
+    this.timeout = timeout;
 
     this.isStatic = !path.includes(':') && !path.includes('*');
     if (this.isStatic) {
@@ -124,11 +128,35 @@ export class Route {
    * @returns 响应对象
    */
   public async execute(context: Context): Promise<Response> {
-    if (!this.middlewarePipeline || !this.middlewarePipeline.hasMiddlewares()) {
-      return await this.handler(context);
+    const executeHandler = async (): Promise<Response> => {
+      if (!this.middlewarePipeline || !this.middlewarePipeline.hasMiddlewares()) {
+        return await this.handler(context);
+      }
+      return await this.middlewarePipeline.run(
+        context,
+        async () => await this.handler(context),
+      );
+    };
+
+    if (!this.timeout || this.timeout <= 0) {
+      return await executeHandler();
     }
 
-    return await this.middlewarePipeline.run(context, async () => this.handler(context));
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<Response>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new HttpException(408, 'Request Timeout')),
+        this.timeout,
+      );
+    });
+
+    try {
+      return await Promise.race([executeHandler(), timeoutPromise]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    }
   }
 
   /**

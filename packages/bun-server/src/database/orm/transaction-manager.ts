@@ -1,8 +1,8 @@
-import { Injectable, Inject } from '../../di/decorators';
-import { DATABASE_SERVICE_TOKEN } from '../types';
-import type { DatabaseService } from '../service';
+import { Inject, Injectable } from '../../di/decorators';
+import { getCurrentSession, runWithSession } from '../database-context';
+import { BUN_SQL_MANAGER_TOKEN } from '../types';
+import type { BunSQLManager } from '../sql-manager';
 import {
-  Propagation,
   IsolationLevel,
   TransactionStatus,
   type TransactionOptions,
@@ -15,262 +15,195 @@ import {
  */
 @Injectable()
 export class TransactionManager {
-  private readonly transactions = new Map<string, TransactionContext>();
-  private readonly connectionTransactions = new Map<unknown, string>(); // connection -> transactionId
-
   public constructor(
-    @Inject(DATABASE_SERVICE_TOKEN)
-    private readonly databaseService: DatabaseService,
+    @Inject(BUN_SQL_MANAGER_TOKEN)
+    private readonly sqlManager: BunSQLManager,
   ) {}
 
   /**
-   * 开始事务
+   * 在当前 session 中执行事务
    */
-  public async beginTransaction(
+  public async runInTransaction<T>(
+    fn: () => Promise<T>,
     options: TransactionOptions = {},
-  ): Promise<TransactionContext> {
+  ): Promise<T> {
+    const session = getCurrentSession();
+    if (!session) {
+      throw new Error(
+        '[TransactionManager] No database session in current request context',
+      );
+    }
+
+    if (session.sqlite) {
+      return await this.runInSqliteTransaction(fn);
+    }
+
+    let reserved = session.reserved;
+    if (!reserved && session.lazyReserve) {
+      reserved = await session.lazyReserve();
+    }
+    if (!reserved) {
+      throw new Error(
+        '[TransactionManager] No reserved session in current context. Add @Session() or @DbStrategy("session").',
+      );
+    }
+
     const transactionId = this.generateTransactionId();
-    const context: TransactionContext = {
+    session.transaction = {
       id: transactionId,
       status: TransactionStatus.ACTIVE,
-      startTime: Date.now(),
       level: 0,
       savepoints: [],
     };
 
-    // 获取数据库连接
-    const connection = await this.databaseService.getConnection();
-    this.connectionTransactions.set(connection, transactionId);
-    this.transactions.set(transactionId, context);
-
-    // 开始事务（根据数据库类型）
-    await this.executeBegin(connection, options);
-
-    return context;
-  }
-
-  /**
-   * 提交事务
-   */
-  public async commitTransaction(transactionId: string): Promise<void> {
-    const context = this.transactions.get(transactionId);
-    if (!context) {
-      throw new Error(`Transaction ${transactionId} not found`);
+    if (options.isolationLevel) {
+      const isolationLevel = this.getIsolationLevelSQL(options.isolationLevel);
+      if (isolationLevel) {
+        await reserved`SET TRANSACTION ISOLATION LEVEL ${isolationLevel}`;
+      }
     }
 
-    if (context.status !== TransactionStatus.ACTIVE) {
-      throw new Error(`Transaction ${transactionId} is not active`);
-    }
-
-    // 查找连接
-    const connection = this.findConnectionByTransactionId(transactionId);
-    if (!connection) {
-      throw new Error(`Connection not found for transaction ${transactionId}`);
-    }
-
-    // 提交事务
-    await this.executeCommit(connection);
-
-    context.status = TransactionStatus.COMMITTED;
-    this.cleanupTransaction(transactionId);
-  }
-
-  /**
-   * 回滚事务
-   */
-  public async rollbackTransaction(transactionId: string): Promise<void> {
-    const context = this.transactions.get(transactionId);
-    if (!context) {
-      throw new Error(`Transaction ${transactionId} not found`);
-    }
-
-    // 查找连接
-    const connection = this.findConnectionByTransactionId(transactionId);
-    if (!connection) {
-      throw new Error(`Connection not found for transaction ${transactionId}`);
-    }
-
-    // 回滚事务
-    await this.executeRollback(connection);
-
-    context.status = TransactionStatus.ROLLED_BACK;
-    this.cleanupTransaction(transactionId);
-  }
-
-  /**
-   * 创建保存点（用于嵌套事务）
-   */
-  public async createSavepoint(transactionId: string): Promise<string> {
-    const context = this.transactions.get(transactionId);
-    if (!context) {
-      throw new Error(`Transaction ${transactionId} not found`);
-    }
-
-    const savepointName = `sp_${context.level}_${Date.now()}`;
-    context.savepoints = context.savepoints || [];
-    context.savepoints.push(savepointName);
-    context.level += 1;
-
-    const connection = this.findConnectionByTransactionId(transactionId);
-    if (connection) {
-      await this.executeSavepoint(connection, savepointName);
-    }
-
-    return savepointName;
-  }
-
-  /**
-   * 回滚到保存点
-   */
-  public async rollbackToSavepoint(
-    transactionId: string,
-    savepointName: string,
-  ): Promise<void> {
-    const context = this.transactions.get(transactionId);
-    if (!context) {
-      throw new Error(`Transaction ${transactionId} not found`);
-    }
-
-    const connection = this.findConnectionByTransactionId(transactionId);
-    if (connection) {
-      await this.executeRollbackToSavepoint(connection, savepointName);
-    }
-
-    // 移除该保存点之后的所有保存点
-    const index = context.savepoints?.indexOf(savepointName) ?? -1;
-    if (index >= 0 && context.savepoints) {
-      context.savepoints = context.savepoints.slice(0, index);
-      context.level = index;
+    try {
+      const result = await reserved.begin(fn);
+      if (session.transaction) {
+        session.transaction.status = TransactionStatus.COMMITTED;
+      }
+      return result;
+    } catch (error) {
+      if (session.transaction) {
+        session.transaction.status = TransactionStatus.ROLLED_BACK;
+      }
+      throw error;
+    } finally {
+      session.transaction = undefined;
     }
   }
 
   /**
-   * 获取当前事务上下文
+   * REQUIRES_NEW：使用独立连接开启新事务
    */
+  public async runInNewTransaction<T>(
+    fn: () => Promise<T>,
+    options: TransactionOptions = {},
+  ): Promise<T> {
+    const reserved = await this.sqlManager.getDefault().reserve();
+    try {
+      const tenantId = getCurrentSession()?.tenantId ?? 'default';
+      return await runWithSession(
+        {
+          tenantId,
+          reserved: reserved as any,
+        },
+        () => this.runInTransaction(fn, options),
+      );
+    } finally {
+      await reserved.release();
+    }
+  }
+
+  public async runInNestedTransaction<T>(
+    fn: () => Promise<T>,
+    options: TransactionOptions = {},
+  ): Promise<T> {
+    const session = getCurrentSession();
+    if (!session?.transaction || !session.reserved) {
+      throw new Error(
+        '[TransactionManager] NESTED propagation requires an active transaction',
+      );
+    }
+
+    const savepointName = `sp_${session.transaction.level}_${Date.now()}`;
+    session.transaction.level += 1;
+    session.transaction.savepoints.push(savepointName);
+
+    await session.reserved`SAVEPOINT ${savepointName}`;
+    try {
+      return await fn();
+    } catch (error) {
+      if (this.shouldRollback(error, options)) {
+        await session.reserved`ROLLBACK TO SAVEPOINT ${savepointName}`;
+      }
+      throw error;
+    } finally {
+      session.transaction.level = Math.max(0, session.transaction.level - 1);
+      session.transaction.savepoints = session.transaction.savepoints.filter(
+        (item) => item !== savepointName,
+      );
+    }
+  }
+
   public getCurrentTransaction(): TransactionContext | null {
-    // 简化实现：返回最后一个活动事务
-    // 实际实现中应该使用 ThreadLocal 或类似机制
-    for (const context of this.transactions.values()) {
-      if (context.status === TransactionStatus.ACTIVE) {
-        return context;
-      }
+    const tx = getCurrentSession()?.transaction;
+    if (!tx) {
+      return null;
     }
-    return null;
+    return {
+      id: tx.id,
+      status: tx.status,
+      startTime: 0,
+      level: tx.level,
+      savepoints: tx.savepoints,
+    };
   }
 
-  /**
-   * 检查是否有活动事务
-   */
   public hasActiveTransaction(): boolean {
-    return this.getCurrentTransaction() !== null;
+    const tx = this.getCurrentTransaction();
+    return tx?.status === TransactionStatus.ACTIVE;
   }
 
-  /**
-   * 生成事务 ID
-   */
+  public async runInSqliteTransaction<T>(fn: () => Promise<T>): Promise<T> {
+    const session = getCurrentSession();
+    if (!session?.sqlite) {
+      throw new Error(
+        '[TransactionManager] No sqlite adapter found in current request context',
+      );
+    }
+
+    using _lock = await session.sqlite.semaphore.acquire();
+    await session.sqlite.execute('BEGIN TRANSACTION');
+    try {
+      const result = await fn();
+      await session.sqlite.execute('COMMIT');
+      return result;
+    } catch (error) {
+      await session.sqlite.execute('ROLLBACK');
+      throw error;
+    }
+  }
+
   private generateTransactionId(): string {
-    return `tx_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    return `tx_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   }
 
-  /**
-   * 查找连接对应的事务 ID
-   */
-  private findConnectionByTransactionId(transactionId: string): unknown {
-    for (const [connection, txId] of this.connectionTransactions.entries()) {
-      if (txId === transactionId) {
-        return connection;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * 清理事务
-   */
-  private cleanupTransaction(transactionId: string): void {
-    this.transactions.delete(transactionId);
-    // 清理连接映射
-    for (const [connection, txId] of this.connectionTransactions.entries()) {
-      if (txId === transactionId) {
-        this.connectionTransactions.delete(connection);
-        break;
-      }
-    }
-  }
-
-  /**
-   * 执行 BEGIN 语句
-   */
-  private async executeBegin(connection: unknown, options: TransactionOptions): Promise<void> {
-    const dbType = this.databaseService['config'].database.type;
-
-    if (dbType === 'sqlite') {
-      // SQLite 默认自动提交，需要显式开始事务
-      await this.databaseService.query('BEGIN TRANSACTION');
-    } else if (dbType === 'postgres' || dbType === 'mysql') {
-      // PostgreSQL 和 MySQL 使用 Bun.SQL，需要设置隔离级别
-      let sql = 'START TRANSACTION';
-      if (options.isolationLevel) {
-        const isolation = this.getIsolationLevelSQL(options.isolationLevel);
-        sql += ` ${isolation}`;
-      }
-      if (options.readOnly) {
-        sql += ' READ ONLY';
-      }
-      await this.databaseService.query(sql);
-    }
-  }
-
-  /**
-   * 执行 COMMIT 语句
-   */
-  private async executeCommit(connection: unknown): Promise<void> {
-    await this.databaseService.query('COMMIT');
-  }
-
-  /**
-   * 执行 ROLLBACK 语句
-   */
-  private async executeRollback(connection: unknown): Promise<void> {
-    await this.databaseService.query('ROLLBACK');
-  }
-
-  /**
-   * 执行 SAVEPOINT 语句
-   */
-  private async executeSavepoint(connection: unknown, savepointName: string): Promise<void> {
-    await this.databaseService.query(`SAVEPOINT ${savepointName}`);
-  }
-
-  /**
-   * 执行 ROLLBACK TO SAVEPOINT 语句
-   */
-  private async executeRollbackToSavepoint(
-    connection: unknown,
-    savepointName: string,
-  ): Promise<void> {
-    await this.databaseService.query(`ROLLBACK TO SAVEPOINT ${savepointName}`);
-  }
-
-  /**
-   * 获取隔离级别的 SQL
-   */
   private getIsolationLevelSQL(level: IsolationLevel): string {
-    const dbType = this.databaseService['config'].database.type;
     const levelMap: Record<IsolationLevel, string> = {
       [IsolationLevel.READ_UNCOMMITTED]: 'READ UNCOMMITTED',
       [IsolationLevel.READ_COMMITTED]: 'READ COMMITTED',
       [IsolationLevel.REPEATABLE_READ]: 'REPEATABLE READ',
       [IsolationLevel.SERIALIZABLE]: 'SERIALIZABLE',
     };
+    return levelMap[level];
+  }
 
-    if (dbType === 'postgres') {
-      return `SET TRANSACTION ISOLATION LEVEL ${levelMap[level]}`;
-    } else if (dbType === 'mysql') {
-      return `SET TRANSACTION ISOLATION LEVEL ${levelMap[level]}`;
+  private shouldRollback(
+    error: unknown,
+    options: Pick<TransactionOptions, 'rollbackFor' | 'noRollbackFor'>,
+  ): boolean {
+    if (options.noRollbackFor && options.noRollbackFor.length > 0) {
+      for (const ErrorClass of options.noRollbackFor) {
+        if (error instanceof ErrorClass) {
+          return false;
+        }
+      }
     }
-
-    // SQLite 不支持隔离级别设置
-    return '';
+    if (options.rollbackFor && options.rollbackFor.length > 0) {
+      for (const ErrorClass of options.rollbackFor) {
+        if (error instanceof ErrorClass) {
+          return true;
+        }
+      }
+      return false;
+    }
+    return true;
   }
 }

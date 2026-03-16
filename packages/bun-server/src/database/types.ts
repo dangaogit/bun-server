@@ -79,6 +79,59 @@ export type DatabaseConfig =
   | { type: 'mysql'; config: MysqlConfig };
 
 /**
+ * Bun.SQL 连接池配置
+ */
+export interface BunSQLPoolOptions {
+  /**
+   * 最大物理连接数
+   * @default 10
+   */
+  max?: number;
+  /**
+   * 空闲连接超时（秒）
+   * @default 30
+   */
+  idleTimeout?: number;
+  /**
+   * 连接最大生存时间（秒）
+   * @default 0
+   */
+  maxLifetime?: number;
+  /**
+   * 获取连接超时（毫秒）
+   * @default 30000
+   */
+  connectionTimeout?: number;
+}
+
+/**
+ * Bun.SQL 配置（Postgres/MySQL）
+ */
+export interface BunSQLConfig {
+  type: 'postgres' | 'mysql';
+  url: string;
+  pool?: BunSQLPoolOptions;
+}
+
+/**
+ * SQLite V2 配置
+ */
+export interface SqliteV2Config {
+  type: 'sqlite';
+  database: string;
+  wal?: boolean;
+  maxWriteConcurrency?: number;
+}
+
+/**
+ * 多租户配置
+ */
+export interface TenantConfig {
+  id: string;
+  config: BunSQLConfig | SqliteV2Config;
+}
+
+/**
  * 连接池配置
  */
 export interface ConnectionPoolOptions {
@@ -109,11 +162,58 @@ export interface ConnectionPoolOptions {
  */
 export interface DatabaseModuleOptions {
   /**
-   * 数据库配置
+   * 全局默认连接策略
+   * - pool: 每次查询走共享池（默认）
+   * - session: 首次查询惰性 reserve，整个请求复用同一连接
+   * @default "pool"
    */
-  database: DatabaseConfig;
+  defaultStrategy?: 'pool' | 'session';
+
+  /**
+   * 多租户配置
+   */
+  tenants?: TenantConfig[];
+  /**
+   * 默认租户 ID
+   * @default "default"
+   */
+  defaultTenant?: string;
+
+  /**
+   * 单租户：数据库类型（V2）
+   */
+  type?: DatabaseType;
+  /**
+   * 单租户：Postgres/MySQL URL（V2）
+   */
+  url?: string;
+  /**
+   * 单租户：SQLite 文件路径（V2）
+   */
+  databasePath?: string;
+  /**
+   * 单租户：SQLite WAL 模式
+   * @default true
+   */
+  wal?: boolean;
+  /**
+   * 单租户：SQLite 最大写并发
+   * @default 1
+   */
+  maxWriteConcurrency?: number;
+  /**
+   * Bun.SQL 连接池参数（V2）
+   */
+  bunSqlPool?: BunSQLPoolOptions;
+
+  /**
+   * 数据库配置
+   * @deprecated 使用 V2 字段（type/url/databasePath）或 tenants
+   */
+  database?: DatabaseConfig;
   /**
    * 连接池配置
+   * @deprecated 旧连接池配置，仅用于兼容旧 DatabaseService
    */
   pool?: ConnectionPoolOptions;
   /**
@@ -135,6 +235,23 @@ export interface DatabaseModuleOptions {
      */
     drizzle?: unknown;
   };
+
+  /**
+   * @deprecated 旧字段兼容（用于构造 URL）
+   */
+  host?: string;
+  /**
+   * @deprecated 旧字段兼容（用于构造 URL）
+   */
+  port?: number;
+  /**
+   * @deprecated 旧字段兼容（用于构造 URL）
+   */
+  username?: string;
+  /**
+   * @deprecated 旧字段兼容（用于构造 URL）
+   */
+  password?: string;
 }
 
 /**
@@ -169,3 +286,18 @@ export const DATABASE_SERVICE_TOKEN = Symbol('@dangao/bun-server:database:servic
  * DatabaseModule Options Token
  */
 export const DATABASE_OPTIONS_TOKEN = Symbol('@dangao/bun-server:database:options');
+
+/**
+ * BunSQLManager Token
+ */
+export const BUN_SQL_MANAGER_TOKEN = Symbol('@dangao/bun-server:database:bun-sql-manager');
+
+/**
+ * SQLite manager Token
+ */
+export const SQLITE_MANAGER_TOKEN = Symbol('@dangao/bun-server:database:sqlite-manager');
+
+/**
+ * db proxy Token
+ */
+export const DB_TOKEN = Symbol('@dangao/bun-server:database:db');

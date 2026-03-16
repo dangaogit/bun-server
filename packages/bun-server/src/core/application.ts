@@ -10,7 +10,7 @@ import { WebSocketGatewayRegistry } from '../websocket/registry';
 import type { ApplicationExtension } from '../extensions/types';
 import { LoggerExtension } from '../extensions/logger-extension';
 import { ModuleRegistry } from '../di/module-registry';
-import type { ModuleClass } from '../di/module';
+import { MODULE_METADATA_KEY, type ModuleClass } from '../di/module';
 import type { Constructor } from './types';
 import { InterceptorRegistry, INTERCEPTOR_REGISTRY_TOKEN } from '../interceptor';
 import { CONFIG_SERVICE_TOKEN } from '../config/types';
@@ -20,6 +20,7 @@ import { CacheModule, CACHE_POST_PROCESSOR_TOKEN } from '../cache';
 import { LoggerManager } from '@dangao/logsmith';
 import { EventModule } from '../events/event-module';
 import { AsyncProviderRegistry } from '../di/async-module';
+import { ServiceRegistryModule } from '../microservice/service-registry/service-registry-module';
 
 /**
  * 应用配置选项
@@ -54,6 +55,12 @@ export interface ApplicationOptions {
    * @default false
    */
   reusePort?: boolean;
+
+  /**
+   * 连接空闲超时时间（毫秒）
+   * 框架内部会自动转换为 Bun.serve 的秒单位
+   */
+  idleTimeout?: number;
 }
 
 /**
@@ -77,6 +84,13 @@ export class Application {
     RouteRegistry.getInstance().clear();
     ControllerRegistry.getInstance().clear();
     ModuleRegistry.getInstance().clear();
+    const serviceRegistryMetadata = Reflect.getMetadata(
+      MODULE_METADATA_KEY,
+      ServiceRegistryModule,
+    );
+    if (!serviceRegistryMetadata) {
+      ServiceRegistryModule.autoRegister = true;
+    }
 
     // 注册 InterceptorRegistry 到 DI 容器
     const container = ControllerRegistry.getInstance().getContainer();
@@ -135,6 +149,7 @@ export class Application {
       port: finalPort,
       hostname: finalHostname,
       reusePort: this.options.reusePort,
+      idleTimeout: this.options.idleTimeout,
       fetch: this.handleRequest.bind(this),
       websocketRegistry: this.websocketRegistry,
       gracefulShutdownTimeout: this.options.gracefulShutdownTimeout,
@@ -430,7 +445,27 @@ export class Application {
    * 扫描所有使用 @ServiceRegistry 装饰器的控制器，自动注册服务
    */
   private async registerServices(port: number, hostname?: string): Promise<void> {
+    if (ServiceRegistryModule.autoRegister === false) {
+      return;
+    }
     try {
+      const configuredService = ServiceRegistryModule.autoRegisterService;
+      if (configuredService) {
+        const { SERVICE_REGISTRY_TOKEN } = await import(
+          '../microservice/service-registry/types'
+        );
+        const container = this.getContainer();
+        if (container.isRegistered(SERVICE_REGISTRY_TOKEN)) {
+          const registry = container.resolve<any>(SERVICE_REGISTRY_TOKEN);
+          await registry.register({
+            ...configuredService,
+            ip: configuredService.ip ?? hostname ?? '127.0.0.1',
+            port: configuredService.port ?? port,
+          });
+          return;
+        }
+      }
+
       // 动态导入服务注册装饰器（避免循环依赖）
       const { registerServiceInstance } = await import(
         '../microservice/service-registry/decorators'
@@ -456,7 +491,31 @@ export class Application {
    * 注销所有使用 @ServiceRegistry 装饰器的服务
    */
   private async deregisterServices(): Promise<void> {
+    if (ServiceRegistryModule.autoRegister === false) {
+      return;
+    }
     try {
+      const configuredService = ServiceRegistryModule.autoRegisterService;
+      if (configuredService) {
+        const { SERVICE_REGISTRY_TOKEN } = await import(
+          '../microservice/service-registry/types'
+        );
+        const container = this.getContainer();
+        if (container.isRegistered(SERVICE_REGISTRY_TOKEN)) {
+          const registry = container.resolve<any>(SERVICE_REGISTRY_TOKEN);
+          await registry.deregister({
+            serviceName: configuredService.serviceName,
+            ip:
+              configuredService.ip ??
+              this.server?.getHostname() ??
+              this.options.hostname ??
+              '127.0.0.1',
+            port: configuredService.port ?? this.server?.getPort() ?? this.options.port ?? 3000,
+          });
+          return;
+        }
+      }
+
       // 动态导入服务注册装饰器（避免循环依赖）
       const { deregisterServiceInstance } = await import(
         '../microservice/service-registry/decorators'

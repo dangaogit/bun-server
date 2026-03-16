@@ -121,6 +121,7 @@ import { ServiceRegistryModule } from '@dangao/bun-server';
 app.registerModule(
   ServiceRegistryModule.forRoot({
     provider: 'nacos',
+    autoRegister: true, // set false to disable listen-time auto registration
     nacos: {
       client: {
         serverList: ['http://localhost:8848'],

@@ -87,5 +87,15 @@ describe('Application', () => {
       await app2.stop();
     }
   });
+
+  test('should pass idleTimeout to BunServer options', async () => {
+    const port = getTestPort();
+    app = new Application({ port, idleTimeout: 8 });
+    await app.listen();
+
+    const server = app.getServer() as any;
+    expect(server).toBeDefined();
+    expect(server.options.idleTimeout).toBe(8);
+  });
 });
 

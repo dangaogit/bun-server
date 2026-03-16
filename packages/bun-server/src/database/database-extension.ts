@@ -7,14 +7,19 @@ import {
 
 import { TransactionInterceptor } from './orm/transaction-interceptor';
 import { TRANSACTION_METADATA_KEY } from './orm/transaction-decorator';
-import { DATABASE_SERVICE_TOKEN } from './types';
-import type { DatabaseService } from './service';
+import type { BunSQLManager } from './sql-manager';
+import type { SqliteManager } from './sqlite-adapter';
 
 /**
  * 数据库扩展
- * 在应用启动时自动初始化数据库连接
+ * 注册事务拦截器，并在应用关闭时释放数据库资源
  */
 export class DatabaseExtension implements ApplicationExtension {
+  public constructor(
+    private readonly sqlManager?: BunSQLManager,
+    private readonly sqliteManager?: SqliteManager,
+  ) {}
+
   public register(container: Container): void {
     // 注册事务拦截器到拦截器注册表
     try {
@@ -36,48 +41,10 @@ export class DatabaseExtension implements ApplicationExtension {
   }
 
   /**
-   * 初始化数据库连接
-   * 应该在应用启动时调用
+   * 关闭数据库资源
    */
-  public async initialize(container: Container): Promise<void> {
-    try {
-      const databaseService = container.resolve<DatabaseService>(
-        DATABASE_SERVICE_TOKEN,
-      );
-      await databaseService.initialize();
-    } catch (error) {
-      // 如果 DatabaseService 未注册，忽略错误
-      // 这意味着用户可能没有使用 DatabaseModule
-      if (
-        error instanceof Error &&
-        error.message.includes('Provider not found')
-      ) {
-        return;
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * 关闭数据库连接
-   * 应该在应用停止时调用
-   */
-  public async close(container: Container): Promise<void> {
-    try {
-      const databaseService = container.resolve<DatabaseService>(
-        DATABASE_SERVICE_TOKEN,
-      );
-      // 关闭连接池（关闭所有连接）
-      await databaseService.closePool();
-    } catch (error) {
-      // 如果 DatabaseService 未注册，忽略错误
-      if (
-        error instanceof Error &&
-        error.message.includes('Provider not found')
-      ) {
-        return;
-      }
-      throw error;
-    }
+  public async close(_container: Container): Promise<void> {
+    await this.sqlManager?.destroyAll(10);
+    this.sqliteManager?.destroyAll();
   }
 }

@@ -1,30 +1,207 @@
 import { Module, MODULE_METADATA_KEY, type ModuleProvider } from '../di/module';
-import type { ApplicationExtension } from '../extensions/types';
-import {
-  InterceptorRegistry,
-  INTERCEPTOR_REGISTRY_TOKEN,
-} from '../interceptor';
 import { type AsyncModuleOptions, registerAsyncProviders } from '../di/async-module';
+import type { Constructor } from '@/core/types';
+import type { Middleware } from '../middleware';
 
 import { DatabaseExtension } from './database-extension';
 import { DatabaseHealthIndicator } from './health-indicator';
 import { OrmService } from './orm/service';
 import { TransactionManager } from './orm/transaction-manager';
-import { TransactionInterceptor } from './orm/transaction-interceptor';
 import { TRANSACTION_METADATA_KEY } from './orm/transaction-decorator';
 import { DatabaseService } from './service';
 import {
+  BUN_SQL_MANAGER_TOKEN,
+  DB_TOKEN,
   DATABASE_OPTIONS_TOKEN,
   DATABASE_SERVICE_TOKEN,
+  SQLITE_MANAGER_TOKEN,
+  type BunSQLConfig,
   type DatabaseModuleOptions,
+  type SqliteV2Config,
 } from './types';
 import { ORM_SERVICE_TOKEN } from './orm/types';
 import { TRANSACTION_SERVICE_TOKEN } from './orm/transaction-types';
+import { BunSQLManager } from './sql-manager';
+import { SqliteManager } from './sqlite-adapter';
+import { db, initDbProxy } from './db-proxy';
+import { getDbStrategy } from './strategy-decorator';
+import { runWithSession, type DatabaseSession } from './database-context';
 
 @Module({
   providers: [],
 })
 export class DatabaseModule {
+  private static isBunSqlType(
+    type: DatabaseModuleOptions['type'] | undefined,
+  ): type is 'postgres' | 'mysql' {
+    return type === 'postgres' || type === 'mysql';
+  }
+
+  public static normalizeConfig(
+    options: DatabaseModuleOptions,
+  ): Array<{ tenantId: string; config: BunSQLConfig | SqliteV2Config }> {
+    if (options.tenants && options.tenants.length > 0) {
+      return options.tenants.map((tenant) => ({
+        tenantId: tenant.id,
+        config: tenant.config,
+      }));
+    }
+
+    if (options.database?.type === 'sqlite') {
+      if (options.pool) {
+        console.warn('[DatabaseModule] pool options are ignored for SQLite');
+      }
+      return [
+        {
+          tenantId: options.defaultTenant ?? 'default',
+          config: {
+            type: 'sqlite',
+            database: options.database.config.path,
+            wal: options.wal ?? true,
+            maxWriteConcurrency: options.maxWriteConcurrency ?? 1,
+          },
+        },
+      ];
+    }
+
+    if (options.database?.type === 'postgres' || options.database?.type === 'mysql') {
+      const db = options.database;
+      const protocol = db.type === 'mysql' ? 'mysql' : 'postgres';
+      const url =
+        `${protocol}://${db.config.user}:${db.config.password}@${db.config.host}:${db.config.port}/${db.config.database}`;
+      return [
+        {
+          tenantId: options.defaultTenant ?? 'default',
+          config: {
+            type: db.type,
+            url,
+            pool: options.bunSqlPool,
+          },
+        },
+      ];
+    }
+
+    if (options.type === 'sqlite') {
+      return [
+        {
+          tenantId: options.defaultTenant ?? 'default',
+          config: {
+            type: 'sqlite',
+            database: options.databasePath ?? ':memory:',
+            wal: options.wal ?? true,
+            maxWriteConcurrency: options.maxWriteConcurrency ?? 1,
+          },
+        },
+      ];
+    }
+
+    if (options.url && DatabaseModule.isBunSqlType(options.type)) {
+      return [
+        {
+          tenantId: options.defaultTenant ?? 'default',
+          config: {
+            type: options.type,
+            url: options.url,
+            pool: options.bunSqlPool,
+          },
+        },
+      ];
+    }
+
+    if (options.host && DatabaseModule.isBunSqlType(options.type)) {
+      const protocol = options.type === 'mysql' ? 'mysql' : 'postgres';
+      const url =
+        `${protocol}://${options.username}:${options.password}@${options.host}:${options.port ?? 5432}/${options.databasePath ?? ''}`;
+      return [
+        {
+          tenantId: options.defaultTenant ?? 'default',
+          config: {
+            type: options.type,
+            url,
+            pool: options.bunSqlPool,
+          },
+        },
+      ];
+    }
+
+    throw new Error(
+      '[DatabaseModule] invalid configuration: specify tenants or single tenant connection options',
+    );
+  }
+
+  private static createDatabaseMiddleware(
+    options: DatabaseModuleOptions,
+    normalized: Array<{ tenantId: string; config: BunSQLConfig | SqliteV2Config }>,
+    sqlManager: BunSQLManager,
+    sqliteManager: SqliteManager,
+  ): Middleware {
+    const defaultStrategy = options.defaultStrategy ?? 'pool';
+    const defaultTenant = options.defaultTenant ?? normalized[0]?.tenantId ?? 'default';
+
+    return async (context, next) => {
+      const routeHandler = (context as any).routeHandler as
+        | { controller: Constructor<unknown>; method: string }
+        | undefined;
+
+      let strategy: 'pool' | 'session' = defaultStrategy;
+      if (routeHandler) {
+        const routeStrategy = getDbStrategy(
+          routeHandler.controller,
+          routeHandler.method,
+        );
+        const hasTx = Boolean(
+          Reflect.getMetadata(
+            TRANSACTION_METADATA_KEY,
+            routeHandler.controller.prototype,
+            routeHandler.method,
+          ),
+        );
+        strategy = routeStrategy ?? (hasTx ? 'session' : defaultStrategy);
+      }
+
+      if (strategy !== 'session') {
+        return await next();
+      }
+
+      const selected = normalized.find((item) => item.tenantId === defaultTenant) ?? normalized[0];
+      if (!selected) {
+        return await next();
+      }
+
+      if (selected.config.type === 'sqlite') {
+        const sqlite = sqliteManager.getAdapter(selected.tenantId);
+        return await runWithSession(
+          {
+            tenantId: selected.tenantId,
+            sqlite,
+          },
+          async () => await next(),
+        );
+      }
+
+      const sql = sqlManager.getOrCreate(selected.tenantId, selected.config);
+      let reserved: any;
+      const session: DatabaseSession = {
+        tenantId: selected.tenantId,
+        lazyReserve: async () => {
+          if (!reserved) {
+            reserved = await sql.reserve();
+            session.reserved = reserved;
+          }
+          return reserved;
+        },
+      };
+
+      try {
+        return await runWithSession(session, async () => await next());
+      } finally {
+        if (reserved) {
+          await reserved.release().catch(() => undefined);
+        }
+      }
+    };
+  }
+
   /**
    * 创建数据库模块
    * @param options - 模块配置
@@ -33,8 +210,47 @@ export class DatabaseModule {
     options: DatabaseModuleOptions,
   ): typeof DatabaseModule {
     const providers: ModuleProvider[] = [];
+    const normalized = DatabaseModule.normalizeConfig(options);
+    const sqlManager = new BunSQLManager();
+    const sqliteManager = new SqliteManager();
 
-    const service = new DatabaseService(options);
+    for (const item of normalized) {
+      if (item.config.type === 'sqlite') {
+        sqliteManager.getOrCreate(item.tenantId, item.config);
+      } else {
+        sqlManager.getOrCreate(item.tenantId, item.config);
+      }
+    }
+    sqlManager.setDefaultTenant(options.defaultTenant ?? normalized[0]?.tenantId ?? 'default');
+    sqliteManager.setDefaultTenant(options.defaultTenant ?? normalized[0]?.tenantId ?? 'default');
+
+    const legacyOptions: DatabaseModuleOptions = options.database
+      ? options
+      : {
+          ...options,
+          database:
+            normalized[0]?.config.type === 'sqlite'
+              ? {
+                  type: 'sqlite',
+                  config: {
+                    path: (normalized[0].config as SqliteV2Config).database,
+                  },
+                }
+              : {
+                  type: (normalized[0]?.config.type ?? 'postgres') as 'postgres' | 'mysql',
+                  config: {
+                    host: options.host ?? 'localhost',
+                    port: options.port ?? (normalized[0]?.config.type === 'mysql' ? 3306 : 5432),
+                    database: options.databasePath ?? 'default',
+                    user: options.username ?? 'root',
+                    password: options.password ?? '',
+                  },
+                },
+        };
+
+    const service = new DatabaseService(legacyOptions);
+    const transactionManager = new TransactionManager(sqlManager);
+    initDbProxy(sqlManager, transactionManager);
 
     providers.push(
       {
@@ -45,7 +261,22 @@ export class DatabaseModule {
         provide: DATABASE_OPTIONS_TOKEN,
         useValue: options,
       },
-      DatabaseService,
+      {
+        provide: DatabaseService,
+        useValue: service,
+      },
+      {
+        provide: BUN_SQL_MANAGER_TOKEN,
+        useValue: sqlManager,
+      },
+      {
+        provide: SQLITE_MANAGER_TOKEN,
+        useValue: sqliteManager,
+      },
+      {
+        provide: DB_TOKEN,
+        useValue: db,
+      },
     );
 
     // 如果启用了 ORM，注册 ORM 服务
@@ -65,13 +296,15 @@ export class DatabaseModule {
     }
 
     // 注册事务管理器（总是注册，即使 ORM 未启用）
-    const transactionManager = new TransactionManager(service);
     providers.push(
       {
         provide: TRANSACTION_SERVICE_TOKEN,
         useValue: transactionManager,
       },
-      TransactionManager,
+      {
+        provide: TransactionManager,
+        useValue: transactionManager,
+      },
     );
 
     // 数据库健康检查指示器可以通过 DatabaseModule.createHealthIndicator() 方法获取
@@ -82,7 +315,13 @@ export class DatabaseModule {
       Reflect.getMetadata(MODULE_METADATA_KEY, DatabaseModule) || {};
     
     // 创建数据库扩展，用于在应用启动时初始化连接
-    const databaseExtension = new DatabaseExtension();
+    const databaseExtension = new DatabaseExtension(sqlManager, sqliteManager);
+    const middleware = DatabaseModule.createDatabaseMiddleware(
+      options,
+      normalized,
+      sqlManager,
+      sqliteManager,
+    );
     
     const metadata = {
       ...existingMetadata,
@@ -101,6 +340,10 @@ export class DatabaseModule {
       extensions: [
         ...(existingMetadata.extensions || []),
         databaseExtension,
+      ],
+      middlewares: [
+        ...(existingMetadata.middlewares || []),
+        middleware,
       ],
     };
     Reflect.defineMetadata(MODULE_METADATA_KEY, metadata, DatabaseModule);

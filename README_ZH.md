@@ -45,6 +45,7 @@
   `Application`、`Router`、`Context` 封装。
 - 🧩
   **依赖注入容器**：`Container`、`@Injectable()`、`@Inject()`、模块系统、生命周期管理与自动依赖计划缓存。
+- 🗄️ **Database V2**：`db` 代理、路由级 pool/session 策略、多租户管理与统一事务能力。
 - 🧵
   **中间件管道**：支持全局/控制器/方法级中间件，内置日志、错误处理、CORS、文件上传、静态资源等。
 - ✅ **输入校验**：声明式验证装饰器，直连 `ValidationError` 与异常过滤器。
@@ -416,11 +417,13 @@ app.listen();
   - `full-app.ts` - 验证、上传、静态文件、WebSocket
   - `lifecycle-app.ts` - 生命周期钩子（OnModuleInit、OnModuleDestroy 等）
   - `async-config-app.ts` - 异步模块配置 `forRootAsync()`
+  - `idle-timeout-app.ts` - 全局与路由级 idleTimeout
 
 - **[官方模块](./examples/02-official-modules/)** - 开箱即用的模块
   - `auth-app.ts` - JWT + OAuth2 认证（含 Web UI）
   - `session-app.ts` - Session 管理
   - `database-app.ts` - 数据库连接与查询
+  - `nacos-auto-register-app.ts` - Nacos 自动注册开关示例
   - `orm-app.ts` - Entity + Repository 模式
   - `cache-app.ts` - 缓存装饰器
   - `queue-app.ts` - 任务队列与 Cron 定时任务
