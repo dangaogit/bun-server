@@ -3,10 +3,40 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v2.0.8',
+    version: 'v2.2.0',
     date: '2026-03',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'feat', text: 'Add component lifecycle hooks for @Controller/@Injectable: onBeforeCreate/onAfterCreate/onBeforeDestroy/onAfterDestroy' },
+      { type: 'feat', text: 'Align controller lifecycle execution with providers during module startup/shutdown' },
+      { type: 'feat', text: 'Auto-dispose Lifecycle.Scoped instances at request end and invoke scoped destroy hooks' },
+      { type: 'feat', text: 'Enhance examples/01-core-features/lifecycle-app.ts with /api/scoped request-scoped lifecycle demo' },
+      { type: 'docs', text: 'Update lifecycle docs and tests for hook ordering and scoped cleanup behavior' },
+    ],
+  },
+  {
+    version: 'v2.1.0',
+    date: '2026-03',
+    tag: '',
+    highlight: false,
+    changes: [
+      { type: 'feat', text: 'Introduce Bun.SQL manager, sqlite adapter, ALS session context, db proxy, and route-level database strategy decorators' },
+      { type: 'refactor', text: 'Migrate transaction manager to ALS-based state and unify db.transaction() with @Transactional' },
+      { type: 'fix', text: 'Deduplicate provider instances to prevent duplicate onModuleInit execution' },
+      { type: 'feat', text: 'Add ServiceRegistryModule.autoRegister switch and listen-time guard in Application' },
+      { type: 'feat', text: 'Support global idleTimeout and route-level @IdleTimeout(ms) with 408 timeout response' },
+      { type: 'docs', text: 'Update database/lifecycle/microservice docs and add docs/idle-timeout.md + docs/zh/idle-timeout.md' },
+      { type: 'test', text: 'Add and refresh coverage for database strategy, db proxy, sqlite adapter, SQL manager, lifecycle dedup, and timeout scenarios' },
+      { type: 'feat', text: 'Refresh database-app.ts and add nacos-auto-register-app.ts + idle-timeout-app.ts examples' },
+      { type: 'chore', text: 'Bump @dangao/bun-server and @dangao/bun-server-web to 2.1.0 and sync web changelog pages' },
+    ],
+  },
+  {
+    version: 'v2.0.8',
+    date: '2026-03',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'fix', text: 'Use Bun.SQL template value binding in DatabaseService and preserve original query error context' },
       { type: 'refactor', text: 'Replace catch-without-binding patterns across src to improve error handling consistency' },

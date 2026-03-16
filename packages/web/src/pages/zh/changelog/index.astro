@@ -3,10 +3,40 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v2.0.8',
+    version: 'v2.2.0',
     date: '2026-03',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'feat', text: '为 @Controller/@Injectable 新增组件生命周期钩子：onBeforeCreate/onAfterCreate/onBeforeDestroy/onAfterDestroy' },
+      { type: 'feat', text: '对齐 controller 与 provider 的模块启动/关闭生命周期执行链路' },
+      { type: 'feat', text: '请求结束时自动清理 Lifecycle.Scoped 实例，并触发 scoped 销毁钩子' },
+      { type: 'feat', text: '增强 examples/01-core-features/lifecycle-app.ts，新增 /api/scoped 请求级生命周期演示' },
+      { type: 'docs', text: '更新 lifecycle 文档与测试，覆盖钩子顺序与 scoped 清理行为' },
+    ],
+  },
+  {
+    version: 'v2.1.0',
+    date: '2026-03',
+    tag: '',
+    highlight: false,
+    changes: [
+      { type: 'feat', text: '引入 Bun.SQL manager、sqlite adapter、ALS 会话上下文、db proxy 以及路由级数据库策略装饰器' },
+      { type: 'refactor', text: '事务管理迁移为基于 ALS 的状态模型，统一 db.transaction() 与 @Transactional 语义' },
+      { type: 'fix', text: '去重 provider 实例，避免 onModuleInit 被重复执行' },
+      { type: 'feat', text: '新增 ServiceRegistryModule.autoRegister 开关，并在 Application 中加入 listen 时机保护' },
+      { type: 'feat', text: '支持全局 idleTimeout 与路由级 @IdleTimeout(ms)，超时返回 408' },
+      { type: 'docs', text: '更新 database/lifecycle/microservice 文档，并新增 docs/idle-timeout.md 与 docs/zh/idle-timeout.md' },
+      { type: 'test', text: '新增并补齐数据库策略、db proxy、sqlite adapter、SQL manager、生命周期去重与超时场景测试覆盖' },
+      { type: 'feat', text: '刷新 database-app.ts 示例，并新增 nacos-auto-register-app.ts 与 idle-timeout-app.ts' },
+      { type: 'chore', text: '将 @dangao/bun-server 与 @dangao/bun-server-web 升级到 2.1.0，并同步 web changelog 页面' },
+    ],
+  },
+  {
+    version: 'v2.0.8',
+    date: '2026-03',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'fix', text: 'DatabaseService 改为通过 Bun.SQL 模板 values 绑定参数，并保留原始查询错误上下文' },
       { type: 'refactor', text: '统一替换 src 下 catch 无异常绑定写法，提升错误处理一致性' },

@@ -324,6 +324,7 @@ export class Application {
    */
   private async handleRequest(context: Context): Promise<Response> {
     const logger = LoggerManager.getLogger();
+    const moduleRegistry = ModuleRegistry.getInstance();
     logger.debug('[Request] Incoming', {
       method: context.method,
       path: context.path,
@@ -332,34 +333,46 @@ export class Application {
 
     // 使用 AsyncLocalStorage 包裹请求处理，确保所有中间件和控制器都在请求上下文中执行
     return await contextStore.run(context, async () => {
-      // 对于 POST、PUT、PATCH 请求，提前解析 body 并缓存
-      // 这样可以确保 Request.body 流只读取一次
-      if (['POST', 'PUT', 'PATCH'].includes(context.method)) {
-        await context.getBody();
-      }
-
-      // 先通过路由解析出处理器信息，便于安全中间件等基于路由元数据做决策
-      const registry = RouteRegistry.getInstance();
-      const router = registry.getRouter();
-
-      // 预解析路由，仅设置上下文信息，不执行处理器
-      await router.preHandle(context);
-
-      // 再进入中间件管道，由中间件（如安全过滤器）根据 routeHandler 和 Auth 元数据做校验，
-      // 最后再由路由真正执行控制器方法
-      return await this.middlewarePipeline.run(context, async () => {
-        const response = await router.handle(context);
-        if (response) {
-          return response;
+      try {
+        // 对于 POST、PUT、PATCH 请求，提前解析 body 并缓存
+        // 这样可以确保 Request.body 流只读取一次
+        if (['POST', 'PUT', 'PATCH'].includes(context.method)) {
+          await context.getBody();
         }
 
-        logger.debug('[Router] No route matched', {
-          method: context.method,
-          path: context.path,
+        // 先通过路由解析出处理器信息，便于安全中间件等基于路由元数据做决策
+        const registry = RouteRegistry.getInstance();
+        const router = registry.getRouter();
+
+        // 预解析路由，仅设置上下文信息，不执行处理器
+        await router.preHandle(context);
+
+        // 再进入中间件管道，由中间件（如安全过滤器）根据 routeHandler 和 Auth 元数据做校验，
+        // 最后再由路由真正执行控制器方法
+        return await this.middlewarePipeline.run(context, async () => {
+          const response = await router.handle(context);
+          if (response) {
+            return response;
+          }
+
+          logger.debug('[Router] No route matched', {
+            method: context.method,
+            path: context.path,
+          });
+          context.setStatus(404);
+          return context.createErrorResponse({ error: 'Not Found' });
         });
-        context.setStatus(404);
-        return context.createErrorResponse({ error: 'Not Found' });
-      });
+      } finally {
+        try {
+          await moduleRegistry.disposeScopedInstances(context);
+        } catch (error) {
+          logger.warn('[Application] Failed to dispose scoped instances', {
+            path: context.path,
+            method: context.method,
+            errorMessage: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
     });
   }
 

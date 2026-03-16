@@ -54,3 +54,4 @@ dummy
 
 *.db
 data.db-*
+orm-demo.db-*

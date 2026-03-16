@@ -16,6 +16,10 @@ import {
   callOnModuleDestroy,
   callOnApplicationBootstrap,
   callOnApplicationShutdown,
+  callComponentBeforeCreate,
+  callOnAfterCreate,
+  callOnBeforeDestroy,
+  callOnAfterDestroy,
 } from '../../src/di/lifecycle';
 
 describe('Lifecycle Hooks', () => {
@@ -68,6 +72,54 @@ describe('Lifecycle Hooks', () => {
       ]);
     });
 
+    test('callComponentBeforeCreate and callOnAfterCreate should invoke component creation hooks', () => {
+      const calls: string[] = [];
+      class TestComponent {
+        public static onBeforeCreate(): void {
+          calls.push('beforeCreate');
+        }
+        public onAfterCreate(): void {
+          calls.push('afterCreate');
+        }
+      }
+
+      callComponentBeforeCreate(TestComponent);
+      callOnAfterCreate(new TestComponent());
+      expect(calls).toEqual(['beforeCreate', 'afterCreate']);
+    });
+
+    test('callOnBeforeDestroy and callOnAfterDestroy should invoke in reverse order', async () => {
+      const calls: string[] = [];
+      const instances = [
+        {
+          onBeforeDestroy: () => {
+            calls.push('before:first');
+          },
+          onAfterDestroy: () => {
+            calls.push('after:first');
+          },
+        },
+        {
+          onBeforeDestroy: () => {
+            calls.push('before:second');
+          },
+          onAfterDestroy: () => {
+            calls.push('after:second');
+          },
+        },
+      ];
+
+      await callOnBeforeDestroy(instances);
+      await callOnAfterDestroy(instances);
+
+      expect(calls).toEqual([
+        'before:second',
+        'before:first',
+        'after:second',
+        'after:first',
+      ]);
+    });
+
     test('should skip non-hook instances', async () => {
       const calls: string[] = [];
       const instances = [
@@ -90,11 +142,23 @@ describe('Lifecycle Hooks', () => {
 
       @Injectable()
       class LifecycleService implements OnModuleInit, OnModuleDestroy, OnApplicationBootstrap, OnApplicationShutdown {
+        public static onBeforeCreate(): void {
+          calls.push('service:onBeforeCreate');
+        }
+        public onAfterCreate(): void {
+          calls.push('service:onAfterCreate');
+        }
+        public onBeforeDestroy(): void {
+          calls.push('service:onBeforeDestroy');
+        }
         public onModuleInit(): void {
           calls.push('onModuleInit');
         }
         public onModuleDestroy(): void {
           calls.push('onModuleDestroy');
+        }
+        public onAfterDestroy(): void {
+          calls.push('service:onAfterDestroy');
         }
         public onApplicationBootstrap(): void {
           calls.push('onApplicationBootstrap');
@@ -105,7 +169,31 @@ describe('Lifecycle Hooks', () => {
       }
 
       @Controller('/test')
-      class TestController {
+      class TestController implements OnModuleInit, OnModuleDestroy, OnApplicationBootstrap, OnApplicationShutdown {
+        public static onBeforeCreate(): void {
+          calls.push('controller:onBeforeCreate');
+        }
+        public onAfterCreate(): void {
+          calls.push('controller:onAfterCreate');
+        }
+        public onBeforeDestroy(): void {
+          calls.push('controller:onBeforeDestroy');
+        }
+        public onModuleInit(): void {
+          calls.push('controller:onModuleInit');
+        }
+        public onModuleDestroy(): void {
+          calls.push('controller:onModuleDestroy');
+        }
+        public onAfterDestroy(): void {
+          calls.push('controller:onAfterDestroy');
+        }
+        public onApplicationBootstrap(): void {
+          calls.push('controller:onApplicationBootstrap');
+        }
+        public onApplicationShutdown(signal?: string): void {
+          calls.push(`controller:onApplicationShutdown:${signal ?? 'none'}`);
+        }
         @GET('/')
         public get(): string {
           return 'ok';
@@ -122,8 +210,14 @@ describe('Lifecycle Hooks', () => {
       app.registerModule(TestModule);
       await app.listen(0);
 
+      expect(calls).toContain('service:onBeforeCreate');
+      expect(calls).toContain('service:onAfterCreate');
+      expect(calls).toContain('controller:onBeforeCreate');
+      expect(calls).toContain('controller:onAfterCreate');
       expect(calls).toContain('onModuleInit');
       expect(calls).toContain('onApplicationBootstrap');
+      expect(calls).toContain('controller:onModuleInit');
+      expect(calls).toContain('controller:onApplicationBootstrap');
 
       const initIdx = calls.indexOf('onModuleInit');
       const bootIdx = calls.indexOf('onApplicationBootstrap');
@@ -131,10 +225,17 @@ describe('Lifecycle Hooks', () => {
 
       await app.stop();
 
+      expect(calls).toContain('service:onBeforeDestroy');
       expect(calls).toContain('onModuleDestroy');
+      expect(calls).toContain('service:onAfterDestroy');
+      expect(calls).toContain('controller:onBeforeDestroy');
+      expect(calls).toContain('controller:onModuleDestroy');
+      expect(calls).toContain('controller:onAfterDestroy');
       // onApplicationShutdown with no signal when using stop() directly
       const shutdownEntry = calls.find((c) => c.startsWith('onApplicationShutdown'));
       expect(shutdownEntry).toBeDefined();
+      const controllerShutdownEntry = calls.find((c) => c.startsWith('controller:onApplicationShutdown'));
+      expect(controllerShutdownEntry).toBeDefined();
     });
 
     test('should call onModuleInit once for duplicated provider instance', async () => {
