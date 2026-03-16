@@ -42,6 +42,10 @@ export type {
   OnModuleDestroy,
   OnApplicationBootstrap,
   OnApplicationShutdown,
+  ComponentClassBeforeCreate,
+  OnAfterCreate,
+  OnBeforeDestroy,
+  OnAfterDestroy,
 } from './di/lifecycle';
 export {
   InterceptorRegistry,

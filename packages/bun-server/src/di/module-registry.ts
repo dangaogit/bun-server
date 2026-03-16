@@ -11,6 +11,8 @@ import {
   callOnModuleDestroy,
   callOnApplicationBootstrap,
   callOnApplicationShutdown,
+  callOnBeforeDestroy,
+  callOnAfterDestroy,
 } from './lifecycle';
 
 interface ModuleRef {
@@ -225,9 +227,9 @@ export class ModuleRegistry {
   }
 
   /**
-   * 解析所有模块中的 provider 实例，用于生命周期钩子调用
+   * 解析所有模块中的组件实例（providers + controllers），用于生命周期钩子调用
    */
-  public resolveAllProviderInstances(): unknown[] {
+  public resolveAllComponentInstances(): unknown[] {
     const instances: unknown[] = [];
     const seen = new Set<unknown>();
     for (const [, ref] of this.moduleRefs) {
@@ -262,40 +264,86 @@ export class ModuleRegistry {
           // skip providers that can't be resolved (e.g. pending async providers)
         }
       }
+      for (const controller of ref.metadata.controllers) {
+        try {
+          const instance = ref.container.resolve(controller);
+          if (!seen.has(instance)) {
+            seen.add(instance);
+            instances.push(instance);
+          }
+        } catch (_error) {
+          // skip controllers that can't be resolved
+        }
+      }
     }
     return instances;
   }
 
   /**
-   * 调用所有 provider 的 onModuleInit 钩子
+   * 调用所有组件（providers + controllers）的 onModuleInit 钩子
    */
   public async callModuleInitHooks(): Promise<void> {
-    const instances = this.resolveAllProviderInstances();
+    const instances = this.resolveAllComponentInstances();
     await callOnModuleInit(instances);
   }
 
   /**
-   * 调用所有 provider 的 onApplicationBootstrap 钩子
+   * 调用所有组件（providers + controllers）的 onApplicationBootstrap 钩子
    */
   public async callBootstrapHooks(): Promise<void> {
-    const instances = this.resolveAllProviderInstances();
+    const instances = this.resolveAllComponentInstances();
     await callOnApplicationBootstrap(instances);
   }
 
   /**
-   * 调用所有 provider 的 onModuleDestroy 钩子
+   * 调用所有组件（providers + controllers）的 onModuleDestroy 钩子
    */
   public async callModuleDestroyHooks(): Promise<void> {
-    const instances = this.resolveAllProviderInstances();
+    const instances = this.resolveAllComponentInstances();
+    await callOnBeforeDestroy(instances);
     await callOnModuleDestroy(instances);
+    await callOnAfterDestroy(instances);
   }
 
   /**
-   * 调用所有 provider 的 onApplicationShutdown 钩子
+   * 调用所有组件（providers + controllers）的 onApplicationShutdown 钩子
    */
   public async callShutdownHooks(signal?: string): Promise<void> {
-    const instances = this.resolveAllProviderInstances();
+    const instances = this.resolveAllComponentInstances();
     await callOnApplicationShutdown(instances, signal);
+  }
+
+  /**
+   * 调用当前请求上下文下 scoped 组件的销毁钩子并清理缓存
+   */
+  public async disposeScopedInstances(context: object): Promise<void> {
+    const containers: Container[] = [];
+    if (this.rootContainer) {
+      containers.push(this.rootContainer);
+    }
+    containers.push(...this.getAllModuleContainers());
+
+    const instances: unknown[] = [];
+    const seen = new Set<unknown>();
+    for (const container of containers) {
+      const scopedInstances = container.getScopedInstances(context);
+      for (const instance of scopedInstances) {
+        if (!seen.has(instance)) {
+          seen.add(instance);
+          instances.push(instance);
+        }
+      }
+    }
+
+    if (instances.length > 0) {
+      await callOnBeforeDestroy(instances);
+      await callOnModuleDestroy(instances);
+      await callOnAfterDestroy(instances);
+    }
+
+    for (const container of containers) {
+      container.clearScopedInstances(context);
+    }
   }
 
   private registerExport(parentContainer: Container, moduleRef: ModuleRef, token: ProviderToken): void {

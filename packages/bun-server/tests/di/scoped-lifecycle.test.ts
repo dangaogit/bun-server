@@ -219,5 +219,66 @@ describe('Lifecycle.Scoped', () => {
     // 工厂函数应该被调用 2 次（每个请求一次）
     expect(factoryCallCount).toBe(2);
   });
+
+  test('should call scoped destroy hooks on context dispose', async () => {
+    const calls: string[] = [];
+
+    @Injectable({ lifecycle: Lifecycle.Scoped })
+    class ScopedService {
+      public onBeforeDestroy(): void {
+        calls.push('before');
+      }
+
+      public onModuleDestroy(): void {
+        calls.push('destroy');
+      }
+
+      public onAfterDestroy(): void {
+        calls.push('after');
+      }
+    }
+
+    container.register(ScopedService);
+
+    const request = new Request('http://localhost:3000/api/test');
+    const context = new Context(request);
+
+    await contextStore.run(context, async () => {
+      const instance = container.resolve(ScopedService);
+      expect(instance).toBeInstanceOf(ScopedService);
+    });
+
+    await container.disposeScopedInstances(context);
+
+    expect(calls).toEqual(['before', 'destroy', 'after']);
+  });
+
+  test('should call scoped destroy hooks once per request context', async () => {
+    const calls: string[] = [];
+
+    @Injectable({ lifecycle: Lifecycle.Scoped })
+    class ScopedService {
+      public onModuleDestroy(): void {
+        calls.push('destroy');
+      }
+    }
+
+    container.register(ScopedService);
+
+    const context1 = new Context(new Request('http://localhost:3000/api/test-1'));
+    const context2 = new Context(new Request('http://localhost:3000/api/test-2'));
+
+    await contextStore.run(context1, async () => {
+      container.resolve(ScopedService);
+    });
+    await container.disposeScopedInstances(context1);
+
+    await contextStore.run(context2, async () => {
+      container.resolve(ScopedService);
+    });
+    await container.disposeScopedInstances(context2);
+
+    expect(calls).toEqual(['destroy', 'destroy']);
+  });
 });
 

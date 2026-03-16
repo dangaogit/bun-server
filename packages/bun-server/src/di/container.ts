@@ -14,6 +14,13 @@ import {
 import { LoggerManager } from "@dangao/logsmith";
 import type { Constructor } from "@/core/types";
 import { contextStore } from "../core/context-service";
+import {
+  callComponentBeforeCreate,
+  callOnAfterCreate,
+  callOnBeforeDestroy,
+  callOnModuleDestroy,
+  callOnAfterDestroy,
+} from "./lifecycle";
 
 /**
  * 依赖注入容器
@@ -365,6 +372,7 @@ export class Container {
    * @returns 实例
    */
   private instantiate<T>(constructor: Constructor<T>): T {
+    callComponentBeforeCreate(constructor);
     const plan = this.getDependencyPlan(constructor);
 
     let instance: T;
@@ -379,7 +387,9 @@ export class Container {
     }
 
     // 应用后处理器
-    return this.applyPostProcessors(instance, constructor);
+    const processed = this.applyPostProcessors(instance, constructor);
+    callOnAfterCreate(processed);
+    return processed;
   }
 
   /**
@@ -407,6 +417,50 @@ export class Container {
     this.dependencyPlans.clear();
     this.postProcessors.length = 0;
     // scopedInstances 使用 WeakMap，当 Context 对象被 GC 时会自动清理
+  }
+
+  /**
+   * 获取指定请求上下文下的 scoped 实例
+   * @param context - 请求上下文对象
+   * @returns 去重后的 scoped 实例列表
+   */
+  public getScopedInstances(context: object): unknown[] {
+    const scopedMap = this.scopedInstances.get(context);
+    if (!scopedMap || scopedMap.size === 0) {
+      return [];
+    }
+    const seen = new Set<unknown>();
+    const instances: unknown[] = [];
+    for (const instance of scopedMap.values()) {
+      if (!seen.has(instance)) {
+        seen.add(instance);
+        instances.push(instance);
+      }
+    }
+    return instances;
+  }
+
+  /**
+   * 清理指定请求上下文的 scoped 实例缓存
+   * @param context - 请求上下文对象
+   */
+  public clearScopedInstances(context: object): void {
+    this.scopedInstances.delete(context);
+  }
+
+  /**
+   * 触发指定请求上下文下 scoped 实例的销毁钩子并清理缓存
+   * @param context - 请求上下文对象
+   */
+  public async disposeScopedInstances(context: object): Promise<void> {
+    const instances = this.getScopedInstances(context);
+    if (instances.length === 0) {
+      return;
+    }
+    await callOnBeforeDestroy(instances);
+    await callOnModuleDestroy(instances);
+    await callOnAfterDestroy(instances);
+    this.clearScopedInstances(context);
   }
 
   /**
