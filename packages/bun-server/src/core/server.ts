@@ -41,6 +41,12 @@ export interface ServerOptions {
    * @default false
    */
   reusePort?: boolean;
+
+  /**
+   * 连接空闲超时时间（毫秒）
+   * 框架内部会转换为 Bun.serve 所需的秒
+   */
+  idleTimeout?: number;
 }
 
 /**
@@ -161,6 +167,10 @@ export class BunServer {
         port: this.options.port ?? 3000,
         hostname: this.options.hostname,
         reusePort: this.options.reusePort,
+        idleTimeout:
+          typeof this.options.idleTimeout === 'number'
+            ? Math.max(0, Math.ceil(this.options.idleTimeout / 1000))
+            : undefined,
         fetch: fetchHandler,
         websocket: websocketHandlers,
       });

@@ -22,8 +22,8 @@ import {
   DatabaseService,
   DATABASE_SERVICE_TOKEN,
   ModuleRegistry,
-  Container,
   type DatabaseConfig,
+  type DatabaseModuleOptions,
 } from '@dangao/bun-server';
 
 // 配置基础模块
@@ -40,7 +40,6 @@ LoggerModule.forRoot({
 
 // 存储当前数据库服务实例和连接
 let currentDatabaseService: DatabaseService | null = null;
-let currentContainer: Container | null = null;
 let currentSqlConnection: any = null; // Bun.SQL 连接实例
 
 /**
@@ -221,7 +220,7 @@ const HTML_PAGE = `<!DOCTYPE html>
   <div class="container">
     <div class="header">
       <h1>🗄️ 数据库连接测试工具</h1>
-      <p>支持 PostgreSQL 和 MySQL 数据库连接测试</p>
+      <p>支持 PostgreSQL / MySQL / SQLite 连接测试与高级调试参数</p>
     </div>
     <div class="content">
       <form id="connectionForm">
@@ -230,6 +229,14 @@ const HTML_PAGE = `<!DOCTYPE html>
           <select id="dbType" name="type" required>
             <option value="postgres">PostgreSQL</option>
             <option value="mysql">MySQL</option>
+            <option value="sqlite">SQLite</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>连接策略（defaultStrategy）</label>
+          <select id="defaultStrategy" name="defaultStrategy" required>
+            <option value="pool">pool（默认）</option>
+            <option value="session">session</option>
           </select>
         </div>
         <div class="form-row">
@@ -246,6 +253,10 @@ const HTML_PAGE = `<!DOCTYPE html>
           <label>数据库名称</label>
           <input type="text" id="database" name="database" placeholder="testdb" required>
         </div>
+        <div class="form-group">
+          <label>SQLite 数据库路径（sqlite 专用）</label>
+          <input type="text" id="sqlitePath" name="sqlitePath" placeholder=":memory: 或 ./data.db">
+        </div>
         <div class="form-row">
           <div class="form-group">
             <label>用户名</label>
@@ -254,6 +265,39 @@ const HTML_PAGE = `<!DOCTYPE html>
           <div class="form-group">
             <label>密码</label>
             <input type="password" id="password" name="password" placeholder="password" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Bun.SQL max</label>
+            <input type="number" id="poolMax" name="poolMax" placeholder="10" value="10">
+          </div>
+          <div class="form-group">
+            <label>Bun.SQL connectionTimeout(ms)</label>
+            <input type="number" id="poolConnectionTimeout" name="poolConnectionTimeout" placeholder="30000" value="30000">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Bun.SQL idleTimeout(s)</label>
+            <input type="number" id="poolIdleTimeout" name="poolIdleTimeout" placeholder="30" value="30">
+          </div>
+          <div class="form-group">
+            <label>Bun.SQL maxLifetime(s)</label>
+            <input type="number" id="poolMaxLifetime" name="poolMaxLifetime" placeholder="0" value="0">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>SQLite WAL</label>
+            <select id="sqliteWal" name="sqliteWal">
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>SQLite maxWriteConcurrency</label>
+            <input type="number" id="sqliteMaxWriteConcurrency" name="sqliteMaxWriteConcurrency" placeholder="1" value="1">
           </div>
         </div>
         <button type="submit" class="btn btn-primary" id="connectBtn">
@@ -306,6 +350,13 @@ const HTML_PAGE = `<!DOCTYPE html>
 
     document.getElementById('dbType').addEventListener('change', () => {
       updateDefaultQuery(false);
+      const dbType = document.getElementById('dbType').value;
+      const isSqlite = dbType === 'sqlite';
+      document.getElementById('host').required = !isSqlite;
+      document.getElementById('port').required = !isSqlite;
+      document.getElementById('database').required = !isSqlite;
+      document.getElementById('user').required = !isSqlite;
+      document.getElementById('password').required = !isSqlite;
     });
 
     document.getElementById('connectionForm').addEventListener('submit', async (e) => {
@@ -322,6 +373,14 @@ const HTML_PAGE = `<!DOCTYPE html>
         database: document.getElementById('database').value,
         user: document.getElementById('user').value,
         password: document.getElementById('password').value,
+        sqlitePath: document.getElementById('sqlitePath').value,
+        defaultStrategy: document.getElementById('defaultStrategy').value,
+        poolMax: parseInt(document.getElementById('poolMax').value),
+        poolConnectionTimeout: parseInt(document.getElementById('poolConnectionTimeout').value),
+        poolIdleTimeout: parseInt(document.getElementById('poolIdleTimeout').value),
+        poolMaxLifetime: parseInt(document.getElementById('poolMaxLifetime').value),
+        sqliteWal: document.getElementById('sqliteWal').value === 'true',
+        sqliteMaxWriteConcurrency: parseInt(document.getElementById('sqliteMaxWriteConcurrency').value),
       };
 
       try {
@@ -435,12 +494,20 @@ class ApiController {
    */
   @POST('/connect')
   public async connect(@Body() body: {
-    type: 'postgres' | 'mysql';
-    host: string;
-    port: number;
-    database: string;
-    user: string;
-    password: string;
+    type: 'postgres' | 'mysql' | 'sqlite';
+    host?: string;
+    port?: number;
+    database?: string;
+    user?: string;
+    password?: string;
+    sqlitePath?: string;
+    defaultStrategy?: 'pool' | 'session';
+    poolMax?: number;
+    poolConnectionTimeout?: number;
+    poolIdleTimeout?: number;
+    poolMaxLifetime?: number;
+    sqliteWal?: boolean;
+    sqliteMaxWriteConcurrency?: number;
   }) {
     try {
       // 关闭之前的连接
@@ -452,28 +519,62 @@ class ApiController {
         }
       }
 
-      // 构建数据库配置
+      // 构建数据库配置（兼容旧服务 + 展示新配置）
       const dbConfig: DatabaseConfig =
-        body.type === 'postgres'
+        body.type === 'sqlite'
           ? {
-              type: 'postgres',
+              type: 'sqlite',
               config: {
-                host: body.host,
-                port: body.port,
-                database: body.database,
-                user: body.user,
-                password: body.password,
+                path: body.sqlitePath?.trim() || ':memory:',
               },
             }
+          : body.type === 'postgres'
+            ? {
+                type: 'postgres',
+                config: {
+                  host: body.host || 'localhost',
+                  port: body.port || 5432,
+                  database: body.database || 'test',
+                  user: body.user || 'postgres',
+                  password: body.password || '',
+                },
+              }
+            : {
+                type: 'mysql',
+                config: {
+                  host: body.host || 'localhost',
+                  port: body.port || 3306,
+                  database: body.database || 'test',
+                  user: body.user || 'root',
+                  password: body.password || '',
+                },
+              };
+
+      const moduleOptions: DatabaseModuleOptions =
+        body.type === 'sqlite'
+          ? {
+              type: 'sqlite',
+              databasePath: body.sqlitePath?.trim() || ':memory:',
+              wal: body.sqliteWal ?? true,
+              maxWriteConcurrency: body.sqliteMaxWriteConcurrency ?? 1,
+              defaultStrategy: body.defaultStrategy ?? 'pool',
+              enableHealthCheck: true,
+            }
           : {
-              type: 'mysql',
-              config: {
-                host: body.host,
-                port: body.port,
-                database: body.database,
-                user: body.user,
-                password: body.password,
+              type: body.type,
+              host: body.host || 'localhost',
+              port: body.port || (body.type === 'mysql' ? 3306 : 5432),
+              databasePath: body.database || 'test',
+              username: body.user || (body.type === 'mysql' ? 'root' : 'postgres'),
+              password: body.password || '',
+              defaultStrategy: body.defaultStrategy ?? 'pool',
+              bunSqlPool: {
+                max: body.poolMax ?? 10,
+                idleTimeout: body.poolIdleTimeout ?? 30,
+                maxLifetime: body.poolMaxLifetime ?? 0,
+                connectionTimeout: body.poolConnectionTimeout ?? 30000,
               },
+              enableHealthCheck: true,
             };
 
       // 清除之前的模块元数据（如果存在）
@@ -481,42 +582,34 @@ class ApiController {
       Reflect.deleteMetadata(MODULE_METADATA_KEY, DatabaseModule);
 
       // 配置数据库模块
-      DatabaseModule.forRoot({
-        database: dbConfig,
-        pool: {
-          maxConnections: 10,
-          connectionTimeout: 30000,
-          retryCount: 3,
-          retryDelay: 1000,
-        },
-        enableHealthCheck: true,
-      });
-
-      // 创建新的容器
-      const container = new Container();
+      DatabaseModule.forRoot(moduleOptions);
 
       // 手动创建并注册数据库服务（不通过 ModuleRegistry，避免缓存问题）
       const dbService = new DatabaseService({
         database: dbConfig,
         pool: {
-          maxConnections: 10,
-          connectionTimeout: 30000,
+          maxConnections: body.poolMax ?? 10,
+          connectionTimeout: body.poolConnectionTimeout ?? 30000,
           retryCount: 3,
           retryDelay: 1000,
         },
         enableHealthCheck: true,
       });
 
-      // 手动注册到容器
-      container.registerInstance(DATABASE_SERVICE_TOKEN, dbService);
-      container.registerInstance(DatabaseService, dbService);
+      // 手动注册到应用全局容器，便于后续组件调试
+      const container = ModuleRegistry.getInstance()
+        .getModuleRef(AppModule)
+        ?.container;
+      if (container) {
+        container.registerInstance(DATABASE_SERVICE_TOKEN, dbService);
+        container.registerInstance(DatabaseService, dbService);
+      }
 
       // 初始化连接
       await dbService.initialize();
 
       // 保存当前服务实例和连接
       currentDatabaseService = dbService;
-      currentContainer = container;
       // 获取 Bun.SQL 连接实例（用于模板字符串查询）
       currentSqlConnection = dbService.getConnection();
 
@@ -527,10 +620,14 @@ class ApiController {
         message: `成功连接到 ${body.type.toUpperCase()} 数据库`,
         data: {
           type: body.type,
-          host: body.host,
-          port: body.port,
-          database: body.database,
+          host: (dbConfig as any).config?.host,
+          port: (dbConfig as any).config?.port,
+          database:
+            body.type === 'sqlite'
+              ? body.sqlitePath?.trim() || ':memory:'
+              : (dbConfig as any).config?.database,
           connectionInfo,
+          moduleOptions,
         },
       };
     } catch (error: any) {
@@ -698,12 +795,18 @@ class ApiController {
           DELETE FROM test_transaction WHERE value = ${'test-rollback'}
         `;
 
-        // 开始事务并插入数据，然后回滚（使用 Bun.SQL 模板字符串）
-        await currentSqlConnection`START TRANSACTION`;
-        await currentSqlConnection`
-          INSERT INTO test_transaction (value) VALUES (${'test-rollback'})
-        `;
-        await currentSqlConnection`ROLLBACK`;
+        // 使用 Bun.SQL 原生事务 API，抛错触发回滚
+        await currentSqlConnection.begin(async (tx: any) => {
+          await tx`
+            INSERT INTO test_transaction (value) VALUES (${'test-rollback'})
+          `;
+          throw new Error('rollback-intentional');
+        }).catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error);
+          if (message !== 'rollback-intentional') {
+            throw error;
+          }
+        });
 
         // 验证数据未插入（使用 Bun.SQL 模板字符串）
         const checkResult = await currentSqlConnection`
@@ -822,7 +925,6 @@ class ApiController {
     try {
       await currentDatabaseService.closePool();
       currentDatabaseService = null;
-      currentContainer = null;
       currentSqlConnection = null;
 
       return {

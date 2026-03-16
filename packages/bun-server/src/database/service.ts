@@ -1,6 +1,7 @@
 import { Injectable } from '../di/decorators';
 
 import { DatabaseConnectionManager } from './connection-manager';
+import { getCurrentSession } from './database-context';
 import type {
   ConnectionInfo,
   DatabaseConfig,
@@ -18,8 +19,27 @@ export class DatabaseService {
 
   public constructor(options: DatabaseModuleOptions) {
     this.options = options;
+    const databaseConfig: DatabaseConfig =
+      options.database ??
+      (options.type === 'sqlite'
+        ? {
+            type: 'sqlite',
+            config: {
+              path: options.databasePath ?? ':memory:',
+            },
+          }
+        : {
+            type: (options.type ?? 'postgres') as 'postgres' | 'mysql',
+            config: {
+              host: options.host ?? 'localhost',
+              port: options.port ?? 5432,
+              database: options.databasePath ?? 'default',
+              user: options.username ?? 'root',
+              password: options.password ?? '',
+            },
+          });
     this.connectionManager = new DatabaseConnectionManager(
-      options.database,
+      databaseConfig,
       options.pool,
     );
   }
@@ -96,7 +116,13 @@ export class DatabaseService {
    * SQLite 返回同步结果，PostgreSQL/MySQL 返回异步结果
    */
   public query<T = unknown>(sql: string, params?: unknown[]): T[] | Promise<T[]> {
-    const connection = this.getConnection();
+    const session = getCurrentSession();
+    if (session?.sqlite) {
+      return session.sqlite.query<T>(sql, (params ?? []) as any);
+    }
+
+    const perRequestConnection = session?.reserved;
+    const connection = perRequestConnection ?? this.getConnection();
     if (!connection) {
       throw new Error('Database connection is not established');
     }

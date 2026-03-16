@@ -35,6 +35,7 @@ const app = new Application();
 app.registerModule(
   ServiceRegistryModule.forRoot({
     provider: 'nacos',
+    autoRegister: true, // 默认 true
     nacos: {
       client: {
         serverList: ['http://localhost:8848'],
@@ -47,6 +48,11 @@ app.registerModule(
   }),
 );
 ```
+
+### 自动注册开关
+
+通过 `ServiceRegistryModule.forRoot({ autoRegister: false })` 可关闭
+`Application.listen()` 阶段的自动注册，适用于需要手动控制注册时机的场景。
 
 ### 2. 注册服务
 

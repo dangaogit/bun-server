@@ -229,18 +229,34 @@ export class ModuleRegistry {
    */
   public resolveAllProviderInstances(): unknown[] {
     const instances: unknown[] = [];
+    const seen = new Set<unknown>();
     for (const [, ref] of this.moduleRefs) {
       for (const provider of ref.metadata.providers) {
         try {
           if (typeof provider === 'function') {
-            instances.push(ref.container.resolve(provider));
+            const instance = ref.container.resolve(provider);
+            if (!seen.has(instance)) {
+              seen.add(instance);
+              instances.push(instance);
+            }
           } else if ('useClass' in provider) {
             const token = provider.provide ?? provider.useClass;
-            instances.push(ref.container.resolve(token as Constructor<unknown>));
+            const instance = ref.container.resolve(token as Constructor<unknown>);
+            if (!seen.has(instance)) {
+              seen.add(instance);
+              instances.push(instance);
+            }
           } else if ('useValue' in provider) {
-            instances.push(provider.useValue);
+            if (!seen.has(provider.useValue)) {
+              seen.add(provider.useValue);
+              instances.push(provider.useValue);
+            }
           } else if ('useFactory' in provider) {
-            instances.push(ref.container.resolve(provider.provide as Constructor<unknown>));
+            const instance = ref.container.resolve(provider.provide as Constructor<unknown>);
+            if (!seen.has(instance)) {
+              seen.add(instance);
+              instances.push(instance);
+            }
           }
         } catch (_error) {
           // skip providers that can't be resolved (e.g. pending async providers)

@@ -16,6 +16,7 @@ import {
   scanInterceptorMetadata,
 } from '../interceptor';
 import { LoggerManager } from '@dangao/logsmith';
+import { getIdleTimeout } from '../router/timeout-decorator';
 
 /**
  * 控制器元数据键
@@ -233,7 +234,16 @@ export class ControllerRegistry {
       }
 
       // 注册路由，传递控制器和方法信息
-      registry.register(route.method, fullPath, handler, middlewares, controllerClass, propertyKey);
+      const timeout = getIdleTimeout(controllerClass, propertyKey);
+      registry.register(
+        route.method,
+        fullPath,
+        handler,
+        middlewares,
+        controllerClass,
+        propertyKey,
+        timeout,
+      );
     }
   }
 

@@ -4,7 +4,7 @@ export { BunServer, type ServerOptions } from './core/server';
 export { ClusterManager, type ClusterOptions, type ClusterMode } from './core/cluster';
 export { Context } from './core/context';
 export { ContextService, CONTEXT_SERVICE_TOKEN, contextStore } from './core/context-service';
-export { Route, Router, RouteRegistry } from './router';
+export { Route, Router, RouteRegistry, IdleTimeout } from './router';
 export { GET, POST, PUT, DELETE, PATCH } from './router/decorators';
 export type { HttpMethod, RouteHandler, RouteMatch } from './router/types';
 export { BodyParser, RequestWrapper, ResponseBuilder } from './request';
@@ -307,16 +307,41 @@ export {
   ConnectionPool,
   DatabaseHealthIndicator,
   DatabaseExtension,
+  BunSQLManager,
+  SqliteAdapter,
+  SqliteManager,
+  Semaphore,
+  db,
+  initDbProxy,
+  DbStrategy,
+  DbSession,
+  DB_STRATEGY_KEY,
+  getDbStrategy,
+  databaseSessionStore,
+  getCurrentSession,
+  runWithSession,
   DATABASE_SERVICE_TOKEN,
   DATABASE_OPTIONS_TOKEN,
+  BUN_SQL_MANAGER_TOKEN,
+  SQLITE_MANAGER_TOKEN,
+  DB_TOKEN,
   type DatabaseModuleOptions,
   type DatabaseConfig,
   type DatabaseType,
   type ConnectionInfo,
   type ConnectionPoolOptions,
+  type BunSQLConfig,
+  type BunSQLPoolOptions,
   type SqliteConfig,
+  type SqliteV2Config,
   type PostgresConfig,
   type MysqlConfig,
+  type TenantConfig,
+  type DbStrategyType,
+  type DbProxy,
+  type DatabaseSession,
+  type TransactionState as DatabaseTransactionState,
+  type ReservedSqlSession,
   // ORM exports
   Entity,
   Column,
@@ -472,6 +497,7 @@ export {
 } from './microservice';
 export {
   ServiceRegistryModule,
+  ServiceRegistryDecorator,
   NacosServiceRegistry,
   SERVICE_REGISTRY_TOKEN,
   type ServiceRegistryModuleOptions,

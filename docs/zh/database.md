@@ -1,23 +1,56 @@
 # 数据库（Database）
 
-本页用于汇总 Bun Server Framework 的数据库相关文档入口。
+数据库模块 V2 基于原生 `Bun.SQL` 实现，并提供请求级连接策略控制。
 
-## 核心数据库能力
+## V2 关键能力
 
-- `DatabaseModule`：连接管理、健康检查、SQL 访问。
-- ORM 支持：实体元数据、Repository、查询辅助能力。
-- 事务支持：声明式事务边界与回滚处理。
+- 原生 Bun.SQL 连接池参数透传（不重复造物理连接池）
+- 推荐统一入口：`import { db } from '@dangao/bun-server'`
+- 路由级策略：`@DbStrategy('pool' | 'session')` / `@DbSession()`
+- session 策略：首次查询惰性 `reserve()` + ALS 请求上下文绑定
+- `db.transaction()` 与 `@Transactional()` 统一事务路径
+- SQLite 增强：默认 `WAL` + 写并发保护
+
+## 配置示例
+
+```ts
+DatabaseModule.forRoot({
+  type: 'postgres',
+  url: process.env.DB_URL!,
+  bunSqlPool: {
+    max: 20,
+    idleTimeout: 30,
+  },
+  defaultStrategy: 'pool',
+});
+```
+
+## 路由策略示例
+
+```ts
+import { Controller, GET, POST, db, DbSession } from '@dangao/bun-server';
+
+@Controller('/users')
+class UserController {
+  @GET('/')
+  public async list() {
+    return await db`SELECT * FROM users`;
+  }
+
+  @DbSession()
+  @POST('/')
+  public async create() {
+    return await db.transaction(async () => {
+      await db`INSERT INTO users (name) VALUES (${'alice'})`;
+      await db`UPDATE stats SET user_count = user_count + 1`;
+      return { ok: true };
+    });
+  }
+}
+```
 
 ## 推荐阅读
 
-- [API 参考](./api.md)
-- [最佳实践](./best-practices.md)
-- [测试指南](./testing.md)
-- [迁移指南](./migration.md)
-
-## 常见接入步骤
-
-1. 在根模块配置 `DatabaseModule.forRoot(...)`。
-2. 按业务模块定义实体与仓储。
-3. 多步骤写操作使用事务保证一致性。
-4. 配置健康检查并监控连接池指标。
+- [生命周期](./lifecycle.md)
+- [idleTimeout](./idle-timeout.md)
+- [服务注册与发现](./microservice-service-registry.md)

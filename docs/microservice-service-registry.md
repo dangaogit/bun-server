@@ -35,6 +35,7 @@ const app = new Application();
 app.registerModule(
   ServiceRegistryModule.forRoot({
     provider: 'nacos',
+    autoRegister: true, // default true
     nacos: {
       client: {
         serverList: ['http://localhost:8848'],
@@ -47,6 +48,12 @@ app.registerModule(
   }),
 );
 ```
+
+### Auto Register Switch
+
+`ServiceRegistryModule.forRoot({ autoRegister: false })` disables automatic
+service registration in `Application.listen()`. This is useful when you need
+manual registration timing or custom startup orchestration.
 
 ### 2. Register Service
 

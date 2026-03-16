@@ -17,6 +17,12 @@ Bun Server supports lifecycle hooks that let providers participate in applicatio
 
 **Shutdown**: `onApplicationShutdown` (reverse order) -> `onModuleDestroy` (reverse order)
 
+## Provider Deduplication
+
+When the same provider instance is exported or registered by multiple tokens,
+`onModuleInit` now runs only once for that instance. This avoids duplicate
+initialization side effects in shared singleton objects.
+
 ## Example: DatabaseService with init/destroy
 
 ```ts

@@ -30,6 +30,21 @@ describe('ServiceRegistryModule', () => {
       (provider: any) => provider.provide === SERVICE_REGISTRY_TOKEN,
     );
     expect(serviceRegistryProvider).toBeDefined();
+    expect(ServiceRegistryModule.autoRegister).toBe(true);
+  });
+
+  test('should support autoRegister option', () => {
+    ServiceRegistryModule.forRoot({
+      provider: 'nacos',
+      autoRegister: false,
+      nacos: {
+        client: {
+          serverList: ['http://localhost:8848'],
+          namespaceId: 'public',
+        },
+      },
+    });
+    expect(ServiceRegistryModule.autoRegister).toBe(false);
   });
 
   test('should throw error when provider is not supported', () => {

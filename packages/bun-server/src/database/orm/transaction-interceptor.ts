@@ -3,8 +3,8 @@ import type { Context } from '../../core/context';
 import type { Interceptor } from '../../interceptor';
 import { TRANSACTION_SERVICE_TOKEN } from './transaction-types';
 import { TransactionManager } from './transaction-manager';
-import { getTransactionMetadata, TRANSACTION_METADATA_KEY } from './transaction-decorator';
-import { Propagation, TransactionStatus } from './transaction-types';
+import { getTransactionMetadata } from './transaction-decorator';
+import { Propagation } from './transaction-types';
 
 /**
  * 事务拦截器
@@ -51,44 +51,26 @@ export class TransactionInterceptor implements Interceptor {
       case Propagation.REQUIRED:
         if (currentTransaction) {
           // 加入现有事务
-          return await TransactionInterceptor.executeInExistingTransaction(
-            originalMethod,
-            target,
-            args,
-            currentTransaction.id,
-            transactionManager,
-          );
+          return await Promise.resolve(originalMethod.apply(target, args));
         } else {
           // 创建新事务
-          return await TransactionInterceptor.executeInNewTransaction(
-            originalMethod,
-            target,
-            args,
+          return await transactionManager.runInTransaction(
+            async () => await Promise.resolve(originalMethod.apply(target, args)),
             transactionMetadata,
-            transactionManager,
           );
         }
 
       case Propagation.REQUIRES_NEW:
         // 总是创建新事务
-        return await TransactionInterceptor.executeInNewTransaction(
-          originalMethod,
-          target,
-          args,
+        return await transactionManager.runInNewTransaction(
+          async () => await Promise.resolve(originalMethod.apply(target, args)),
           transactionMetadata,
-          transactionManager,
         );
 
       case Propagation.SUPPORTS:
         if (currentTransaction) {
           // 加入现有事务
-          return await TransactionInterceptor.executeInExistingTransaction(
-            originalMethod,
-            target,
-            args,
-            currentTransaction.id,
-            transactionManager,
-          );
+          return await Promise.resolve(originalMethod.apply(target, args));
         } else {
           // 非事务执行
           return await Promise.resolve(originalMethod.apply(target, args));
@@ -109,22 +91,15 @@ export class TransactionInterceptor implements Interceptor {
       case Propagation.NESTED:
         if (currentTransaction) {
           // 创建嵌套事务（保存点）
-          return await TransactionInterceptor.executeInNestedTransaction(
-            originalMethod,
-            target,
-            args,
-            currentTransaction.id,
+          return await transactionManager.runInNestedTransaction(
+            async () => await Promise.resolve(originalMethod.apply(target, args)),
             transactionMetadata,
-            transactionManager,
           );
         } else {
           // 创建新事务
-          return await TransactionInterceptor.executeInNewTransaction(
-            originalMethod,
-            target,
-            args,
+          return await transactionManager.runInTransaction(
+            async () => await Promise.resolve(originalMethod.apply(target, args)),
             transactionMetadata,
-            transactionManager,
           );
         }
 
@@ -148,116 +123,4 @@ export class TransactionInterceptor implements Interceptor {
     return await interceptor.execute(target, propertyKey, originalMethod, args, container);
   }
 
-  /**
-   * 在新事务中执行方法
-   */
-  private static async executeInNewTransaction<T>(
-    method: (...args: unknown[]) => T | Promise<T>,
-    target: unknown,
-    args: unknown[],
-    options: {
-      timeout?: number;
-      rollbackFor?: Array<new () => Error>;
-      noRollbackFor?: Array<new () => Error>;
-    },
-    transactionManager: TransactionManager,
-  ): Promise<T> {
-    const context = await transactionManager.beginTransaction({
-      timeout: options.timeout,
-    });
-
-    try {
-      const result = await Promise.resolve(method.apply(target, args));
-      await transactionManager.commitTransaction(context.id);
-      return result;
-    } catch (error) {
-      // 检查是否需要回滚
-      if (this.shouldRollback(error, options.rollbackFor, options.noRollbackFor)) {
-        await transactionManager.rollbackTransaction(context.id);
-      } else {
-        await transactionManager.commitTransaction(context.id);
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * 在现有事务中执行方法
-   */
-  private static async executeInExistingTransaction<T>(
-    method: (...args: unknown[]) => T | Promise<T>,
-    target: unknown,
-    args: unknown[],
-    transactionId: string,
-    transactionManager: TransactionManager,
-  ): Promise<T> {
-    // 直接执行，不提交或回滚（由外层事务管理）
-    return await Promise.resolve(method.apply(target, args));
-  }
-
-  /**
-   * 在嵌套事务中执行方法
-   */
-  private static async executeInNestedTransaction<T>(
-    method: (...args: unknown[]) => T | Promise<T>,
-    target: unknown,
-    args: unknown[],
-    parentTransactionId: string,
-    options: {
-      timeout?: number;
-      rollbackFor?: Array<new () => Error>;
-      noRollbackFor?: Array<new () => Error>;
-    },
-    transactionManager: TransactionManager,
-  ): Promise<T> {
-    const savepointName = await transactionManager.createSavepoint(parentTransactionId);
-
-    try {
-      const result = await Promise.resolve(method.apply(target, args));
-      // 嵌套事务成功，不执行任何操作（保存点保留）
-      return result;
-    } catch (error) {
-      // 检查是否需要回滚到保存点
-      if (this.shouldRollback(error, options.rollbackFor, options.noRollbackFor)) {
-        await transactionManager.rollbackToSavepoint(parentTransactionId, savepointName);
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * 判断是否应该回滚
-   */
-  private static shouldRollback(
-    error: unknown,
-    rollbackFor?: Array<new () => Error>,
-    noRollbackFor?: Array<new () => Error>,
-  ): boolean {
-    if (!error) {
-      return false;
-    }
-
-    // 如果指定了 noRollbackFor，且错误匹配，则不回滚
-    if (noRollbackFor && noRollbackFor.length > 0) {
-      for (const ErrorClass of noRollbackFor) {
-        if (error instanceof ErrorClass) {
-          return false;
-        }
-      }
-    }
-
-    // 如果指定了 rollbackFor，且错误匹配，则回滚
-    if (rollbackFor && rollbackFor.length > 0) {
-      for (const ErrorClass of rollbackFor) {
-        if (error instanceof ErrorClass) {
-          return true;
-        }
-      }
-      // 如果指定了 rollbackFor 但错误不匹配，则不回滚
-      return false;
-    }
-
-    // 默认情况下，所有错误都回滚
-    return true;
-  }
 }

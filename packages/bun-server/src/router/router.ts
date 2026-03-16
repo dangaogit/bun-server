@@ -49,10 +49,19 @@ export class Router {
     middlewares: Middleware[] = [],
     controllerClass?: Constructor<unknown>,
     methodName?: string,
+    timeout?: number,
   ): void {
     // 规范化路径
     const normalizedPath = this.normalizePath(path);
-    const route = new Route(method, normalizedPath, handler, middlewares, controllerClass, methodName);
+    const route = new Route(
+      method,
+      normalizedPath,
+      handler,
+      middlewares,
+      controllerClass,
+      methodName,
+      timeout,
+    );
     this.routes.push(route);
     const staticKey = route.getStaticKey();
     if (staticKey) {

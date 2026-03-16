@@ -42,8 +42,17 @@ export class RouteRegistry {
     middlewares: Middleware[] = [],
     controllerClass?: Constructor<unknown>,
     methodName?: string,
+    timeout?: number,
   ): void {
-    this.router.register(method, path, handler, middlewares, controllerClass, methodName);
+    this.router.register(
+      method,
+      path,
+      handler,
+      middlewares,
+      controllerClass,
+      methodName,
+      timeout,
+    );
   }
 
   /**

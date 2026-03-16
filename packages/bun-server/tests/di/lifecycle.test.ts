@@ -136,5 +136,42 @@ describe('Lifecycle Hooks', () => {
       const shutdownEntry = calls.find((c) => c.startsWith('onApplicationShutdown'));
       expect(shutdownEntry).toBeDefined();
     });
+
+    test('should call onModuleInit once for duplicated provider instance', async () => {
+      const calls: string[] = [];
+
+      @Injectable()
+      class SharedService implements OnModuleInit {
+        public onModuleInit(): void {
+          calls.push('init');
+        }
+      }
+
+      const shared = new SharedService();
+
+      @Controller('/dup')
+      class DupController {
+        @GET('/')
+        public get(): string {
+          return 'ok';
+        }
+      }
+
+      @Module({
+        controllers: [DupController],
+        providers: [
+          { provide: SharedService, useValue: shared },
+          { provide: Symbol.for('dup-shared'), useValue: shared },
+        ],
+      })
+      class DupModule {}
+
+      const app = new Application({ port: 0, enableSignalHandlers: false });
+      app.registerModule(DupModule);
+      await app.listen(0);
+      await app.stop();
+
+      expect(calls.length).toBe(1);
+    });
   });
 });

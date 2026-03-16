@@ -42,6 +42,8 @@
   and `ResponseBuilder` helpers.
 - 🧩 **Dependency injection container** with `@Injectable`, `@Inject`, module
   metadata, lifecycle management and cached dependency plans.
+- 🗄️ **Database v2** with `db` proxy, route-level pool/session strategy,
+  multi-tenant manager and unified transactions.
 - 🧵 **Middleware pipeline** with global/class/method scopes plus built-ins
   (logging, error, CORS, upload, static, ...).
 - ✅ **Input validation** via decorators and `ValidationError` integration.
@@ -420,11 +422,13 @@ Examples are organized by difficulty and feature category:
   - `full-app.ts` - Validation, uploads, static files, WebSocket
   - `lifecycle-app.ts` - Lifecycle hooks (OnModuleInit, OnModuleDestroy, etc.)
   - `async-config-app.ts` - Async module config with `forRootAsync()`
+  - `idle-timeout-app.ts` - Global and route-level idleTimeout
 
 - **[Official Modules](./examples/02-official-modules/)** - Ready-to-use modules
   - `auth-app.ts` - JWT + OAuth2 authentication (with Web UI)
   - `session-app.ts` - Session management
   - `database-app.ts` - Database connection and queries
+  - `nacos-auto-register-app.ts` - Nacos autoRegister switch example
   - `orm-app.ts` - Entity + Repository pattern
   - `cache-app.ts` - Caching with decorators
   - `queue-app.ts` - Task queues and Cron jobs

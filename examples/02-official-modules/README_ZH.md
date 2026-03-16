@@ -18,6 +18,7 @@
 | 文件 | 模块 | 核心功能 | 难度 | 端口 |
 |------|------|---------|------|------|
 | `database-app.ts` | DatabaseModule | SQLite 连接、查询、健康检查 | ⭐⭐ | 3000 |
+| `nacos-auto-register-app.ts` | ServiceRegistryModule | Nacos 自动注册开关 | ⭐⭐ | 3010 |
 | `orm-app.ts` | DatabaseModule (ORM) | Entity、Repository 模式 | ⭐⭐⭐ | 3000 |
 | `cache-app.ts` | CacheModule | 缓存装饰器、手动缓存 | ⭐⭐ | 3200 |
 | `transaction-app.ts` | DatabaseModule (事务) | `@Transactional` 装饰器 | ⭐⭐⭐ | 3000 |
@@ -193,17 +194,9 @@ bun run examples/02-official-modules/database-app.ts
 **配置示例**：
 ```typescript
 DatabaseModule.forRoot({
-  database: {
-    type: 'sqlite',
-    config: {
-      path: './data.db',  // 或 ':memory:' 使用内存数据库
-    },
-  },
-  pool: {
-    maxConnections: 10,
-    connectionTimeout: 30000,
-  },
-  enableHealthCheck: true,
+  type: 'sqlite',
+  databasePath: './data.db',
+  defaultStrategy: 'pool',
 })
 ```
 
@@ -230,6 +223,18 @@ class UserService {
     );
   }
 }
+```
+
+### ServiceRegistryModule (nacos-auto-register-app.ts)
+
+演示通过 `autoRegister: false` 关闭 `listen()` 阶段自动注册。
+
+```typescript
+ServiceRegistryModule.forRoot({
+  provider: 'nacos',
+  autoRegister: false,
+  nacos: { client: { serverList: ['http://localhost:8848'] } },
+});
 ```
 
 ---

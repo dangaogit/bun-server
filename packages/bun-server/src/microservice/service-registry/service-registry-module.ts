@@ -2,7 +2,11 @@ import { Module, MODULE_METADATA_KEY, type ModuleProvider } from '../../di/modul
 import { NacosClient } from '@dangao/nacos-client';
 import type { NacosClientOptions } from '@dangao/nacos-client';
 import { NacosServiceRegistry } from './nacos-service-registry';
-import { SERVICE_REGISTRY_TOKEN, type ServiceRegistry } from './types';
+import {
+  SERVICE_REGISTRY_TOKEN,
+  type ServiceRegistry,
+  type ServiceInstance,
+} from './types';
 
 /**
  * 服务注册中心 Provider 类型
@@ -45,6 +49,21 @@ export interface ServiceRegistryModuleOptions {
    */
   nacos?: NacosServiceRegistryOptions;
 
+  /**
+   * 是否自动在 Application.listen 时注册带 @ServiceRegistry 的服务
+   * @default true
+   */
+  autoRegister?: boolean;
+
+  /**
+   * 通过模块配置自动注册服务（无需 @ServiceRegistry 装饰器）
+   * 当 autoRegister=true 时在 Application.listen 阶段自动注册
+   */
+  autoRegisterService?: Omit<ServiceInstance, 'ip' | 'port'> & {
+    ip?: string;
+    port?: number;
+  };
+
   // 未来可以添加其他 provider 的配置
   // consul?: ConsulServiceRegistryOptions;
   // eureka?: EurekaServiceRegistryOptions;
@@ -57,11 +76,16 @@ export interface ServiceRegistryModuleOptions {
   providers: [],
 })
 export class ServiceRegistryModule {
+  public static autoRegister = true;
+  public static autoRegisterService: ServiceRegistryModuleOptions['autoRegisterService'];
+
   /**
    * 创建服务注册中心模块
    * @param options - 模块配置
    */
   public static forRoot(options: ServiceRegistryModuleOptions): typeof ServiceRegistryModule {
+    ServiceRegistryModule.autoRegister = options.autoRegister ?? true;
+    ServiceRegistryModule.autoRegisterService = options.autoRegisterService;
     const providers: ModuleProvider[] = [];
 
     let serviceRegistry: ServiceRegistry;

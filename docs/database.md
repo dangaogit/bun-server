@@ -1,23 +1,56 @@
 # Database
 
-This page summarizes database-related documentation in Bun Server Framework.
+Database module v2 is built on top of native `Bun.SQL` and adds request-level strategy routing.
 
-## Core Database Capabilities
+## V2 Highlights
 
-- `DatabaseModule`: connection management, health checks, and SQL access.
-- ORM support: entity metadata, repositories, and query helpers.
-- Transactions: declarative transaction boundaries and rollback handling.
+- Native Bun.SQL pool passthrough (no custom physical pool implementation)
+- `db` proxy as the preferred query entry (`import { db } from '@dangao/bun-server'`)
+- Route strategy control with `@DbStrategy('pool' | 'session')` and `@DbSession()`
+- Session strategy uses lazy `reserve()` + request ALS context
+- `db.transaction()` and `@Transactional()` are unified through `TransactionManager`
+- SQLite improvements: `WAL` mode and write-concurrency guard
+
+## Configuration
+
+```ts
+DatabaseModule.forRoot({
+  type: 'postgres',
+  url: process.env.DB_URL!,
+  bunSqlPool: {
+    max: 20,
+    idleTimeout: 30,
+  },
+  defaultStrategy: 'pool',
+});
+```
+
+## Route strategy
+
+```ts
+import { Controller, GET, POST, db, DbSession } from '@dangao/bun-server';
+
+@Controller('/users')
+class UserController {
+  @GET('/')
+  public async list() {
+    return await db`SELECT * FROM users`;
+  }
+
+  @DbSession()
+  @POST('/')
+  public async create() {
+    return await db.transaction(async () => {
+      await db`INSERT INTO users (name) VALUES (${'alice'})`;
+      await db`UPDATE stats SET user_count = user_count + 1`;
+      return { ok: true };
+    });
+  }
+}
+```
 
 ## Recommended Reading
 
-- [API Reference](./api.md)
-- [Best Practices](./best-practices.md)
-- [Testing](./testing.md)
-- [Migration Guide](./migration.md)
-
-## Typical Setup
-
-1. Configure `DatabaseModule.forRoot(...)` in the root module.
-2. Define entities/repositories per feature module.
-3. Use transactions for multi-step write operations.
-4. Add health checks and monitor connection pool metrics.
+- [Lifecycle](./lifecycle.md)
+- [idleTimeout](./idle-timeout.md)
+- [Service Registry](./microservice-service-registry.md)
