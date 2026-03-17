@@ -3,10 +3,27 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v2.2.0',
+    version: 'v2.3.0',
     date: '2026-03',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'feat', text: '自动检测 SSE 响应，通过 server.timeout(req, 0) 禁用 Bun TCP 空闲超时' },
+      { type: 'feat', text: '按可配置间隔注入 SSE 心跳（: keepalive），防止中间代理断连' },
+      { type: 'feat', text: 'ApplicationOptions 新增 sseKeepAlive 配置（enabled、intervalMs）' },
+      { type: 'feat', text: 'Context 暴露 ctx.signal（AbortSignal），支持客户端断连级联取消' },
+      { type: 'feat', text: 'AiRequest 新增 signal 字段 — 4 个 Provider 的 stream()/complete() 均透传 abort 信号至上游 AI API' },
+      { type: 'refactor', text: '移除 McpServer SSE 手动 setInterval ping — 由框架 SSE 后处理器统一接管' },
+      { type: 'docs', text: '重写 idle-timeout 文档：双层超时机制说明、SSE 保活配置、ctx.signal 级联指南' },
+      { type: 'feat', text: 'idle-timeout-app.ts 示例新增 SSE 端点，演示自动保活与信号级联' },
+      { type: 'chore', text: '将 @dangao/bun-server 与 @dangao/bun-server-web 升级到 2.3.0，并同步 web changelog 页面' },
+    ],
+  },
+  {
+    version: 'v2.2.0',
+    date: '2026-03',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'feat', text: '为 @Controller/@Injectable 新增组件生命周期钩子：onBeforeCreate/onAfterCreate/onBeforeDestroy/onAfterDestroy' },
       { type: 'feat', text: '对齐 controller 与 provider 的模块启动/关闭生命周期执行链路' },

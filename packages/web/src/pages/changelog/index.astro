@@ -3,10 +3,27 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v2.2.0',
+    version: 'v2.3.0',
     date: '2026-03',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'feat', text: 'Auto-detect SSE responses and disable Bun TCP idle timeout via server.timeout(req, 0)' },
+      { type: 'feat', text: 'Inject SSE heartbeat (: keepalive) at configurable interval to prevent proxy disconnects' },
+      { type: 'feat', text: 'Add sseKeepAlive configuration to ApplicationOptions (enabled, intervalMs)' },
+      { type: 'feat', text: 'Expose ctx.signal (AbortSignal) on Context for client disconnect cascading' },
+      { type: 'feat', text: 'Add signal field to AiRequest — propagate abort to upstream AI API fetch calls across all 4 providers' },
+      { type: 'refactor', text: 'Remove manual setInterval ping from McpServer SSE — now handled by framework SSE post-processor' },
+      { type: 'docs', text: 'Rewrite idle-timeout docs with two-layer timeout explanation, SSE keep-alive config, and ctx.signal guide' },
+      { type: 'feat', text: 'Add SSE endpoint to idle-timeout-app.ts example demonstrating auto keep-alive and signal cascading' },
+      { type: 'chore', text: 'Bump @dangao/bun-server and @dangao/bun-server-web to 2.3.0 and sync web changelog pages' },
+    ],
+  },
+  {
+    version: 'v2.2.0',
+    date: '2026-03',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'feat', text: 'Add component lifecycle hooks for @Controller/@Injectable: onBeforeCreate/onAfterCreate/onBeforeDestroy/onAfterDestroy' },
       { type: 'feat', text: 'Align controller lifecycle execution with providers during module startup/shutdown' },

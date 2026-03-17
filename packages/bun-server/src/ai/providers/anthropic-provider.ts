@@ -56,7 +56,7 @@ export class AnthropicProvider implements LlmProvider {
       }));
     }
 
-    const response = await this.post('/v1/messages', body);
+    const response = await this.post('/v1/messages', body, request.signal);
     const usage = (response['usage'] as { input_tokens: number; output_tokens: number }) ?? { input_tokens: 0, output_tokens: 0 };
 
     let content = '';
@@ -108,6 +108,7 @@ export class AnthropicProvider implements LlmProvider {
     const baseUrl = this.baseUrl;
     const anthropicVersion = this.anthropicVersion;
     const encoder = new TextEncoder();
+    const signal = request.signal;
 
     return new ReadableStream<Uint8Array>({
       async start(controller) {
@@ -120,6 +121,7 @@ export class AnthropicProvider implements LlmProvider {
               'anthropic-version': anthropicVersion,
             },
             body: JSON.stringify(body),
+            signal,
           });
 
           if (!res.ok || !res.body) {
@@ -170,7 +172,7 @@ export class AnthropicProvider implements LlmProvider {
     return Math.ceil(messages.reduce((sum, m) => sum + m.content.length, 0) / 4);
   }
 
-  private async post(path: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  private async post(path: string, body: Record<string, unknown>, signal?: AbortSignal): Promise<Record<string, unknown>> {
     const res = await fetch(`${this.baseUrl}${path}`, {
       method: 'POST',
       headers: {
@@ -179,6 +181,7 @@ export class AnthropicProvider implements LlmProvider {
         'anthropic-version': this.anthropicVersion,
       },
       body: JSON.stringify(body),
+      signal,
     });
 
     if (res.status === 429) throw new AiRateLimitError(this.name);

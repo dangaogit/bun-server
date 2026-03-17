@@ -120,7 +120,7 @@ export class AiService {
     const timeout = this.options.timeout ?? 30000;
 
     if (!fallback) {
-      return this.withTimeout(this.getProvider(targetName).complete(request), timeout, targetName);
+      return this.withTimeout(this.getProvider(targetName).complete(request), timeout, targetName, request.signal);
     }
 
     // Fallback chain: try target first, then others in order
@@ -134,7 +134,7 @@ export class AiService {
       try {
         const provider = this.providers.get(name);
         if (!provider) continue;
-        return await this.withTimeout(provider.complete({ ...request, provider: name }), timeout, name);
+        return await this.withTimeout(provider.complete({ ...request, provider: name }), timeout, name, request.signal);
       } catch (err) {
         errors.push(`${name}: ${err instanceof Error ? err.message : String(err)}`);
       }
@@ -143,12 +143,24 @@ export class AiService {
     throw new AiAllProvidersFailed(errors);
   }
 
-  private withTimeout<T>(promise: Promise<T>, ms: number, providerName: string): Promise<T> {
+  private withTimeout<T>(promise: Promise<T>, ms: number, providerName: string, signal?: AbortSignal): Promise<T> {
     return new Promise<T>((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(signal.reason ?? new Error('Aborted'));
+        return;
+      }
+
       const timer = setTimeout(() => reject(new AiTimeoutError(providerName, ms)), ms);
+
+      const onAbort = () => {
+        clearTimeout(timer);
+        reject(signal!.reason ?? new Error('Aborted'));
+      };
+      signal?.addEventListener('abort', onAbort, { once: true });
+
       promise.then(
-        (val) => { clearTimeout(timer); resolve(val); },
-        (err) => { clearTimeout(timer); reject(err); },
+        (val) => { clearTimeout(timer); signal?.removeEventListener('abort', onAbort); resolve(val); },
+        (err) => { clearTimeout(timer); signal?.removeEventListener('abort', onAbort); reject(err); },
       );
     });
   }
