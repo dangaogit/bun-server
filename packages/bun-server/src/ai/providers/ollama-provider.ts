@@ -33,6 +33,7 @@ export class OllamaProvider implements LlmProvider {
           num_predict: request.maxTokens,
         },
       }),
+      signal: request.signal,
     });
 
     if (!res.ok) {
@@ -61,6 +62,7 @@ export class OllamaProvider implements LlmProvider {
     const model = request.model ?? this.defaultModel;
     const baseUrl = this.baseUrl;
     const encoder = new TextEncoder();
+    const signal = request.signal;
 
     return new ReadableStream<Uint8Array>({
       async start(controller) {
@@ -77,6 +79,7 @@ export class OllamaProvider implements LlmProvider {
                 num_predict: request.maxTokens,
               },
             }),
+            signal,
           });
 
           if (!res.ok || !res.body) {

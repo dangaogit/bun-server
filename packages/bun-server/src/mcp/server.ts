@@ -48,31 +48,22 @@ export class McpServer {
   }
 
   /**
-   * Create an SSE response that keeps the connection open for streaming
-   * This is the SSE transport endpoint
+   * Create an SSE response that keeps the connection open for streaming.
+   *
+   * Heartbeat / keep-alive pings are handled automatically by the framework's
+   * SSE post-processor (`sseKeepAlive`), so this method no longer injects its
+   * own `setInterval`.
    */
   public createSseResponse(): Response {
-    const registry = this.registry;
-    const serverInfo = this.serverInfo;
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
       start(controller) {
-        // Send initial server info event
         const initEvent = `event: endpoint\ndata: ${JSON.stringify({
           type: 'endpoint',
           method: 'POST',
         })}\n\n`;
         controller.enqueue(encoder.encode(initEvent));
-
-        // Keep connection alive with periodic pings
-        const pingInterval = setInterval(() => {
-          try {
-            controller.enqueue(encoder.encode(': ping\n\n'));
-          } catch (_error) {
-            clearInterval(pingInterval);
-          }
-        }, 15000);
       },
     });
 
@@ -81,7 +72,7 @@ export class McpServer {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
-        'X-MCP-Server': `${serverInfo.name}/${serverInfo.version}`,
+        'X-MCP-Server': `${this.serverInfo.name}/${this.serverInfo.version}`,
       },
     });
   }

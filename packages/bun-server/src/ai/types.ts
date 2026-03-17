@@ -45,6 +45,11 @@ export interface AiRequest {
   tools?: AiToolDefinition[];
   /** Provider name override */
   provider?: string;
+  /**
+   * Abort signal — pass `ctx.signal` to cascade client disconnection
+   * to the upstream AI API, stopping token consumption immediately.
+   */
+  signal?: AbortSignal;
 }
 
 /**

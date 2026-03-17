@@ -74,6 +74,12 @@ export class Context {
    */
   private _bodyParsed: boolean = false;
 
+  /**
+   * 客户端断连信号
+   * 当客户端主动关闭连接时 abort，可用于级联取消内部请求
+   */
+  public readonly signal: AbortSignal;
+
   public constructor(request: Request) {
     this.request = request;
     this.url = new URL(request.url);
@@ -82,6 +88,7 @@ export class Context {
     this.query = this.url.searchParams;
     this.headers = request.headers;
     this.responseHeaders = new Headers();
+    this.signal = request.signal;
   }
 
   /**

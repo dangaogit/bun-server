@@ -61,6 +61,24 @@ export interface ApplicationOptions {
    * 框架内部会自动转换为 Bun.serve 的秒单位
    */
   idleTimeout?: number;
+
+  /**
+   * SSE 保活配置
+   *
+   * 框架自动检测 `Content-Type: text/event-stream` 的响应，
+   * 对该请求禁用 Bun TCP 空闲超时（`server.timeout(req, 0)`），
+   * 并按配置间隔向客户端发送 SSE 注释心跳（`: keepalive\n\n`）。
+   *
+   * 心跳可防止中间代理（nginx / 云 LB）因空闲而断开连接。
+   *
+   * @default `{ enabled: true, intervalMs: 15000 }`
+   */
+  sseKeepAlive?: {
+    /** 是否启用，默认 true */
+    enabled?: boolean;
+    /** 心跳间隔（毫秒），默认 15000 */
+    intervalMs?: number;
+  };
 }
 
 /**
@@ -150,6 +168,7 @@ export class Application {
       hostname: finalHostname,
       reusePort: this.options.reusePort,
       idleTimeout: this.options.idleTimeout,
+      sseKeepAlive: this.options.sseKeepAlive,
       fetch: this.handleRequest.bind(this),
       websocketRegistry: this.websocketRegistry,
       gracefulShutdownTimeout: this.options.gracefulShutdownTimeout,

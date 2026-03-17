@@ -50,6 +50,7 @@ export class GoogleProvider implements LlmProvider {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: request.signal,
       },
     );
 
@@ -95,6 +96,7 @@ export class GoogleProvider implements LlmProvider {
     const apiKey = this.apiKey;
     const baseUrl = this.baseUrl;
     const encoder = new TextEncoder();
+    const signal = request.signal;
 
     const body: Record<string, unknown> = {
       contents,
@@ -111,6 +113,7 @@ export class GoogleProvider implements LlmProvider {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(body),
+              signal,
             },
           );
 

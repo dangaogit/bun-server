@@ -79,7 +79,7 @@ export class OpenAIProvider implements LlmProvider {
       }));
     }
 
-    const response = await this.post('/chat/completions', body);
+    const response = await this.post('/chat/completions', body, request.signal);
     const choice = response.choices?.[0];
     const usage = response.usage ?? { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
     const message = choice?.message;
@@ -127,6 +127,7 @@ export class OpenAIProvider implements LlmProvider {
     const encoder = new TextEncoder();
     const apiKey = this.apiKey;
     const baseUrl = this.baseUrl;
+    const signal = request.signal;
 
     return new ReadableStream<Uint8Array>({
       async start(controller) {
@@ -138,6 +139,7 @@ export class OpenAIProvider implements LlmProvider {
               'Authorization': `Bearer ${apiKey}`,
             },
             body: JSON.stringify(body),
+            signal,
           });
 
           if (!res.ok || !res.body) {
@@ -191,7 +193,7 @@ export class OpenAIProvider implements LlmProvider {
     return Math.ceil(messages.reduce((sum, m) => sum + m.content.length, 0) / 4);
   }
 
-  private async post(path: string, body: Record<string, unknown>): Promise<OpenAiChatCompletionResponse> {
+  private async post(path: string, body: Record<string, unknown>, signal?: AbortSignal): Promise<OpenAiChatCompletionResponse> {
     const res = await fetch(`${this.baseUrl}${path}`, {
       method: 'POST',
       headers: {
@@ -199,6 +201,7 @@ export class OpenAIProvider implements LlmProvider {
         'Authorization': `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify(body),
+      signal,
     });
 
     if (res.status === 429) {

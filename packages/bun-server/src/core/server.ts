@@ -47,6 +47,15 @@ export interface ServerOptions {
    * 框架内部会转换为 Bun.serve 所需的秒
    */
   idleTimeout?: number;
+
+  /**
+   * SSE 保活配置
+   * @see ApplicationOptions.sseKeepAlive
+   */
+  sseKeepAlive?: {
+    enabled?: boolean;
+    intervalMs?: number;
+  };
 }
 
 /**
@@ -81,9 +90,44 @@ export class BunServer {
     this.shutdownPromise = undefined;
     this.shutdownResolve = undefined;
 
+    const sseKeepAlive = this.options.sseKeepAlive;
+    const sseHeartbeatEnabled = sseKeepAlive?.enabled !== false;
+    const sseHeartbeatIntervalMs = sseKeepAlive?.intervalMs ?? 15_000;
+
+    const postProcessSse = (
+      response: Response,
+      request: Request,
+      bunServer: Server<WebSocketConnectionData>,
+    ): Response => {
+      const ct = response.headers.get('content-type');
+      if (!ct?.includes('text/event-stream')) {
+        return response;
+      }
+
+      // SSE detected — always disable Bun TCP idle timeout for this connection
+      bunServer.timeout(request, 0);
+
+      if (sseHeartbeatEnabled && response.body) {
+        return BunServer.wrapSseWithHeartbeat(
+          response,
+          sseHeartbeatIntervalMs,
+          request.signal,
+        );
+      }
+
+      return response;
+    };
+
+    const decrementAndMaybeShutdown = () => {
+      this.activeRequests--;
+      if (this.isShuttingDown && this.activeRequests === 0 && this.shutdownResolve) {
+        this.shutdownResolve();
+      }
+    };
+
     const fetchHandler = (
       request: Request,
-      server: Server<WebSocketConnectionData>,
+      bunServer: Server<WebSocketConnectionData>,
     ): Response | Promise<Response> | undefined => {
       if (this.isShuttingDown) {
         return new Response("Server is shutting down", { status: 503 });
@@ -101,7 +145,7 @@ export class BunServer {
         }
         const context = new Context(request);
         const queryParams = new URLSearchParams(url.searchParams);
-        const upgraded = server.upgrade(request, {
+        const upgraded = bunServer.upgrade(request, {
           data: {
             path: url.pathname,
             query: queryParams,
@@ -120,24 +164,17 @@ export class BunServer {
       const responsePromise = this.options.fetch(context);
 
       if (responsePromise instanceof Promise) {
-        responsePromise
-          .finally(() => {
-            this.activeRequests--;
-            if (this.isShuttingDown && this.activeRequests === 0 && this.shutdownResolve) {
-              this.shutdownResolve();
-            }
-          })
-          .catch(() => {
-            // errors handled by middleware pipeline
-          });
-      } else {
-        this.activeRequests--;
-        if (this.isShuttingDown && this.activeRequests === 0 && this.shutdownResolve) {
-          this.shutdownResolve();
-        }
+        const processed = responsePromise.then(
+          (response) => postProcessSse(response, request, bunServer),
+        );
+        processed
+          .finally(decrementAndMaybeShutdown)
+          .catch(() => { /* errors handled by middleware pipeline */ });
+        return processed;
       }
 
-      return responsePromise;
+      decrementAndMaybeShutdown();
+      return postProcessSse(responsePromise, request, bunServer);
     };
 
     const websocketHandlers = {
@@ -295,5 +332,71 @@ export class BunServer {
    */
   public getHostname(): string | undefined {
     return this.options.hostname;
+  }
+
+  /**
+   * 将 SSE Response 的 body 包裹一层心跳注入流。
+   *
+   * 原始流的数据原样透传；在数据间隙中按 intervalMs 发送
+   * SSE 注释帧 `: keepalive\n\n`（客户端会忽略注释帧）。
+   *
+   * 当 signal abort / 原始流结束 / 客户端断连时自动清理定时器。
+   */
+  private static wrapSseWithHeartbeat(
+    original: Response,
+    intervalMs: number,
+    signal: AbortSignal,
+  ): Response {
+    const encoder = new TextEncoder();
+    const keepaliveChunk = encoder.encode(': keepalive\n\n');
+    const originalBody = original.body!;
+    let heartbeat: ReturnType<typeof setInterval> | undefined;
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+
+    const wrapped = new ReadableStream<Uint8Array>({
+      start(controller) {
+        reader = originalBody.getReader() as ReadableStreamDefaultReader<Uint8Array>;
+
+        heartbeat = setInterval(() => {
+          try {
+            controller.enqueue(keepaliveChunk);
+          } catch {
+            clearInterval(heartbeat);
+            heartbeat = undefined;
+          }
+        }, intervalMs);
+
+        const onAbort = () => {
+          if (heartbeat) { clearInterval(heartbeat); heartbeat = undefined; }
+        };
+        signal.addEventListener('abort', onAbort, { once: true });
+
+        const pump = async () => {
+          try {
+            while (true) {
+              const { done, value } = await reader!.read();
+              if (done) break;
+              controller.enqueue(value);
+            }
+            controller.close();
+          } catch (err) {
+            try { controller.error(err); } catch { /* already closed */ }
+          } finally {
+            if (heartbeat) { clearInterval(heartbeat); heartbeat = undefined; }
+            signal.removeEventListener('abort', onAbort);
+          }
+        };
+        pump();
+      },
+      cancel() {
+        if (heartbeat) { clearInterval(heartbeat); heartbeat = undefined; }
+        reader?.cancel();
+      },
+    });
+
+    return new Response(wrapped, {
+      status: original.status,
+      headers: original.headers,
+    });
   }
 }
