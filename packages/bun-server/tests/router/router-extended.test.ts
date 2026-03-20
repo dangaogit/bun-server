@@ -94,6 +94,42 @@ describe('Router', () => {
       const route = router.findRoute('POST', '/users');
       expect(route).toBeUndefined();
     });
+
+    test('should distinguish GET POST PUT DELETE PATCH on the same dynamic route', () => {
+      router.get('/api/:id', async () => new Response('get'));
+      router.post('/api/:id', async () => new Response('post'));
+      router.put('/api/:id', async () => new Response('put'));
+      router.delete('/api/:id', async () => new Response('delete'));
+      router.patch('/api/:id', async () => new Response('patch'));
+
+      const getRoute = router.findRoute('GET', '/api/123');
+      const postRoute = router.findRoute('POST', '/api/123');
+      const putRoute = router.findRoute('PUT', '/api/123');
+      const deleteRoute = router.findRoute('DELETE', '/api/123');
+      const patchRoute = router.findRoute('PATCH', '/api/123');
+
+      expect(getRoute).toBeDefined();
+      expect(postRoute).toBeDefined();
+      expect(putRoute).toBeDefined();
+      expect(deleteRoute).toBeDefined();
+      expect(patchRoute).toBeDefined();
+
+      expect(getRoute?.method).toBe('GET');
+      expect(postRoute?.method).toBe('POST');
+      expect(putRoute?.method).toBe('PUT');
+      expect(deleteRoute?.method).toBe('DELETE');
+      expect(patchRoute?.method).toBe('PATCH');
+    });
+
+    test('should not cross-match methods on same dynamic route', () => {
+      router.get('/api/:id', async () => new Response('get'));
+      router.post('/api/:id', async () => new Response('post'));
+
+      expect(router.findRoute('GET', '/api/123')).toBeDefined();
+      expect(router.findRoute('POST', '/api/123')).toBeDefined();
+      expect(router.findRoute('PUT', '/api/123')).toBeUndefined();
+      expect(router.findRoute('DELETE', '/api/123')).toBeUndefined();
+    });
   });
 
   describe('findRouteWithMatch', () => {
@@ -177,6 +213,23 @@ describe('Router', () => {
       expect((context as any).routeHandler).toBeDefined();
       expect((context as any).routeHandler.controller).toBe(MyController);
       expect((context as any).routeHandler.method).toBe('testMethod');
+    });
+
+    test('should route each HTTP method to its own handler on the same dynamic path /api/:id', async () => {
+      router.get('/api/:id', async () => new Response('get'));
+      router.post('/api/:id', async () => new Response('post'));
+      router.put('/api/:id', async () => new Response('put'));
+      router.delete('/api/:id', async () => new Response('delete'));
+      router.patch('/api/:id', async () => new Response('patch'));
+
+      const methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] as const;
+      for (const method of methods) {
+        const request = new Request('http://localhost/api/123', { method });
+        const context = new Context(request, new Container());
+        const response = await router.handle(context);
+        expect(response).toBeDefined();
+        expect(await response?.text()).toBe(method.toLowerCase());
+      }
     });
   });
 

@@ -1,8 +1,8 @@
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 import { Application } from '../../src/core/application';
 import { Controller, ControllerRegistry } from '../../src/controller/controller';
-import { GET, POST } from '../../src/router/decorators';
-import { Param } from '../../src/controller/decorators';
+import { GET, POST, PUT, DELETE, PATCH } from '../../src/router/decorators';
+import { Param, Body } from '../../src/controller/decorators';
 import { RouteRegistry } from '../../src/router/registry';
 import { getTestPort } from '../utils/test-port';
 
@@ -203,6 +203,81 @@ describe('Controller Path Combination', () => {
     expect(rootResponse.status).toBe(404);
   });
 
+  test('should match GET POST PUT DELETE PATCH all registered on same dynamic route /api/:id independently', async () => {
+    @Controller('/api')
+    class ResourceController {
+      @GET('/:id')
+      public getResource(@Param('id') id: string) {
+        return { method: 'GET', id };
+      }
+
+      @POST('/:id')
+      public postResource(@Param('id') id: string) {
+        return { method: 'POST', id };
+      }
+
+      @PUT('/:id')
+      public putResource(@Param('id') id: string) {
+        return { method: 'PUT', id };
+      }
+
+      @DELETE('/:id')
+      public deleteResource(@Param('id') id: string) {
+        return { method: 'DELETE', id };
+      }
+
+      @PATCH('/:id')
+      public patchResource(@Param('id') id: string) {
+        return { method: 'PATCH', id };
+      }
+    }
+
+    app.registerController(ResourceController);
+    await app.listen();
+
+    const methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] as const;
+    for (const method of methods) {
+      const res = await fetch(`http://localhost:${port}/api/123`, { method });
+      expect(res.status).toBe(200);
+      const data = await res.json() as { method: string; id: string };
+      expect(data.method).toBe(method);
+      expect(data.id).toBe('123');
+    }
+  });
+
+  test('should not cross-match methods: only registered methods respond 200, others respond 404/405', async () => {
+    @Controller('/items')
+    class ItemController {
+      @GET('/:id')
+      public getItem(@Param('id') id: string) {
+        return { method: 'GET', id };
+      }
+
+      @POST('/:id')
+      public createItem(@Param('id') id: string) {
+        return { method: 'POST', id };
+      }
+    }
+
+    app.registerController(ItemController);
+    await app.listen();
+
+    const getRes = await fetch(`http://localhost:${port}/items/42`);
+    expect(getRes.status).toBe(200);
+    expect((await getRes.json() as { method: string }).method).toBe('GET');
+
+    const postRes = await fetch(`http://localhost:${port}/items/42`, { method: 'POST' });
+    expect(postRes.status).toBe(200);
+    expect((await postRes.json() as { method: string }).method).toBe('POST');
+
+    // PUT and DELETE are not registered — should return a non-200 status
+    const putRes = await fetch(`http://localhost:${port}/items/42`, { method: 'PUT' });
+    expect(putRes.ok).toBe(false);
+
+    const deleteRes = await fetch(`http://localhost:${port}/items/42`, { method: 'DELETE' });
+    expect(deleteRes.ok).toBe(false);
+  });
+
   test('should correctly combine root controller "/" with method path "/health"', async () => {
     // 这是 metrics-rate-limit-app.ts 示例中的场景
     // @Controller('/') + @GET('/health') 应该映射到 /health，而不是 //health
@@ -274,6 +349,125 @@ describe('Controller Path Combination', () => {
     });
     expect(dataResponse.status).toBe(200);
     expect((await dataResponse.json()).received).toBe(true);
+  });
+
+  /**
+   * 模拟真实业务场景：ProjectController
+   *
+   * 路由表：
+   *   GET    /api/projects/         → list()
+   *   GET    /api/projects/:id      → get(id)
+   *   POST   /api/projects/         → create(dto)
+   *   PUT    /api/projects/:id      → update(id, dto)
+   *   DELETE /api/projects/:id      → remove(id)
+   *   GET    /api/projects/:id/pages → listPages(id)
+   */
+  test('ProjectController: all routes on /api/projects should match independently', async () => {
+    const db: Record<string, { id: string; name: string; description: string; pages: string[] }> = {
+      'proj-1': { id: 'proj-1', name: 'Alpha', description: 'desc-a', pages: ['page-1', 'page-2'] },
+      'proj-2': { id: 'proj-2', name: 'Beta',  description: 'desc-b', pages: [] },
+    };
+
+    @Controller('/api/projects')
+    class ProjectController {
+      @GET('/')
+      list() {
+        return Object.values(db);
+      }
+
+      @GET('/:id')
+      get(@Param('id') id: string) {
+        return db[id] ?? null;
+      }
+
+      @POST('/')
+      create(@Body() dto: { name: string; description?: string }) {
+        const id = `proj-new`;
+        db[id] = { id, name: dto.name, description: dto.description ?? '', pages: [] };
+        return db[id];
+      }
+
+      @PUT('/:id')
+      update(@Param('id') id: string, @Body() dto: { name?: string; description?: string }) {
+        if (!db[id]) return null;
+        db[id] = { ...db[id], ...dto };
+        return db[id];
+      }
+
+      @DELETE('/:id')
+      remove(@Param('id') id: string) {
+        const existed = !!db[id];
+        delete db[id];
+        return { success: existed };
+      }
+
+      @GET('/:id/pages')
+      listPages(@Param('id') id: string) {
+        return db[id]?.pages ?? [];
+      }
+    }
+
+    app.registerController(ProjectController);
+    await app.listen();
+
+    const base = `http://localhost:${port}/api/projects`;
+
+    // GET / → 列表
+    const listRes = await fetch(`${base}/`);
+    expect(listRes.status).toBe(200);
+    const list = await listRes.json() as { id: string }[];
+    expect(list.length).toBe(2);
+
+    // GET /:id → 单条
+    const getRes = await fetch(`${base}/proj-1`);
+    expect(getRes.status).toBe(200);
+    const item = await getRes.json() as { id: string; name: string };
+    expect(item.id).toBe('proj-1');
+    expect(item.name).toBe('Alpha');
+
+    // POST / → 创建
+    const createRes = await fetch(`${base}/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Gamma', description: 'desc-c' }),
+    });
+    expect(createRes.status).toBe(200);
+    const created = await createRes.json() as { id: string; name: string };
+    expect(created.name).toBe('Gamma');
+
+    // PUT /:id → 更新
+    const updateRes = await fetch(`${base}/proj-1`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Alpha-Updated' }),
+    });
+    expect(updateRes.status).toBe(200);
+    const updated = await updateRes.json() as { name: string };
+    expect(updated.name).toBe('Alpha-Updated');
+
+    // GET /:id/pages → 子资源，不能被 GET /:id 拦截
+    const pagesRes = await fetch(`${base}/proj-2/pages`);
+    expect(pagesRes.status).toBe(200);
+    const pages = await pagesRes.json() as string[];
+    expect(Array.isArray(pages)).toBe(true);
+
+    // proj-1 pages（改名后仍可访问）
+    const pages1Res = await fetch(`${base}/proj-1/pages`);
+    expect(pages1Res.status).toBe(200);
+    const pages1 = await pages1Res.json() as string[];
+    expect(pages1).toEqual(['page-1', 'page-2']);
+
+    // DELETE /:id → 删除
+    const delRes = await fetch(`${base}/proj-2`, { method: 'DELETE' });
+    expect(delRes.status).toBe(200);
+    const delData = await delRes.json() as { success: boolean };
+    expect(delData.success).toBe(true);
+
+    // 删除后 GET /:id 返回 null（项目已不存在）
+    const afterDelRes = await fetch(`${base}/proj-2`);
+    expect(afterDelRes.status).toBe(200);
+    const afterDel = await afterDelRes.json();
+    expect(afterDel).toBeNull();
   });
 });
 
