@@ -23,6 +23,7 @@
     "start:events": "bun 02-official-modules/events-app.ts",
     "start:events-module": "bun 02-official-modules/events-module-based-app.ts",
     "start:global-module": "bun 01-basic/global-module-app.ts",
+    "start:sse-issue53": "bun 01-core-features/sse-heartbeat-issue53-app.ts",
     "start:lifecycle": "bun 01-core-features/lifecycle-app.ts",
     "start:async-config": "bun 01-core-features/async-config-app.ts",
     "start:dashboard": "bun 02-official-modules/dashboard-app.ts",
