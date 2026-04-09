@@ -3,10 +3,31 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v2.3.0',
-    date: '2026-03',
+    version: 'v3.0.0',
+    date: '2026-04',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'feat', text: 'Platform Adapter Layer — Bun 与 Node.js 22+ 透明多运行时支持' },
+      { type: 'feat', text: '六大适配器契约：IFsAdapter、ICryptoAdapter、IParserAdapter、IProcessAdapter、IHttpDriver、IWebSocket<T>' },
+      { type: 'feat', text: 'BunPlatform：封装 Bun.file/write/Glob、Bun.CryptoHasher、Bun.JSONC/JSON5/markdown、Bun.serve、Bun.ServerWebSocket' },
+      { type: 'feat', text: 'NodePlatform：使用 node:fs、node:crypto、jsonc-parser/json5/marked、node:http、node:child_process、ws' },
+      { type: 'feat', text: 'resolvePlatform() 优先级链：ApplicationOptions.platform > --platform CLI > BUN_SERVER_PLATFORM env > 自动检测' },
+      { type: 'feat', text: '从 @dangao/bun-server 导出 getRuntime() / initRuntime() 单例访问器' },
+      { type: 'feat', text: 'DatabaseModule 自动感知运行时，在 bun:sqlite/Bun.SQL 与 better-sqlite3/postgres/mysql2 间切换，无需额外配置' },
+      { type: 'feat', text: '新增 dist/index.node.mjs 与 "node" 导出条件，生成纯 Node.js 兼容 bundle' },
+      { type: 'feat', text: '新增 examples/06-platform/：自动检测、显式 Node.js、CLI 切换三个示例' },
+      { type: 'test', text: '平台共享测试套件（bun:test + vitest）覆盖 fs/crypto/parser/process/websocket/database 适配器' },
+      { type: 'docs', text: '新增 docs/platform.md 和 docs/zh/platform.md；README 新增 Node.js 徽章和架构图' },
+      { type: 'chore', text: '新增 jsonc-parser、json5、marked、mime-types、ws、postgres、mysql2、better-sqlite3 运行时依赖' },
+      { type: 'chore', text: '将 @dangao/bun-server 与 @dangao/bun-server-web 升级到 3.0.0，并同步 web changelog 页面' },
+    ],
+  },
+  {
+    version: 'v2.3.0',
+    date: '2026-03',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'feat', text: '自动检测 SSE 响应，通过 server.timeout(req, 0) 禁用 Bun TCP 空闲超时' },
       { type: 'feat', text: '按可配置间隔注入 SSE 心跳（: keepalive），防止中间代理断连' },

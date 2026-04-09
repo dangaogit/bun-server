@@ -3,10 +3,31 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v2.3.0',
-    date: '2026-03',
+    version: 'v3.0.0',
+    date: '2026-04',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'feat', text: 'Platform Adapter Layer — transparent multi-runtime support for Bun and Node.js 22+' },
+      { type: 'feat', text: 'Six adapter contracts: IFsAdapter, ICryptoAdapter, IParserAdapter, IProcessAdapter, IHttpDriver, IWebSocket<T>' },
+      { type: 'feat', text: 'BunPlatform: wraps Bun.file/write/Glob, Bun.CryptoHasher, Bun.JSONC/JSON5/markdown, Bun.serve, Bun.ServerWebSocket' },
+      { type: 'feat', text: 'NodePlatform: uses node:fs, node:crypto, jsonc-parser/json5/marked, node:http, node:child_process, ws' },
+      { type: 'feat', text: 'resolvePlatform() priority chain: ApplicationOptions.platform > --platform CLI > BUN_SERVER_PLATFORM env > auto-detect' },
+      { type: 'feat', text: 'Export getRuntime() / initRuntime() singleton accessor from @dangao/bun-server' },
+      { type: 'feat', text: 'DatabaseModule auto-selects bun:sqlite/Bun.SQL or better-sqlite3/postgres/mysql2 based on detected runtime' },
+      { type: 'feat', text: 'Add dist/index.node.mjs with "node" export condition for clean Node.js-compatible bundle' },
+      { type: 'feat', text: 'Add examples/06-platform/ — auto-detect, explicit Node.js, and CLI-switch examples' },
+      { type: 'test', text: 'Shared platform test suites (bun:test + vitest) covering fs/crypto/parser/process/websocket/database adapters' },
+      { type: 'docs', text: 'Add docs/platform.md and docs/zh/platform.md; update README with Node.js badge and architecture diagram' },
+      { type: 'chore', text: 'Add jsonc-parser, json5, marked, mime-types, ws, postgres, mysql2, better-sqlite3 as runtime dependencies' },
+      { type: 'chore', text: 'Bump @dangao/bun-server and @dangao/bun-server-web to 3.0.0 and sync web changelog pages' },
+    ],
+  },
+  {
+    version: 'v2.3.0',
+    date: '2026-03',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'feat', text: 'Auto-detect SSE responses and disable Bun TCP idle timeout via server.timeout(req, 0)' },
       { type: 'feat', text: 'Inject SSE heartbeat (: keepalive) at configurable interval to prevent proxy disconnects' },
