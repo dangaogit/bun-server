@@ -113,7 +113,7 @@ export class DatabaseService {
 
   /**
    * 执行 SQL 查询
-   * SQLite 返回同步结果，PostgreSQL/MySQL 返回异步结果
+   * SQLite (bun:sqlite) 返回同步结果；@vscode/sqlite3 / PostgreSQL / MySQL 返回异步结果
    */
   public query<T = unknown>(sql: string, params?: unknown[]): T[] | Promise<T[]> {
     const session = getCurrentSession();
@@ -139,18 +139,20 @@ export class DatabaseService {
 
   /**
    * SQLite 查询实现
+   * bun:sqlite 使用同步 .query().all()；@vscode/sqlite3 使用异步 callback .all()
    */
   private querySqlite<T = unknown>(
     connection: unknown,
     sql: string,
     params?: unknown[],
-  ): T[] {
-    // Bun SQLite Database 对象
+  ): T[] | Promise<T[]> {
+    // bun:sqlite Database 对象（有 .query() 方法）
     if (
       connection &&
       typeof connection === 'object' &&
       'query' in connection &&
-      typeof connection.query === 'function'
+      typeof (connection as any).query === 'function' &&
+      !('all' in connection && 'run' in connection)
     ) {
       const db = connection as {
         query: (sql: string) => {
@@ -160,10 +162,24 @@ export class DatabaseService {
       };
 
       const statement = db.query(sql);
-      // Bun SQLite 的 all() 方法接受参数
       const result =
         params && params.length > 0 ? statement.all(...params) : statement.all();
       return result;
+    }
+
+    // @vscode/sqlite3 Database 对象（有 .all() callback 方法）
+    if (
+      connection &&
+      typeof connection === 'object' &&
+      'all' in connection &&
+      typeof (connection as any).all === 'function'
+    ) {
+      return new Promise<T[]>((resolve, reject) => {
+        (connection as any).all(sql, params ?? [], (err: Error | null, rows: T[]) => {
+          if (err) reject(err);
+          else resolve(rows ?? []);
+        });
+      });
     }
 
     throw new Error('Invalid SQLite connection');

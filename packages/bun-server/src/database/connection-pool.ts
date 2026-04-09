@@ -185,9 +185,10 @@ export class ConnectionPool {
       const { Database } = await import('bun:sqlite');
       return new Database(config.path);
     }
-    // Node.js：使用 better-sqlite3
-    const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
-    return BetterSqlite3(config.path);
+    // Node.js：使用 @vscode/sqlite3
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const sqlite3 = require('@vscode/sqlite3') as any;
+    return new sqlite3.Database(config.path);
   }
 
   /**

@@ -40,7 +40,7 @@ export class Semaphore {
 
 /**
  * SQLite 适配器（自动感知运行时）
- * Bun 平台下使用 bun:sqlite，Node.js 平台下使用 better-sqlite3
+ * Bun 平台下使用 bun:sqlite，Node.js 平台下使用 @vscode/sqlite3
  */
 export class SqliteAdapter {
   private readonly db: unknown;
@@ -58,10 +58,12 @@ export class SqliteAdapter {
       }
       this.db = db;
     } else {
-      const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
-      const db = BetterSqlite3(config.database);
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const sqlite3 = require('@vscode/sqlite3') as any;
+      const db: any = new sqlite3.Database(config.database);
       if (config.wal !== false) {
-        db.exec('PRAGMA journal_mode = WAL;');
+        // Operations are serialized internally; WAL is queued before any query runs
+        db.run('PRAGMA journal_mode = WAL;');
       }
       this.db = db;
     }
@@ -69,15 +71,18 @@ export class SqliteAdapter {
     this.semaphore = new Semaphore(config.maxWriteConcurrency ?? 1);
   }
 
-  public query<T = unknown>(sql: string, params: unknown[] = []): T[] {
+  public async query<T = unknown>(sql: string, params: unknown[] = []): Promise<T[]> {
     if (this.isBun) {
       const db = this.db as import('bun:sqlite').Database;
       const stmt = db.query(sql);
       return stmt.all(...params as Parameters<typeof stmt.all>) as T[];
     }
-    const db = this.db as import('better-sqlite3').Database;
-    const stmt = db.prepare(sql);
-    return stmt.all(...params) as T[];
+    return new Promise<T[]>((resolve, reject) => {
+      (this.db as any).all(sql, params, (err: Error | null, rows: T[]) => {
+        if (err) reject(err);
+        else resolve(rows ?? []);
+      });
+    });
   }
 
   public async execute(sql: string, params: unknown[] = []): Promise<void> {
@@ -86,9 +91,12 @@ export class SqliteAdapter {
       const stmt = db.query(sql);
       stmt.run(...params as Parameters<typeof stmt.run>);
     } else {
-      const db = this.db as import('better-sqlite3').Database;
-      const stmt = db.prepare(sql);
-      stmt.run(...params);
+      return new Promise<void>((resolve, reject) => {
+        (this.db as any).run(sql, params, (err: Error | null) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
     }
   }
 

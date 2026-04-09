@@ -160,21 +160,28 @@ export class DatabaseConnectionManager {
    */
   private async healthCheckSqlite(connection: unknown): Promise<boolean> {
     try {
-      if (
-        connection &&
-        typeof connection === 'object' &&
-        'query' in connection &&
-        typeof connection.query === 'function'
-      ) {
-        // 执行简单的查询来检查连接
-        const db = connection as {
-          query: (sql: string) => {
-            all: () => unknown[];
-          };
-        };
+      if (!connection || typeof connection !== 'object') {
+        return false;
+      }
+
+      // bun:sqlite Database（有 .query() 但没有 callback-based .all()）
+      if ('query' in connection && typeof (connection as any).query === 'function' && !('all' in connection && 'run' in connection)) {
+        const db = connection as { query: (sql: string) => { all: () => unknown[] } };
         db.query('SELECT 1').all();
         return true;
       }
+
+      // @vscode/sqlite3 Database（callback-based .all()）
+      if ('all' in connection && typeof (connection as any).all === 'function') {
+        await new Promise<void>((resolve, reject) => {
+          (connection as any).all('SELECT 1', [], (err: Error | null) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+        return true;
+      }
+
       return false;
     } catch (_error) {
       return false;
