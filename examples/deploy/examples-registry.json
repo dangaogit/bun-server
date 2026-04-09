@@ -46,5 +46,9 @@
   { "scriptName": "start:ai-mcp", "slug": "ai-mcp", "name": "AI MCP Server", "group": "ai", "port": 4166, "enabled": true, "exposed": true },
   { "scriptName": "start:ai-guard", "slug": "ai-guard", "name": "AI Guard", "group": "ai", "port": 4167, "enabled": true, "exposed": true },
   { "scriptName": "start:ai-platform-mvp:api", "slug": "ai-platform-mvp-api", "name": "AI Platform MVP API", "group": "ai", "port": 4168, "enabled": true, "exposed": false },
-  { "scriptName": "start:ai-platform-mvp:web", "slug": "ai-platform-mvp", "name": "AI Platform MVP", "group": "ai", "port": 4169, "enabled": true, "exposed": true }
+  { "scriptName": "start:ai-platform-mvp:web", "slug": "ai-platform-mvp", "name": "AI Platform MVP", "group": "ai", "port": 4169, "enabled": true, "exposed": true },
+
+  { "scriptName": "start:platform-auto-detect", "slug": "platform-auto-detect", "name": "Platform Auto-Detect", "group": "platform", "port": 4170, "enabled": true, "exposed": true },
+  { "scriptName": "start:platform-explicit-node", "slug": "platform-explicit-node", "name": "Platform Explicit Node", "group": "platform", "port": 4171, "enabled": true, "exposed": true },
+  { "scriptName": "start:platform-cli-switch", "slug": "platform-cli-switch", "name": "Platform CLI Switch", "group": "platform", "port": 4172, "enabled": true, "exposed": true }
 ]
