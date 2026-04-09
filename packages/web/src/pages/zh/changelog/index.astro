@@ -3,10 +3,20 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v3.0.1',
+    version: 'v3.0.2',
     date: '2026-04',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'refactor', text: '将 @vscode/sqlite3 从 dependencies 移至 peerDependencies（optional: true），不再自动安装' },
+      { type: 'refactor', text: 'SqliteAdapter 与 ConnectionPool 在 @vscode/sqlite3 缺失时抛出明确的安装提示' },
+    ],
+  },
+  {
+    version: 'v3.0.1',
+    date: '2026-04',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'fix', text: '将 Node.js SQLite 驱动从 better-sqlite3 替换为 @vscode/sqlite3 5.1.12-vscode' },
       { type: 'fix', text: 'SqliteAdapter.query() 改为 async — Node.js 路径通过 @vscode/sqlite3 的 db.all() callback 包装为 Promise' },

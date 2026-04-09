@@ -3,10 +3,20 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v3.0.1',
+    version: 'v3.0.2',
     date: '2026-04',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'refactor', text: 'Move @vscode/sqlite3 from dependencies to peerDependencies (optional: true) — no longer installed automatically' },
+      { type: 'refactor', text: 'SqliteAdapter and ConnectionPool throw a clear install instruction when @vscode/sqlite3 is missing' },
+    ],
+  },
+  {
+    version: 'v3.0.1',
+    date: '2026-04',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'fix', text: 'Replace better-sqlite3 with @vscode/sqlite3 5.1.12-vscode as the Node.js SQLite driver' },
       { type: 'fix', text: 'SqliteAdapter.query() is now async — Node.js path uses @vscode/sqlite3 callback-based db.all() wrapped in a Promise' },
