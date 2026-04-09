@@ -3,10 +3,24 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v3.0.0',
+    version: 'v3.0.1',
     date: '2026-04',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'fix', text: 'Replace better-sqlite3 with @vscode/sqlite3 5.1.12-vscode as the Node.js SQLite driver' },
+      { type: 'fix', text: 'SqliteAdapter.query() is now async — Node.js path uses @vscode/sqlite3 callback-based db.all() wrapped in a Promise' },
+      { type: 'fix', text: 'DatabaseService.querySqlite() adds async branch for @vscode/sqlite3 connections' },
+      { type: 'fix', text: 'ConnectionManager.healthCheckSqlite() adds async health-check path for @vscode/sqlite3' },
+      { type: 'chore', text: 'Remove better-sqlite3 / @types/better-sqlite3; add @vscode/sqlite3@5.1.12-vscode' },
+      { type: 'chore', text: 'Add --external @vscode/sqlite3 to bundle script — native addon cannot be inlined by bun build' },
+    ],
+  },
+  {
+    version: 'v3.0.0',
+    date: '2026-04',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'feat', text: 'Platform Adapter Layer — transparent multi-runtime support for Bun and Node.js 22+' },
       { type: 'feat', text: 'Six adapter contracts: IFsAdapter, ICryptoAdapter, IParserAdapter, IProcessAdapter, IHttpDriver, IWebSocket<T>' },
