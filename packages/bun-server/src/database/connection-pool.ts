@@ -3,6 +3,7 @@ import type {
   DatabaseConfig,
   DatabaseType,
 } from './types';
+import { getRuntime } from '../platform/runtime';
 
 /**
  * 连接池中的连接项
@@ -175,19 +176,22 @@ export class ConnectionPool {
   }
 
   /**
-   * 创建 SQLite 连接
+   * 创建 SQLite 连接（自动感知运行时）
    */
   private async createSqliteConnection(
     config: { path: string },
   ): Promise<unknown> {
-    // 使用 Bun 原生 SQLite API
-    const { Database } = await import('bun:sqlite');
-    const db = new Database(config.path);
-    return db;
+    if (getRuntime().engine === 'bun') {
+      const { Database } = await import('bun:sqlite');
+      return new Database(config.path);
+    }
+    // Node.js：使用 better-sqlite3
+    const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
+    return BetterSqlite3(config.path);
   }
 
   /**
-   * 创建 PostgreSQL 连接（使用 Bun.SQL）
+   * 创建 PostgreSQL 连接（自动感知运行时）
    */
   private async createPostgresConnection(
     config: {
@@ -199,18 +203,18 @@ export class ConnectionPool {
       ssl?: boolean;
     },
   ): Promise<unknown> {
-    // 使用 Bun.SQL API
-    // Bun.SQL 支持 postgres:// URL
     const url = `postgres://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`;
-    const { SQL } = await import('bun');
-    return new SQL(url, {
-      max: 1, // 单个连接（连接池会在外部管理）
-      tls: config.ssl ?? false,
-    });
+    if (getRuntime().engine === 'bun') {
+      const { SQL } = await import('bun');
+      return new SQL(url, { max: 1, tls: config.ssl ?? false });
+    }
+    // Node.js：使用 postgres 包
+    const postgres = require('postgres') as typeof import('postgres');
+    return postgres(url, { max: 1, ssl: config.ssl ? 'require' : false });
   }
 
   /**
-   * 创建 MySQL 连接（使用 Bun.SQL）
+   * 创建 MySQL 连接（自动感知运行时）
    */
   private async createMysqlConnection(
     config: {
@@ -221,13 +225,21 @@ export class ConnectionPool {
       password: string;
     },
   ): Promise<unknown> {
-    // 使用 Bun.SQL API
-    // Bun.SQL 支持 mysql:// URL
-    const url = `mysql://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`;
-    const { SQL } = await import('bun');
-    return new SQL(url, {
-      max: 1, // 单个连接（连接池会在外部管理）
+    if (getRuntime().engine === 'bun') {
+      const url = `mysql://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`;
+      const { SQL } = await import('bun');
+      return new SQL(url, { max: 1 });
+    }
+    // Node.js：使用 mysql2 包
+    const mysql2 = require('mysql2/promise') as typeof import('mysql2/promise');
+    const conn = await mysql2.createConnection({
+      host: config.host,
+      port: config.port,
+      database: config.database,
+      user: config.user,
+      password: config.password,
     });
+    return conn;
   }
 
   /**

@@ -3,3 +3,4 @@ coveragePathIgnorePatterns = [
   "**/dist/**",
   "**/tests/**"
 ]
+exclude = ["**/tests/platform/node/**"]

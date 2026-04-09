@@ -1,14 +1,17 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { mkdir, rm } from 'fs/promises';
+import { mkdir, rm, writeFile as fsWriteFile } from 'fs/promises';
 import { join } from 'path';
 
 import { createStaticFileMiddleware } from '../../src/middleware/builtin/static-file';
 import { Context } from '../../src/core/context';
+import { initRuntime } from '../../src/platform/runtime';
+
+initRuntime('bun');
 
 const TMP_DIR = join(process.cwd(), 'tmp-static-test');
 
 async function writeFile(path: string, content: string): Promise<void> {
-  await Bun.write(path, content);
+  await fsWriteFile(path, content, 'utf-8');
 }
 
 describe('StaticFileMiddleware', () => {

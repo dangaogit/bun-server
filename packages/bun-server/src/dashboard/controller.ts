@@ -4,6 +4,7 @@ import { createDashboardHTML } from './ui';
 import { ControllerRegistry } from '../controller/controller';
 import { HEALTH_INDICATORS_TOKEN } from '../health/types';
 import type { HealthIndicator } from '../health/types';
+import { getRuntime } from '../platform/runtime';
 
 /**
  * Dashboard 服务
@@ -122,7 +123,7 @@ export class DashboardService {
         heapTotal: mem.heapTotal,
       },
       platform: process.platform,
-      bunVersion: typeof Bun !== 'undefined' ? Bun.version : undefined,
+      bunVersion: getRuntime().engine === 'bun' && typeof Bun !== 'undefined' ? Bun.version : undefined,
     };
     return new Response(JSON.stringify(data), {
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
@@ -166,7 +167,7 @@ export class DashboardService {
           headers: { 'Content-Type': 'application/json; charset=utf-8' },
         });
       }
-      const html = Bun.markdown.html(body.content, { headings: true });
+      const html = getRuntime().parser.renderMarkdown(body.content);
       return new Response(JSON.stringify({ html }), {
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
       });

@@ -1,6 +1,5 @@
-import { Database, type SQLQueryBindings } from 'bun:sqlite';
-
 import type { SqliteV2Config } from './types';
+import { getRuntime } from '../platform/runtime';
 
 export interface DisposableLock {
   [Symbol.dispose](): void;
@@ -39,30 +38,64 @@ export class Semaphore {
   }
 }
 
+/**
+ * SQLite 适配器（自动感知运行时）
+ * Bun 平台下使用 bun:sqlite，Node.js 平台下使用 better-sqlite3
+ */
 export class SqliteAdapter {
-  private readonly db: Database;
+  private readonly db: unknown;
   public readonly semaphore: Semaphore;
+  private readonly isBun: boolean;
 
   public constructor(config: SqliteV2Config) {
-    this.db = new Database(config.database);
-    if (config.wal !== false) {
-      this.db.exec('PRAGMA journal_mode = WAL;');
+    this.isBun = getRuntime().engine === 'bun';
+
+    if (this.isBun) {
+      const { Database } = require('bun:sqlite') as typeof import('bun:sqlite');
+      const db = new Database(config.database);
+      if (config.wal !== false) {
+        db.exec('PRAGMA journal_mode = WAL;');
+      }
+      this.db = db;
+    } else {
+      const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
+      const db = BetterSqlite3(config.database);
+      if (config.wal !== false) {
+        db.exec('PRAGMA journal_mode = WAL;');
+      }
+      this.db = db;
     }
+
     this.semaphore = new Semaphore(config.maxWriteConcurrency ?? 1);
   }
 
-  public query<T = unknown>(sql: string, params: SQLQueryBindings[] = []): T[] {
-    const stmt = this.db.query(sql);
+  public query<T = unknown>(sql: string, params: unknown[] = []): T[] {
+    if (this.isBun) {
+      const db = this.db as import('bun:sqlite').Database;
+      const stmt = db.query(sql);
+      return stmt.all(...params as Parameters<typeof stmt.all>) as T[];
+    }
+    const db = this.db as import('better-sqlite3').Database;
+    const stmt = db.prepare(sql);
     return stmt.all(...params) as T[];
   }
 
-  public async execute(sql: string, params: SQLQueryBindings[] = []): Promise<void> {
-    const stmt = this.db.query(sql);
-    stmt.run(...params);
+  public async execute(sql: string, params: unknown[] = []): Promise<void> {
+    if (this.isBun) {
+      const db = this.db as import('bun:sqlite').Database;
+      const stmt = db.query(sql);
+      stmt.run(...params as Parameters<typeof stmt.run>);
+    } else {
+      const db = this.db as import('better-sqlite3').Database;
+      const stmt = db.prepare(sql);
+      stmt.run(...params);
+    }
   }
 
   public close(): void {
-    this.db.close();
+    if (typeof (this.db as any).close === 'function') {
+      (this.db as any).close();
+    }
   }
 }
 

@@ -1,4 +1,17 @@
 export { Application, type ApplicationOptions } from './core/application';
+export type {
+  PlatformEngine,
+  IServerHandle,
+  IWebSocket,
+  WebSocketHandlers,
+  IFsAdapter,
+  ICryptoAdapter,
+  IParserAdapter,
+  IProcessAdapter,
+  IHttpDriver,
+  IPlatform,
+} from './platform';
+export { getRuntime, initRuntime, resolvePlatform } from './platform';
 export { applyDecorators } from './core/apply-decorators';
 export { BunServer, type ServerOptions } from './core/server';
 export { ClusterManager, type ClusterOptions, type ClusterMode } from './core/cluster';

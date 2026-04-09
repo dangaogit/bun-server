@@ -1,4 +1,5 @@
 import type { JWTConfig, JWTPayload } from './types';
+import { getRuntime } from '../platform/runtime';
 
 /**
  * JWT 工具类
@@ -120,7 +121,7 @@ export class JWTUtil {
 
     if (key.length > blockSize) {
       // 如果密钥长度超过块大小，先哈希
-      const hasher = new Bun.CryptoHasher('sha256');
+      const hasher = getRuntime().crypto.createHasher('sha256');
       hasher.update(key);
       keyBuffer = new Uint8Array(hasher.digest());
     } else {
@@ -141,7 +142,7 @@ export class JWTUtil {
     const innerData = new Uint8Array(iKeyPad.length + data.length);
     innerData.set(iKeyPad);
     innerData.set(data, iKeyPad.length);
-    const innerHasher = new Bun.CryptoHasher('sha256');
+    const innerHasher = getRuntime().crypto.createHasher('sha256');
     innerHasher.update(innerData);
     const innerHash = new Uint8Array(innerHasher.digest());
 
@@ -149,7 +150,7 @@ export class JWTUtil {
     const outerData = new Uint8Array(oKeyPad.length + innerHash.length);
     outerData.set(oKeyPad);
     outerData.set(innerHash, oKeyPad.length);
-    const outerHasher = new Bun.CryptoHasher('sha256');
+    const outerHasher = getRuntime().crypto.createHasher('sha256');
     outerHasher.update(outerData);
 
     return new Uint8Array(outerHasher.digest());

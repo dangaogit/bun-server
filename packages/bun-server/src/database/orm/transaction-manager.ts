@@ -86,7 +86,7 @@ export class TransactionManager {
     fn: () => Promise<T>,
     options: TransactionOptions = {},
   ): Promise<T> {
-    const reserved = await this.sqlManager.getDefault().reserve();
+    const reserved = await (this.sqlManager.getDefault() as any).reserve();
     try {
       const tenantId = getCurrentSession()?.tenantId ?? 'default';
       return await runWithSession(

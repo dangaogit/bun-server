@@ -1,14 +1,17 @@
 import { normalize, resolve, sep } from 'path';
 
 import type { Middleware } from '../middleware';
-import type { HeadersInit } from 'bun'
+import { getRuntime } from '../../platform/runtime';
+
+/** Cross-runtime compatible headers input type */
+type HeadersInput = Headers | string[][] | Record<string, string>;
 
 export interface StaticFileOptions {
   root: string;
   prefix?: string;
   indexFile?: string;
   enableCache?: boolean;
-  headers?: HeadersInit | Headers;
+  headers?: HeadersInput;
 }
 
 function isSubPath(root: string, target: string): boolean {
@@ -65,12 +68,12 @@ export function createStaticFileMiddleware(options: StaticFileOptions): Middlewa
       return context.createErrorResponse({ error: 'Forbidden' });
     }
 
-    const file = Bun.file(targetPath);
+    const file = getRuntime().fs.file(targetPath);
     if (!(await file.exists())) {
       return await next();
     }
 
-    const headers = new Headers(options.headers);
+    const headers = new Headers(options.headers as HeadersInput);
     if (enableCache) {
       headers.set('Cache-Control', 'public, max-age=31536000, immutable');
     }
@@ -78,7 +81,7 @@ export function createStaticFileMiddleware(options: StaticFileOptions): Middlewa
       headers.set('Content-Type', file.type);
     }
 
-    return new Response(file, {
+    return new Response(file.stream(), {
       status: 200,
       headers,
     });

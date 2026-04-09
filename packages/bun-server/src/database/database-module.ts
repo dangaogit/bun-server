@@ -185,7 +185,7 @@ export class DatabaseModule {
         tenantId: selected.tenantId,
         lazyReserve: async () => {
           if (!reserved) {
-            reserved = await sql.reserve();
+            reserved = await (sql as any).reserve();
             session.reserved = reserved;
           }
           return reserved;

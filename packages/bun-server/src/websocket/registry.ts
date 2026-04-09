@@ -1,5 +1,4 @@
-import type { ServerWebSocket } from 'bun';
-
+import type { IWebSocket } from '../platform/types';
 import { Container } from '../di/container';
 import { ControllerRegistry } from '../controller/controller';
 import { getGatewayMetadata, getHandlerMetadata } from './decorators';
@@ -161,7 +160,7 @@ export class WebSocketGatewayRegistry {
    * @param args - 原始参数（message, code, reason 等，不包括 ws）
    */
   private async invokeHandler(
-    ws: ServerWebSocket<WebSocketConnectionData>,
+    ws: IWebSocket<WebSocketConnectionData>,
     definition: GatewayDefinition,
     handlerName: string | undefined,
     ...args: unknown[]
@@ -266,7 +265,7 @@ export class WebSocketGatewayRegistry {
     }
   }
 
-  public async handleOpen(ws: ServerWebSocket<WebSocketConnectionData>): Promise<void> {
+  public async handleOpen(ws: IWebSocket<WebSocketConnectionData>): Promise<void> {
     const path = ws.data?.path;
     const match = path ? this.getGateway(path) : undefined;
     if (!match) {
@@ -281,8 +280,8 @@ export class WebSocketGatewayRegistry {
   }
 
   public async handleMessage(
-    ws: ServerWebSocket<WebSocketConnectionData>,
-    message: string | ArrayBuffer | ArrayBufferView,
+    ws: IWebSocket<WebSocketConnectionData>,
+    message: string | ArrayBuffer | ArrayBufferView | Buffer,
   ): Promise<void> {
     const path = ws.data?.path;
     const match = path ? this.getGateway(path) : undefined;
@@ -298,7 +297,7 @@ export class WebSocketGatewayRegistry {
   }
 
   public async handleClose(
-    ws: ServerWebSocket<WebSocketConnectionData>,
+    ws: IWebSocket<WebSocketConnectionData>,
     code: number,
     reason: string,
   ): Promise<void> {

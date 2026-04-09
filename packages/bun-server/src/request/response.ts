@@ -1,4 +1,7 @@
-import type { BodyInit, HeadersInit } from 'bun';
+import { getRuntime } from '../platform/runtime';
+
+/** Cross-runtime compatible headers input type */
+type HeadersInit = Headers | string[][] | Record<string, string>;
 
 /**
  * 响应封装类
@@ -131,17 +134,17 @@ export class ResponseBuilder {
     }
 
     if (typeof source === 'string') {
-      const file = Bun.file(source);
+      const file = getRuntime().fs.file(source);
       if (!headers.has('Content-Type') && file.type) {
         headers.set('Content-Type', file.type);
       }
-      return new Response(file, {
+      return new Response(file.stream(), {
         status: options.status ?? 200,
         headers,
       });
     }
 
-    return new Response(source as BodyInit, {
+    return new Response(source as any, {
       status: options.status ?? 200,
       headers,
     });

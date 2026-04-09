@@ -1,8 +1,9 @@
-import type { Server } from "bun";
 import { Context } from "./context";
 import { LoggerManager } from "@dangao/logsmith";
 import type { WebSocketGatewayRegistry } from "../websocket/registry";
 import type { WebSocketConnectionData } from "../websocket/registry";
+import type { IServerHandle, IWebSocket } from "../platform/types";
+import { getRuntime } from "../platform/runtime";
 
 /**
  * 服务器配置选项
@@ -44,7 +45,7 @@ export interface ServerOptions {
 
   /**
    * 连接空闲超时时间（毫秒）
-   * 框架内部会转换为 Bun.serve 所需的秒
+   * Bun 平台下自动转换为秒单位；Node.js 平台下静默忽略
    */
   idleTimeout?: number;
 
@@ -60,10 +61,10 @@ export interface ServerOptions {
 
 /**
  * 服务器封装类
- * 基于 Bun.serve() 构建
+ * 基于平台适配层构建，支持 Bun 和 Node.js
  */
 export class BunServer {
-  private server?: Server<WebSocketConnectionData>;
+  private server?: IServerHandle;
   private readonly options: ServerOptions;
   private activeRequests: number = 0;
   private isShuttingDown: boolean = false;
@@ -77,7 +78,7 @@ export class BunServer {
   /**
    * 启动服务器
    */
-  public start(): void {
+  public async start(): Promise<void> {
     if (this.server) {
       throw new Error("Server is already running");
     }
@@ -97,15 +98,15 @@ export class BunServer {
     const postProcessSse = (
       response: Response,
       request: Request,
-      bunServer: Server<WebSocketConnectionData>,
+      serverHandle: IServerHandle,
     ): Response => {
       const ct = response.headers.get('content-type');
       if (!ct?.includes('text/event-stream')) {
         return response;
       }
 
-      // SSE detected — always disable Bun TCP idle timeout for this connection
-      bunServer.timeout(request, 0);
+      // SSE detected — disable idle timeout for this connection (Bun-only, no-op on Node)
+      serverHandle.timeout?.(request, 0);
 
       if (sseHeartbeatEnabled && response.body) {
         return BunServer.wrapSseWithHeartbeat(
@@ -127,8 +128,8 @@ export class BunServer {
 
     const fetchHandler = (
       request: Request,
-      bunServer: Server<WebSocketConnectionData>,
-    ): Response | Promise<Response> | undefined => {
+      serverHandle: IServerHandle,
+    ): Response | Promise<Response | undefined> | undefined => {
       if (this.isShuttingDown) {
         return new Response("Server is shutting down", { status: 503 });
       }
@@ -145,7 +146,7 @@ export class BunServer {
         }
         const context = new Context(request);
         const queryParams = new URLSearchParams(url.searchParams);
-        const upgraded = bunServer.upgrade(request, {
+        const upgraded = serverHandle.upgrade?.(request, {
           data: {
             path: url.pathname,
             query: queryParams,
@@ -165,7 +166,7 @@ export class BunServer {
 
       if (responsePromise instanceof Promise) {
         const processed = responsePromise.then(
-          (response) => postProcessSse(response, request, bunServer),
+          (response) => postProcessSse(response, request, serverHandle),
         );
         processed
           .finally(decrementAndMaybeShutdown)
@@ -174,40 +175,45 @@ export class BunServer {
       }
 
       decrementAndMaybeShutdown();
-      return postProcessSse(responsePromise, request, bunServer);
+      return postProcessSse(responsePromise, request, serverHandle);
     };
 
-    const websocketHandlers = {
-      open: async (ws: import("bun").ServerWebSocket<WebSocketConnectionData>) => {
-        await this.options.websocketRegistry?.handleOpen(ws);
-      },
-      message: async (ws: import("bun").ServerWebSocket<WebSocketConnectionData>, message: string | Buffer) => {
-        await this.options.websocketRegistry?.handleMessage(ws, message);
-      },
-      close: async (ws: import("bun").ServerWebSocket<WebSocketConnectionData>, code: number, reason: string) => {
-        await this.options.websocketRegistry?.handleClose(ws, code, reason);
-      },
-    };
+    const websocketHandlers = this.options.websocketRegistry
+      ? {
+          open: async (ws: IWebSocket<WebSocketConnectionData>) => {
+            await this.options.websocketRegistry?.handleOpen(ws);
+          },
+          message: async (ws: IWebSocket<WebSocketConnectionData>, message: string | Buffer) => {
+            await this.options.websocketRegistry?.handleMessage(ws, message);
+          },
+          close: async (ws: IWebSocket<WebSocketConnectionData>, code: number, reason: string) => {
+            await this.options.websocketRegistry?.handleClose(ws, code, reason);
+          },
+        }
+      : undefined;
 
+    const runtime = getRuntime();
     const socketFile = process.env.CLUSTER_SOCKET_FILE;
 
     if (socketFile) {
       // Unix socket mode for cluster proxy workers
-      this.server = Bun.serve({
+      this.server = await runtime.http.serve({
         unix: socketFile,
         fetch: fetchHandler,
         websocket: websocketHandlers,
       });
       logger.info(`Server started at unix://${socketFile}`);
     } else {
-      this.server = Bun.serve({
+      const idleTimeoutSec =
+        typeof this.options.idleTimeout === 'number'
+          ? Math.max(0, Math.ceil(this.options.idleTimeout / 1000))
+          : undefined;
+
+      this.server = await runtime.http.serve({
         port: this.options.port ?? 3000,
         hostname: this.options.hostname,
         reusePort: this.options.reusePort,
-        idleTimeout:
-          typeof this.options.idleTimeout === 'number'
-            ? Math.max(0, Math.ceil(this.options.idleTimeout / 1000))
-            : undefined,
+        idleTimeout: idleTimeoutSec,
         fetch: fetchHandler,
         websocket: websocketHandlers,
       });
@@ -218,7 +224,7 @@ export class BunServer {
       // In proxy cluster mode (TCP fallback), report port to master
       const portFile = process.env.CLUSTER_PORT_FILE;
       if (portFile) {
-        Bun.write(portFile, String(port));
+        runtime.fs.write(portFile, String(port));
       }
     }
   }
@@ -301,16 +307,23 @@ export class BunServer {
   }
 
   /**
-   * 获取服务器实例
-   * @returns Bun Server 实例
+   * 获取平台中立的服务器句柄（推荐）
    */
-  public getServer(): Server<WebSocketConnectionData> | undefined {
+  public getServer(): IServerHandle | undefined {
     return this.server;
   }
 
   /**
+   * 获取底层原生服务器实例（不推荐，类型为 unknown）
+   * - Bun 平台：Bun.Server<WebSocketConnectionData>
+   * - Node.js 平台：node:http.Server
+   */
+  public getNativeServer(): unknown {
+    return this.server?.getNative();
+  }
+
+  /**
    * 检查服务器是否运行中
-   * @returns 是否运行中
    */
   public isRunning(): boolean {
     return this.server !== undefined;
