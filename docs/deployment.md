@@ -1,11 +1,13 @@
 # Production Deployment Guide
 
 This guide covers best practices for deploying Bun Server Framework applications
-to production.
+to production. The framework supports both **Bun** (optimal performance) and
+**Node.js 22+** runtimes — choose the one that fits your infrastructure.
 
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
+- [Runtime Selection](#runtime-selection)
 - [Environment Setup](#environment-setup)
 - [Configuration](#configuration)
 - [Process Management](#process-management)
@@ -16,21 +18,43 @@ to production.
 
 ## Prerequisites
 
-- Bun runtime (latest stable version)
-- Node.js 18+ (for compatibility)
-- Production-ready database (PostgreSQL, MySQL, etc.)
+- **Bun** >= 1.3.10 (Bun deployment) **or** **Node.js** >= 22.0.0 (Node.js deployment)
+- Production-ready database (PostgreSQL, MySQL, SQLite, etc.)
 - Reverse proxy (Nginx, Caddy, etc.)
+
+## Runtime Selection
+
+| Criteria | Bun | Node.js |
+|---|---|---|
+| Performance | Optimal (native APIs) | Good |
+| Ecosystem | Growing | Mature |
+| Docker image | `oven/bun` | `node:22-alpine` |
+| `idleTimeout` / `reusePort` | Supported | Not available |
+| Recommended for | New projects, latency-sensitive | Existing Node.js infra |
+
+The framework auto-detects the runtime at startup. See [Platform Guide](./platform.md) for details.
 
 ## Environment Setup
 
-### Install Bun
+### Option A — Bun Runtime
 
 ```bash
-# On Linux/macOS
+# Install Bun (Linux/macOS)
 curl -fsSL https://bun.sh/install | bash
 
-# Verify installation
+# Verify
 bun --version
+```
+
+### Option B — Node.js Runtime
+
+```bash
+# Use Node.js 22+ (LTS)
+node --version  # should be v22+
+
+# Build TypeScript to JS
+bun build src/main.ts --target=node --outdir=dist
+# or: npx tsc
 ```
 
 ### Set Environment Variables

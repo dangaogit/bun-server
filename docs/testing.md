@@ -72,6 +72,66 @@ await client.close();
 
 Options support `headers`, `body`, and `query`.
 
+## Multi-Runtime Testing
+
+The framework ships with a shared test strategy that runs the same test cases on both Bun and Node.js.
+
+### Test Structure
+
+```
+tests/platform/
+├── shared/          ← platform-neutral assertion helpers
+│   ├── suite.ts     ← TestSuite interface (test / expect / beforeEach)
+│   ├── fs.cases.ts
+│   ├── crypto.cases.ts
+│   ├── parser.cases.ts
+│   ├── process.cases.ts
+│   ├── websocket.cases.ts
+│   └── database.cases.ts
+├── bun/             ← bun:test runners (initRuntime('bun'))
+│   └── *.test.ts
+└── node/            ← vitest runners (initRuntime('node'))
+    ├── *.test.ts
+    └── build-smoke.test.ts
+```
+
+### Running Platform Tests
+
+```bash
+# Bun platform tests only
+bun run test:bun
+
+# Node.js platform tests only (uses vitest)
+bun run test:node
+
+# Both platforms
+bun run test:platform
+```
+
+### Writing Tests that Work on Both Runtimes
+
+Always call `initRuntime()` at the start of your test file:
+
+```ts
+// tests/platform/bun/fs.test.ts
+import { describe, test, expect, beforeEach } from 'bun:test';
+import { initRuntime, _resetRuntime } from '../../../src/platform/runtime';
+import { runFsCases } from '../shared/fs.cases';
+
+initRuntime('bun');
+runFsCases({ test, expect, beforeEach });
+```
+
+```ts
+// tests/platform/node/fs.test.ts
+import { describe, test, expect, beforeEach } from 'vitest';
+import { initRuntime, _resetRuntime } from '../../../src/platform/runtime';
+import { runFsCases } from '../shared/fs.cases';
+
+beforeEach(() => { _resetRuntime(); initRuntime('node'); });
+runFsCases({ test, expect, beforeEach });
+```
+
 ## Example with bun:test
 
 ```ts

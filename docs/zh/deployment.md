@@ -1,10 +1,11 @@
 # 生产部署指南
 
-本文档介绍将 Bun Server Framework 应用部署到生产环境的最佳实践。
+本文档介绍将 Bun Server Framework 应用部署到生产环境的最佳实践。框架同时支持 **Bun**（最优性能）和 **Node.js 22+** 运行时，请根据基础设施选择合适的方案。
 
 ## 目录
 
 - [前置要求](#前置要求)
+- [运行时选择](#运行时选择)
 - [环境设置](#环境设置)
 - [配置](#配置)
 - [进程管理](#进程管理)
@@ -15,21 +16,43 @@
 
 ## 前置要求
 
-- Bun runtime（最新稳定版本）
-- Node.js 18+（用于兼容性）
-- 生产级数据库（PostgreSQL、MySQL 等）
+- **Bun** >= 1.3.10（Bun 部署方案）**或** **Node.js** >= 22.0.0（Node.js 部署方案）
+- 生产级数据库（PostgreSQL、MySQL、SQLite 等）
 - 反向代理（Nginx、Caddy 等）
+
+## 运行时选择
+
+| 维度 | Bun | Node.js |
+|---|---|---|
+| 性能 | 最优（原生 API） | 良好 |
+| 生态成熟度 | 持续增长 | 成熟 |
+| Docker 镜像 | `oven/bun` | `node:22-alpine` |
+| `idleTimeout` / `reusePort` | 支持 | 不可用 |
+| 推荐场景 | 新项目、延迟敏感型应用 | 已有 Node.js 基础设施 |
+
+框架在启动时自动检测运行时。详见[平台适配指南](./platform.md)。
 
 ## 环境设置
 
-### 安装 Bun
+### 方案 A — Bun 运行时
 
 ```bash
-# 在 Linux/macOS 上
+# 安装 Bun（Linux/macOS）
 curl -fsSL https://bun.sh/install | bash
 
-# 验证安装
+# 验证
 bun --version
+```
+
+### 方案 B — Node.js 运行时
+
+```bash
+# 使用 Node.js 22+（LTS）
+node --version  # 应为 v22+
+
+# 构建 TypeScript 为 JS
+bun build src/main.ts --target=node --outdir=dist
+# 或：npx tsc
 ```
 
 ### 设置环境变量

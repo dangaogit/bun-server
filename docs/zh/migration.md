@@ -2,6 +2,48 @@
 
 适用于从项目早期版本或其他框架迁移到最新 Bun Server Framework 的场景。
 
+## v2.x → v3.0（平台适配层）
+
+v3.0.0 引入 **Platform Adapter Layer**，在保留 Bun 最优性能的同时支持 Node.js 22+。
+
+### 破坏性变更
+
+| 变更点 | 之前 | 之后 |
+|---|---|---|
+| `BunServer.getServer()` 返回类型 | `Bun.Server \| undefined` | `IServerHandle \| undefined` |
+| `WsArgumentsHost.getClient()` 返回类型 | `ServerWebSocket<T>` | `IWebSocket<T>` |
+
+### 迁移步骤
+
+**1. 更新 WebSocket 守卫类型**
+
+```typescript
+// 之前
+import type { ServerWebSocket } from 'bun';
+getClient(): ServerWebSocket<unknown>
+
+// 之后
+import type { IWebSocket } from '@dangao/bun-server';
+getClient(): IWebSocket<unknown>
+```
+
+**2. 更新服务器句柄访问**
+
+```typescript
+// 之前
+const server: Bun.Server | undefined = app.getServer();
+
+// 之后
+import type { IServerHandle } from '@dangao/bun-server';
+const server: IServerHandle | undefined = app.getServer();
+// 原生访问（不推荐，类型为 unknown）：
+const native: unknown = app.getNativeServer();
+```
+
+**3. 其他均向后兼容。** 数据库配置、模块 API、控制器、服务和中间件无需修改。
+
+---
+
 ## 1. 项目结构调整
 
 - 统一入口到 `src/index.ts`，示例项目可放在 `examples/`。

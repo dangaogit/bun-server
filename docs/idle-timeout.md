@@ -1,13 +1,15 @@
 # idleTimeout & SSE Keep-Alive
 
+> **Platform note:** `idleTimeout`, `reusePort`, and SSE TCP keepalive via `server.timeout` are **Bun-exclusive** features. On Node.js they are silently ignored. The `@IdleTimeout(ms)` decorator (handler-level timeout) works on both runtimes. See [Platform Guide](./platform.md#bun-exclusive-features) for the full list.
+
 ## Two layers of timeout
 
 Bun Server has **two independent timeout mechanisms** — understanding their difference is critical for SSE / streaming use cases.
 
-| Layer | Config | Scope | Mechanism |
-|-------|--------|-------|-----------|
-| **TCP connection** | `Application({ idleTimeout })` | Bun.serve level | Bun kernel closes the TCP socket when no bytes flow for N seconds |
-| **Handler logic** | `@IdleTimeout(ms)` decorator | Per-route `Promise.race` | Returns `408 Request Timeout` if the handler doesn't resolve in time |
+| Layer | Config | Scope | Mechanism | Bun | Node.js |
+|-------|--------|-------|-----------|-----|---------|
+| **TCP connection** | `Application({ idleTimeout })` | Bun.serve level | Bun kernel closes the TCP socket when no bytes flow for N seconds | Yes | Ignored |
+| **Handler logic** | `@IdleTimeout(ms)` decorator | Per-route `Promise.race` | Returns `408 Request Timeout` if the handler doesn't resolve in time | Yes | Yes |
 
 > **Key point:** For SSE responses the handler returns a `Response` immediately (with a streaming body). The handler-level `@IdleTimeout` has already resolved at that point and will **not** protect or kill the stream. Only the TCP-level `idleTimeout` can break an SSE connection.
 

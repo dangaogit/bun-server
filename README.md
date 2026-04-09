@@ -3,10 +3,11 @@
 > Examples: `https://disb-examples-{example-name}.dangaogm.com`
 
 [![bun](https://img.shields.io/badge/Bun-1.3.10%2B-000?logo=bun&logoColor=fff)](https://bun.sh/)
+[![node](https://img.shields.io/badge/Node.js-22%2B-339933?logo=node.js&logoColor=fff)](https://nodejs.org/)
 [![typescript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=fff)](https://www.typescriptlang.org/)
 [![license](https://img.shields.io/badge/license-MIT-blue)](#license)
 
-> A high-performance, decorator-driven DI web framework running on Bun Runtime.
+> A high-performance, decorator-driven DI web framework with multi-runtime support (Bun & Node.js).
 
 - [Why Bun Server](#why-@dangao/bun-server)
 - [Features](#features)
@@ -24,8 +25,10 @@
 
 ## Why Bun Server
 
-- **Native Bun**: built on top of `Bun.serve`, embracing native TS, fast I/O and
-  the Bun package manager.
+- **Multi-runtime**: runs on Bun (optimal) and Node.js 22+ via the Platform Adapter
+  Layer — same codebase, automatic runtime detection.
+- **Native Bun performance**: when running on Bun, uses `Bun.serve`, `Bun.file`,
+  `Bun.CryptoHasher` and other native APIs for maximum performance.
 - **Modern DX**: decorators, metadata and DI everywhere — controllers, services,
   middleware, validation.
 - **Lightweight yet extensible**: modular DI + extension layer + logging
@@ -211,6 +214,81 @@ Container
 
 For detailed lifecycle documentation, see
 [Request Lifecycle](./docs/request-lifecycle.md).
+
+### Platform Adapter Layer
+
+Bun Server abstracts all runtime-specific APIs behind a unified `IPlatform` interface, enabling transparent execution on **Bun** (optimal performance) and **Node.js 22+** (broad compatibility).
+
+```
+┌──────────────────────────────────────────────────────┐
+│                  Application Layer                    │
+│   Controllers / Services / Modules / Middleware       │
+└──────────────────────────┬───────────────────────────┘
+                           │ getRuntime()
+┌──────────────────────────▼───────────────────────────┐
+│              Platform Adapter Layer                   │
+│  IFsAdapter · ICryptoAdapter · IParserAdapter         │
+│  IProcessAdapter · IHttpDriver · IWebSocket           │
+└──────┬───────────────────────────────┬───────────────┘
+       │                               │
+┌──────▼──────┐                 ┌──────▼──────┐
+│ BunPlatform │                 │ NodePlatform│
+│ Bun.serve   │                 │ node:http   │
+│ Bun.file    │                 │ node:fs     │
+│ Bun.Crypto  │                 │ node:crypto │
+│ spawn(bun)  │                 │ ws package  │
+└─────────────┘                 └─────────────┘
+```
+
+DatabaseModule internally detects the platform via `getRuntime().engine`:
+- **Bun** → `bun:sqlite` (SQLite) / `Bun.SQL` (PostgreSQL + MySQL)
+- **Node.js** → `better-sqlite3` (SQLite) / `postgres` (PostgreSQL) / `mysql2` (MySQL)
+
+**Platform support matrix:**
+
+| Feature | Bun | Node.js |
+|---|---|---|
+| HTTP Server | `Bun.serve` | `node:http` |
+| WebSocket | `Bun.ServerWebSocket` | `ws` package |
+| File I/O | `Bun.file / write` | `node:fs` |
+| Crypto (JWT) | `Bun.CryptoHasher` | `node:crypto` |
+| JSONC / JSON5 | `Bun.JSONC / JSON5` | `jsonc-parser / json5` |
+| Markdown | `Bun.markdown` | `marked` |
+| Cluster spawn | `spawn` (bun) | `node:child_process` |
+| SQLite | `bun:sqlite` | `better-sqlite3` |
+| PostgreSQL | `Bun.SQL` | `postgres` package |
+| MySQL | `Bun.SQL` | `mysql2` package |
+| Performance | Optimal | Good |
+
+All features are transparent to the user — the framework auto-detects the runtime at startup.
+
+**Platform configuration:**
+
+```typescript
+// Option 1: code config (highest priority)
+const app = new Application({ platform: 'node' });
+app.registerModule(AppModule);
+await app.listen(3000);
+
+// Option 2: CLI argument
+// bun run main.ts --platform=node
+
+// Option 3: environment variable
+// BUN_SERVER_PLATFORM=node node main.js
+
+// Option 4: auto-detect (default, no config needed)
+// Running under Bun → BunPlatform
+// Running under Node.js → NodePlatform
+```
+
+### Platform Differences
+
+- **`BunServer.getServer()`** now returns `IServerHandle` (platform-neutral). Use `getNativeServer(): unknown` to access the raw underlying instance (Bun: `Bun.Server<T>`, Node: `http.Server`). Raw access is discouraged.
+- **WebSocket guards**: `WsArgumentsHost.getClient()` returns `IWebSocket<T>` instead of Bun's `ServerWebSocket<T>`. This is the only breaking change in the WebSocket public API.
+- **Database, HTTP, file I/O, crypto** — all underlying implementations are automatically switched by the Platform Adapter. **Zero user configuration needed.**
+- **`idleTimeout` / `reusePort` / SSE TCP keepalive** are Bun-exclusive features; silently ignored on Node.js.
+
+See [docs/platform.md](./docs/platform.md) for the full platform guide.
 
 ## Getting Started
 

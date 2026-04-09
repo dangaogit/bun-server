@@ -4,6 +4,49 @@
 
 ---
 
+## v2.x → v3.0 (Platform Adapter)
+
+v3.0.0 introduces the **Platform Adapter Layer** enabling Node.js 22+ support alongside Bun.
+
+### Breaking Changes
+
+| Change | Before | After |
+|---|---|---|
+| `BunServer.getServer()` return type | `Bun.Server \| undefined` | `IServerHandle \| undefined` |
+| `WsArgumentsHost.getClient()` return type | `ServerWebSocket<T>` | `IWebSocket<T>` |
+
+### Migration Steps
+
+**1. Update WebSocket guard types**
+
+```typescript
+// Before
+import type { ServerWebSocket } from 'bun';
+getClient(): ServerWebSocket<unknown>
+
+// After
+import type { IWebSocket } from '@dangao/bun-server';
+getClient(): IWebSocket<unknown>
+```
+
+**2. Update server handle access**
+
+```typescript
+// Before
+const server: Bun.Server | undefined = app.getServer();
+
+// After
+import type { IServerHandle } from '@dangao/bun-server';
+const server: IServerHandle | undefined = app.getServer();
+// Raw native access (not recommended):
+const native: unknown = app.getNativeServer();
+```
+
+**3. Everything else is backward compatible.**
+Database configuration, module APIs, controllers, services, and middleware require no changes.
+
+---
+
 ## v1.x → v2.0
 
 v2.0.0 is **fully backward compatible** with v1.x. All existing modules, APIs, and patterns continue to work without changes.

@@ -1,13 +1,15 @@
 # idleTimeout 与 SSE 保活
 
+> **平台说明：** `idleTimeout`、`reusePort` 以及基于 `server.timeout` 的 SSE TCP 保活是 **Bun 独有**特性，在 Node.js 上会被静默忽略。`@IdleTimeout(ms)` 装饰器（handler 级超时）在两个平台均可用。详见[平台适配指南](./platform.md#bun-独有特性)。
+
 ## 两层超时机制
 
 Bun Server 有**两套独立的超时机制**——理解它们的区别对 SSE / 流式场景至关重要。
 
-| 层面 | 配置方式 | 作用域 | 机制 |
-|------|----------|--------|------|
-| **TCP 连接级** | `Application({ idleTimeout })` | Bun.serve 底层 | Bun 内核在连接无数据流动 N 秒后直接断开 socket |
-| **Handler 逻辑级** | `@IdleTimeout(ms)` 装饰器 | 路由粒度的 `Promise.race` | handler 未在指定时间内 resolve 则返回 `408 Request Timeout` |
+| 层面 | 配置方式 | 作用域 | 机制 | Bun | Node.js |
+|------|----------|--------|------|-----|---------|
+| **TCP 连接级** | `Application({ idleTimeout })` | Bun.serve 底层 | Bun 内核在连接无数据流动 N 秒后直接断开 socket | 支持 | 忽略 |
+| **Handler 逻辑级** | `@IdleTimeout(ms)` 装饰器 | 路由粒度的 `Promise.race` | handler 未在指定时间内 resolve 则返回 `408 Request Timeout` | 支持 | 支持 |
 
 > **关键：** 对于 SSE 响应，handler 会立即返回一个带流式 body 的 `Response`。此时 handler 层面的 `@IdleTimeout` 已经 resolve，**不会**保护或终止该流。只有 TCP 级别的 `idleTimeout` 才能断开 SSE 连接。
 
