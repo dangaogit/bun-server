@@ -65,10 +65,17 @@
     "typescript": "catalog:",
     "vitest": "^4.1.4"
   },
+  "peerDependencies": {
+    "@vscode/sqlite3": "5.1.12-vscode"
+  },
+  "peerDependenciesMeta": {
+    "@vscode/sqlite3": {
+      "optional": true
+    }
+  },
   "dependencies": {
     "@dangao/logsmith": "workspace:*",
     "@dangao/nacos-client": "workspace:*",
-    "@vscode/sqlite3": "5.1.12-vscode",
     "json5": "^2.2.3",
     "jsonc-parser": "^3.3.1",
     "marked": "^18.0.0",

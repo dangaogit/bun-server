@@ -185,9 +185,17 @@ export class ConnectionPool {
       const { Database } = await import('bun:sqlite');
       return new Database(config.path);
     }
-    // Node.js：使用 @vscode/sqlite3
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const sqlite3 = require('@vscode/sqlite3') as any;
+    // Node.js：使用 @vscode/sqlite3（可选对等依赖，需用户自行安装）
+    let sqlite3: any;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      sqlite3 = require('@vscode/sqlite3');
+    } catch {
+      throw new Error(
+        '[bun-server] SQLite on Node.js requires @vscode/sqlite3.\n' +
+        'Install it with: bun add @vscode/sqlite3@5.1.12-vscode',
+      );
+    }
     return new sqlite3.Database(config.path);
   }
 

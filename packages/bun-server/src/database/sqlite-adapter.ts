@@ -58,8 +58,16 @@ export class SqliteAdapter {
       }
       this.db = db;
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const sqlite3 = require('@vscode/sqlite3') as any;
+      let sqlite3: any;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        sqlite3 = require('@vscode/sqlite3');
+      } catch {
+        throw new Error(
+          '[bun-server] SQLite on Node.js requires @vscode/sqlite3.\n' +
+          'Install it with: bun add @vscode/sqlite3@5.1.12-vscode',
+        );
+      }
       const db: any = new sqlite3.Database(config.database);
       if (config.wal !== false) {
         // Operations are serialized internally; WAL is queued before any query runs
