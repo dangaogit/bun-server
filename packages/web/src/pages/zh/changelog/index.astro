@@ -3,10 +3,20 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v3.0.2',
+    version: 'v3.0.3',
     date: '2026-04',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'fix', text: '将 ws 从 dependencies 移至 peerDependencies（optional: true），不再自动安装' },
+      { type: 'fix', text: 'setupWebSocket() 在 ws 缺失时抛出明确的安装提示：bun add ws' },
+    ],
+  },
+  {
+    version: 'v3.0.2',
+    date: '2026-04',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'refactor', text: '将 @vscode/sqlite3 从 dependencies 移至 peerDependencies（optional: true），不再自动安装' },
       { type: 'refactor', text: 'SqliteAdapter 与 ConnectionPool 在 @vscode/sqlite3 缺失时抛出明确的安装提示' },
