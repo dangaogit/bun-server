@@ -168,7 +168,17 @@ function setupWebSocket<T>(
   httpServer: import('node:http').Server,
   handlers: WebSocketHandlers<T>,
 ): void {
-  const { WebSocketServer } = require('ws') as typeof import('ws');
+  let wsModule: typeof import('ws');
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    wsModule = require('ws');
+  } catch {
+    throw new Error(
+      '[bun-server] WebSocket on Node.js requires the ws package.\n' +
+      'Install it with: bun add ws',
+    );
+  }
+  const { WebSocketServer } = wsModule;
   const wss = new WebSocketServer({ noServer: true });
 
   httpServer.on('upgrade', (request, socket, head) => {

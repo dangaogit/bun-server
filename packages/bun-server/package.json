@@ -66,10 +66,14 @@
     "vitest": "^4.1.4"
   },
   "peerDependencies": {
-    "@vscode/sqlite3": "5.1.12-vscode"
+    "@vscode/sqlite3": "5.1.12-vscode",
+    "ws": "^8.0.0"
   },
   "peerDependenciesMeta": {
     "@vscode/sqlite3": {
+      "optional": true
+    },
+    "ws": {
       "optional": true
     }
   },
@@ -82,7 +86,6 @@
     "mime-types": "^3.0.2",
     "mysql2": "^3.21.0",
     "postgres": "^3.4.9",
-    "reflect-metadata": "catalog:",
-    "ws": "^8.20.0"
+    "reflect-metadata": "catalog:"
   }
 }

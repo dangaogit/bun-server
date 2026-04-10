@@ -53,7 +53,7 @@
     },
     "packages/bun-server": {
       "name": "@dangao/bun-server",
-      "version": "3.0.1",
+      "version": "3.0.2",
       "dependencies": {
         "@dangao/logsmith": "workspace:*",
         "@dangao/nacos-client": "workspace:*",
@@ -64,7 +64,6 @@
         "mysql2": "^3.21.0",
         "postgres": "^3.4.9",
         "reflect-metadata": "catalog:",
-        "ws": "^8.20.0",
       },
       "devDependencies": {
         "@types/bun": "catalog:",
@@ -75,9 +74,11 @@
       },
       "peerDependencies": {
         "@vscode/sqlite3": "5.1.12-vscode",
+        "ws": "^8.0.0",
       },
       "optionalPeers": [
         "@vscode/sqlite3",
+        "ws",
       ],
     },
     "packages/logsmith": {
@@ -1392,8 +1393,6 @@
     "wrap-ansi": ["wrap-ansi@9.0.2", "", { "dependencies": { "ansi-styles": "^6.2.1", "string-width": "^7.0.0", "strip-ansi": "^7.1.0" } }, "sha512-42AtmgqjV+X1VpdOfyTGOYRi0/zsoLqtXQckTmqTeybT+BDIbM/Guxo7x3pE2vtpr1ok6xRqM9OpBe+Jyoqyww=="],
 
     "wrappy": ["wrappy@1.0.2", "", {}, "sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ=="],
-
-    "ws": ["ws@8.20.0", "", { "peerDependencies": { "bufferutil": "^4.0.1", "utf-8-validate": ">=5.0.2" }, "optionalPeers": ["bufferutil", "utf-8-validate"] }, "sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA=="],
 
     "xxhash-wasm": ["xxhash-wasm@1.1.0", "", {}, "sha512-147y/6YNh+tlp6nd/2pWq38i9h6mz/EuQ6njIrmW8D1BS5nCqs0P6DG+m6zTGnNz5I+uhZ0SHxBs9BsPrwcKDA=="],
 
