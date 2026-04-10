@@ -1,6 +1,11 @@
-import { describe, expect, test } from 'bun:test';
+import { beforeAll, describe, expect, test } from 'bun:test';
 
 import { Semaphore, SqliteAdapter } from '../../src/database/sqlite-adapter';
+import { initRuntime } from '../../src/platform/runtime';
+
+beforeAll(() => {
+  initRuntime();
+});
 
 describe('SqliteAdapter', () => {
   test('should execute query and write', async () => {
@@ -15,7 +20,7 @@ describe('SqliteAdapter', () => {
     );
     await adapter.execute('INSERT INTO users (name) VALUES (?)', ['alice']);
 
-    const rows = adapter.query<{ id: number; name: string }>(
+    const rows = await adapter.query<{ id: number; name: string }>(
       'SELECT * FROM users',
     );
     expect(rows.length).toBe(1);
