@@ -3,10 +3,23 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v3.0.3',
+    version: 'v3.0.5',
     date: '2026-04',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'feat', text: 'QueueService.registerCron() 在 Bun 平台改用原生 Bun.cron() — 支持完整 cron 表达式、无重叠保护、--hot 安全、UTC 调度；Node.js 平台保留 setInterval 兜底' },
+      { type: 'feat', text: 'ConnectionPool.acquireDisposable() — 返回 Disposable handle，支持 "await using { connection } = await pool.acquireDisposable()" 语法（TC39 Explicit Resource Management，Bun 1.3.12+ 原生支持）' },
+      { type: 'feat', text: 'IParserAdapter.renderMarkdownAnsi() — Bun 平台使用 Bun.markdown.ansi()（Bun 1.3.12+），Node.js 平台降级为纯文本' },
+      { type: 'chore', text: '新增 src/types/bun-augment.d.ts，在 @types/bun 正式更新前提供 Bun.markdown.ansi() 类型声明' },
+      { type: 'docs', text: 'ClusterManager Unix socket 清理逻辑补充 Bun 1.3.12 新语义注释（stop() 自动清理文件，重新绑定正确抛出 EADDRINUSE）' },
+    ],
+  },
+  {
+    version: 'v3.0.3',
+    date: '2026-04',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'fix', text: '将 ws 从 dependencies 移至 peerDependencies（optional: true），不再自动安装' },
       { type: 'fix', text: 'setupWebSocket() 在 ws 缺失时抛出明确的安装提示：bun add ws' },
