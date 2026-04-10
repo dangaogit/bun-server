@@ -178,8 +178,19 @@ function setupWebSocket<T>(
       'Install it with: bun add ws',
     );
   }
-  const { WebSocketServer } = wsModule;
-  const wss = new WebSocketServer({ noServer: true });
+  // Handle CJS (WebSocketServer as class property) and ESM interop (named export)
+  // Also falls back to .Server for ws < 7.5.0
+  const WebSocketServer =
+    (wsModule as unknown as Record<string, unknown>).WebSocketServer ??
+    (wsModule as unknown as { default?: Record<string, unknown> }).default?.WebSocketServer ??
+    (wsModule as unknown as Record<string, unknown>).Server;
+  if (!WebSocketServer) {
+    throw new Error(
+      '[bun-server] Could not find WebSocketServer in the ws module. ' +
+      'Please ensure ws >= 7.5.0 is installed.',
+    );
+  }
+  const wss = new (WebSocketServer as new (opts: unknown) => import('ws').WebSocketServer)({ noServer: true });
 
   httpServer.on('upgrade', (request, socket, head) => {
     wss.handleUpgrade(request, socket, head, (ws) => {
