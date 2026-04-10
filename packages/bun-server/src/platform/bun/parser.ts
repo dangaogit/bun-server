@@ -16,4 +16,8 @@ export const bunParserAdapter: IParserAdapter = {
   renderMarkdown(md: string): string {
     return Bun.markdown.html(md, { headings: true });
   },
+
+  renderMarkdownAnsi(md: string): string {
+    return Bun.markdown.ansi(md);
+  },
 };

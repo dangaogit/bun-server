@@ -186,7 +186,8 @@ export class ClusterManager {
     );
 
     this.socketDir = join(tmpdir(), `bun-cluster-${process.pid}`);
-    // Clean up stale directory from a previous run with the same PID
+    // Bun 1.3.12+：绑定已存在的 unix socket 会正确抛出 EADDRINUSE（不再静默覆盖），
+    // 因此必须在启动前清理同 PID 上一次运行遗留的目录。
     try { rmSync(this.socketDir, { recursive: true, force: true }); } catch (_error) { /* ignore */ }
     mkdirSync(this.socketDir, { recursive: true });
 
@@ -291,6 +292,9 @@ export class ClusterManager {
           );
 
           const socketPath = this.socketPaths[index]!;
+          // Bun 1.3.12+：worker 正常退出时 Bun.serve stop() 会自动删除 socket 文件；
+          // 但崩溃（SIGKILL / 异常退出）时 stop() 不会被调用，socket 文件仍残留，
+          // 此处手动清理确保新 worker 能成功绑定（否则会得到 EADDRINUSE）。
           try { rmSync(socketPath); } catch (_error) { /* ignore */ }
 
           this.workers[index] = this.spawnProxyWorker(index, socketPath);

@@ -53,6 +53,8 @@ export interface IParserAdapter {
   parseJSON5(content: string): unknown;
   parseJSONL(content: string): unknown[];
   renderMarkdown(md: string): string;
+  /** 将 Markdown 渲染为 ANSI 着色字符串，用于终端 / CLI 输出（Bun 1.3.12+） */
+  renderMarkdownAnsi(md: string): string;
 }
 
 /**

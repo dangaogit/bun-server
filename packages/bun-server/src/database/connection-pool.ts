@@ -117,6 +117,21 @@ export class ConnectionPool {
   }
 
   /**
+   * 获取连接并返回 Disposable 对象，支持 `await using` 语法（Bun 1.3.12+ / TC39 Explicit Resource Management）
+   *
+   * @example
+   * await using { connection } = await pool.acquireDisposable();
+   * // 作用域结束时自动调用 release，无需手动释放
+   */
+  public async acquireDisposable(): Promise<{ connection: unknown } & Disposable> {
+    const connection = await this.acquire();
+    return {
+      connection,
+      [Symbol.dispose]: () => this.release(connection),
+    };
+  }
+
+  /**
    * 获取池状态信息
    */
   public getPoolStats(): {

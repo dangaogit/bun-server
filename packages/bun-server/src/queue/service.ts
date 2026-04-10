@@ -10,6 +10,7 @@ import type {
   CronOptions,
 } from './types';
 import { QUEUE_OPTIONS_TOKEN } from './types';
+import { getRuntime } from '../platform/runtime';
 
 /**
  * 队列服务
@@ -23,7 +24,7 @@ export class QueueService {
   private workers: Map<string, Set<Promise<void>>> = new Map();
   private cronJobs: Map<string, { handler: JobHandler; options: CronOptions }> =
     new Map();
-  private cronTimers: Map<string, ReturnType<typeof setInterval>> = new Map();
+  private cronTimers: Map<string, ReturnType<typeof setInterval> | { stop(): void }> = new Map();
 
   public constructor(@Inject(QUEUE_OPTIONS_TOKEN) options: QueueModuleOptions) {
     this.store = options.store!;
@@ -158,14 +159,21 @@ export class QueueService {
       await this.add(jobName, {} as T, undefined, queue);
     }
 
-    // 解析 Cron 表达式并设置定时器
-    // 注意：这里简化实现，实际应该使用 cron 解析库
-    const interval = this.parseCronInterval(options.pattern);
-    if (interval > 0) {
-      const timer = setInterval(async () => {
+    if (getRuntime().engine === 'bun') {
+      // Bun 平台：使用原生 Bun.cron() —— 支持完整 cron 表达式、无重叠、--hot 安全、UTC 调度
+      const job = (Bun as any).cron(options.pattern, async () => {
         await this.add(jobName, {} as T, undefined, queue);
-      }, interval);
-      this.cronTimers.set(key, timer);
+      });
+      this.cronTimers.set(key, job);
+    } else {
+      // Node.js 平台兜底：简化实现，仅支持基础 cron 格式
+      const interval = this.parseCronInterval(options.pattern);
+      if (interval > 0) {
+        const timer = setInterval(async () => {
+          await this.add(jobName, {} as T, undefined, queue);
+        }, interval);
+        this.cronTimers.set(key, timer);
+      }
     }
   }
 
@@ -291,9 +299,12 @@ export class QueueService {
    * 销毁服务，清理资源
    */
   public destroy(): void {
-    // 清理所有定时器
-    for (const timer of this.cronTimers.values()) {
-      clearInterval(timer);
+    for (const handle of this.cronTimers.values()) {
+      if (handle && typeof handle === 'object' && 'stop' in handle) {
+        (handle as { stop(): void }).stop();
+      } else {
+        clearInterval(handle as ReturnType<typeof setInterval>);
+      }
     }
     this.cronTimers.clear();
     this.cronJobs.clear();

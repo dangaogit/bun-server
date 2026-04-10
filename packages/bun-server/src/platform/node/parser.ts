@@ -31,4 +31,10 @@ export const nodeParserAdapter: IParserAdapter = {
     markedSync.setOptions({ async: false });
     return markedSync(md) as string;
   },
+
+  renderMarkdownAnsi(md: string): string {
+    // Node.js 平台无 Bun.markdown.ansi()，降级为纯文本（去除 HTML 标签）
+    const html = this.renderMarkdown(md);
+    return html.replace(/<[^>]+>/g, '');
+  },
 };
