@@ -61,6 +61,66 @@ const client = await module.createHttpClient();
 
 `options` 支持 `headers`、`body`、`query`。响应对象包含 `status`、`headers`、`body`、`text`、`ok`。
 
+## 多运行时测试
+
+框架内置的共享测试策略，能在 Bun 和 Node.js 上运行完全相同的测试用例。
+
+### 测试目录结构
+
+```
+tests/platform/
+├── shared/          ← 平台无关的断言辅助函数
+│   ├── suite.ts     ← TestSuite 接口（test / expect / beforeEach）
+│   ├── fs.cases.ts
+│   ├── crypto.cases.ts
+│   ├── parser.cases.ts
+│   ├── process.cases.ts
+│   ├── websocket.cases.ts
+│   └── database.cases.ts
+├── bun/             ← bun:test 运行器（initRuntime('bun')）
+│   └── *.test.ts
+└── node/            ← vitest 运行器（initRuntime('node')）
+    ├── *.test.ts
+    └── build-smoke.test.ts
+```
+
+### 执行平台测试
+
+```bash
+# 仅 Bun 平台测试
+bun run test:bun
+
+# 仅 Node.js 平台测试（使用 vitest）
+bun run test:node
+
+# 两个平台全部测试
+bun run test:platform
+```
+
+### 编写跨平台测试
+
+在测试文件开头调用 `initRuntime()`：
+
+```ts
+// tests/platform/bun/fs.test.ts
+import { test, expect, beforeEach } from 'bun:test';
+import { initRuntime, _resetRuntime } from '../../../src/platform/runtime';
+import { runFsCases } from '../shared/fs.cases';
+
+initRuntime('bun');
+runFsCases({ test, expect, beforeEach });
+```
+
+```ts
+// tests/platform/node/fs.test.ts
+import { test, expect, beforeEach } from 'vitest';
+import { initRuntime, _resetRuntime } from '../../../src/platform/runtime';
+import { runFsCases } from '../shared/fs.cases';
+
+beforeEach(() => { _resetRuntime(); initRuntime('node'); });
+runFsCases({ test, expect, beforeEach });
+```
+
 ## 配合 bun:test 使用
 
 ```ts

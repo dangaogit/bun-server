@@ -3,6 +3,7 @@ import { constants } from 'node:fs';
 import { join } from 'node:path';
 
 import type { UploadedFileInfo } from './types';
+import { getRuntime } from '../platform/runtime';
 
 export interface SaveFileOptions {
   dest: string;
@@ -51,7 +52,7 @@ export class FileStorage {
       }
     }
 
-    await Bun.write(targetPath, file);
+    await getRuntime().fs.write(targetPath, await file.arrayBuffer());
 
     return {
       fieldName,

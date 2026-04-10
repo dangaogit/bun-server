@@ -1,6 +1,7 @@
 import type { SwaggerDocument, SwaggerOptions, SwaggerPathItem } from './types';
 import { ControllerRegistry } from '../controller/controller';
 import { getControllerMetadata, getRouteMetadata } from '../controller/metadata';
+import { getRuntime } from '../platform/runtime';
 import {
   getApiTags,
   getApiOperation,
@@ -311,7 +312,7 @@ export class SwaggerGenerator {
    */
   public generateMarkdownHtml(): string {
     const md = this.generateMarkdown();
-    return Bun.markdown.html(md, { headings: true });
+    return getRuntime().parser.renderMarkdown(md);
   }
 
   /**

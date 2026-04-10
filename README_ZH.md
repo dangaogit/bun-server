@@ -3,11 +3,11 @@
 > Examples: `https://disb-examples-{example-name}.dangaogm.com`
 
 [![bun](https://img.shields.io/badge/Bun-1.3.10%2B-000?logo=bun&logoColor=fff)](https://bun.sh/)
+[![node](https://img.shields.io/badge/Node.js-22%2B-339933?logo=node.js&logoColor=fff)](https://nodejs.org/)
 [![typescript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=fff)](https://www.typescriptlang.org/)
 [![license](https://img.shields.io/badge/license-MIT-blue)](#许可证)
 
-> Bun Server 是一个运行在 Bun Runtime 上的高性能、装饰器驱动的 DI Web
-> 框架，目标是为企业级应用提供即开即用的现代体验。
+> Bun Server 是一个支持多运行时（Bun & Node.js）的高性能、装饰器驱动的 DI Web 框架，目标是为企业级应用提供即开即用的现代体验。
 
 - [Bun Server](#@dangao/bun-server)
   - [为什么选择 Bun Server](#为什么选择-@dangao/bun-server)
@@ -26,18 +26,13 @@
 
 ## 为什么选择 Bun Server
 
-- **原生 Bun**：充分利用 Bun Runtime 的高性能 I/O、原生 TypeScript
-  与极速包管理器。
-- **现代 DX**：大量使用装饰器、元数据与
-  DI，让控制器、服务、路由、验证与中间件的编写极其顺滑。
-- **轻量 +
-  可扩展**：松耦合的模块系统、扩展系统与日志框架，既可以快速起步，也能按需裁剪。
-- **Monorepo 友好**：原生支持 Bun workspaces，使用 `workspace:*`
-  协议管理内部依赖，配合 catalog 统一版本，完美适配多包协作场景。
-- **完整测试矩阵**：内置单元/集成测试、压力与基准测试用例，Security 和 Swagger
-  模块测试覆盖完整，便于持续优化。
-- **AI 友好**：npm 包中包含完整的源码和测试文件，使 AI 工具（如 Cursor）能够
-  更好地分析代码、提供建议，并深入理解框架内部实现。
+- **多运行时**：通过 Platform Adapter Layer 同时支持 Bun（最优性能）和 Node.js 22+，相同代码库，运行时自动检测。
+- **原生 Bun 性能**：在 Bun 上运行时，使用 `Bun.serve`、`Bun.file`、`Bun.CryptoHasher` 等原生 API 获得最高性能。
+- **现代 DX**：大量使用装饰器、元数据与 DI，让控制器、服务、路由、验证与中间件的编写极其顺滑。
+- **轻量 + 可扩展**：松耦合的模块系统、扩展系统与日志框架，既可以快速起步，也能按需裁剪。
+- **Monorepo 友好**：原生支持 Bun workspaces，使用 `workspace:*` 协议管理内部依赖，配合 catalog 统一版本，完美适配多包协作场景。
+- **完整测试矩阵**：内置单元/集成测试、压力与基准测试用例，Security 和 Swagger 模块测试覆盖完整，便于持续优化。
+- **AI 友好**：npm 包中包含完整的源码和测试文件，使 AI 工具（如 Cursor）能够更好地分析代码、提供建议，并深入理解框架内部实现。
 
 ## 核心特性
 
@@ -209,11 +204,86 @@ Container
 
 详细的生命周期文档请参阅 [请求生命周期](./docs/zh/request-lifecycle.md)。
 
+### Platform Adapter Layer（平台适配层）
+
+Bun Server 将所有运行时相关的 API 抽象到统一的 `IPlatform` 接口后，实现在 **Bun**（最优性能）和 **Node.js 22+**（广泛兼容）上透明运行。
+
+```
+┌──────────────────────────────────────────────────────┐
+│                   应用层                              │
+│   Controllers / Services / Modules / Middleware       │
+└──────────────────────────┬───────────────────────────┘
+                           │ getRuntime()
+┌──────────────────────────▼───────────────────────────┐
+│              Platform Adapter Layer                   │
+│  IFsAdapter · ICryptoAdapter · IParserAdapter         │
+│  IProcessAdapter · IHttpDriver · IWebSocket           │
+└──────┬───────────────────────────────┬───────────────┘
+       │                               │
+┌──────▼──────┐                 ┌──────▼──────┐
+│ BunPlatform │                 │ NodePlatform│
+│ Bun.serve   │                 │ node:http   │
+│ Bun.file    │                 │ node:fs     │
+│ Bun.Crypto  │                 │ node:crypto │
+│ spawn(bun)  │                 │ ws package  │
+└─────────────┘                 └─────────────┘
+```
+
+DatabaseModule 通过 `getRuntime().engine` 自动感知平台：
+- **Bun** → `bun:sqlite`（SQLite）/ `Bun.SQL`（PostgreSQL + MySQL）
+- **Node.js** → `better-sqlite3`（SQLite）/ `postgres`（PostgreSQL）/ `mysql2`（MySQL）
+
+**平台支持矩阵：**
+
+| 特性 | Bun | Node.js |
+|---|---|---|
+| HTTP 服务器 | `Bun.serve` | `node:http` |
+| WebSocket | `Bun.ServerWebSocket` | `ws` 包 |
+| 文件 I/O | `Bun.file / write` | `node:fs` |
+| Crypto（JWT） | `Bun.CryptoHasher` | `node:crypto` |
+| JSONC / JSON5 | `Bun.JSONC / JSON5` | `jsonc-parser / json5` |
+| Markdown | `Bun.markdown` | `marked` |
+| Cluster spawn | `spawn` (bun) | `node:child_process` |
+| SQLite | `bun:sqlite` | `better-sqlite3` |
+| PostgreSQL | `Bun.SQL` | `postgres` 包 |
+| MySQL | `Bun.SQL` | `mysql2` 包 |
+| 性能表现 | 最优 | 良好 |
+
+所有特性对用户完全透明——框架在启动时自动检测运行时环境。
+
+**平台配置方式：**
+
+```typescript
+// 方式一：代码配置（最高优先级）
+const app = new Application({ platform: 'node' });
+app.registerModule(AppModule);
+await app.listen(3000);
+
+// 方式二：CLI 参数
+// bun run main.ts --platform=node
+
+// 方式三：环境变量
+// BUN_SERVER_PLATFORM=node node main.js
+
+// 方式四：自动检测（默认，无需配置）
+// 运行在 Bun 下 → BunPlatform
+// 运行在 Node.js 下 → NodePlatform
+```
+
+### 平台差异说明
+
+- **`BunServer.getServer()`** 现在返回 `IServerHandle`（平台中立类型）。使用 `getNativeServer(): unknown` 可访问底层原生实例（Bun: `Bun.Server<T>`，Node: `http.Server`），不建议直接依赖。
+- **WebSocket 守卫**：`WsArgumentsHost.getClient()` 返回 `IWebSocket<T>` 而非 Bun 的 `ServerWebSocket<T>`，这是 WebSocket 公开 API 中的唯一破坏性变更。
+- **数据库、HTTP、文件 I/O、Crypto** — 所有底层实现均由 Platform Adapter 自动切换，**用户零额外配置**。
+- **`idleTimeout` / `reusePort` / SSE TCP keepalive** 是 Bun 独有特性，在 Node.js 上会被静默忽略。
+
+详细文档参阅 [docs/zh/platform.md](./docs/zh/platform.md)。
+
 ## 快速上手
 
 ### 环境要求
 
-- Bun >= `1.3.10`
+- Bun >= `1.3.10`（Bun 平台）或 Node.js >= `22.0.0`（Node.js 平台）
 - Node.js / npm 只在极少数脚手架场景使用
 
 ### TypeScript 配置 ⚠️

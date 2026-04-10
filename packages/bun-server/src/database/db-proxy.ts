@@ -49,10 +49,10 @@ const baseDb = async (
   if (tenantId) {
     const tenantSql = sqlManager.get(tenantId);
     if (tenantSql) {
-      return await tenantSql(strings, ...values);
+      return await (tenantSql as any)(strings, ...values);
     }
   }
-  return await sqlManager.getDefault()(strings, ...values);
+  return await (sqlManager.getDefault() as any)(strings, ...values);
 };
 
 function createDb(tenantId?: string): DbProxy {

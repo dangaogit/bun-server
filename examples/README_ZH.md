@@ -370,6 +370,32 @@ bun run examples/05-ai/01-basic-chat.ts
 
 ---
 
+### 06. 平台适配（Platform Adapter）— 多运行时支持
+
+**适合人群**：需要同时支持 Bun 和 Node.js 环境的开发者
+
+| 文件 | 核心模块 | 功能 | 端口 |
+|---|---|---|---|
+| `01-auto-detect.ts` | `Application` | 自动检测运行时（默认行为） | 3000 |
+| `02-explicit-node.ts` | `Application({ platform: 'node' })` | 显式指定 Node.js 适配器 | 3001 |
+| `03-cli-switch.ts` | CLI / 环境变量 | 无需修改代码切换平台 | 3002 |
+
+**快速开始**：
+```bash
+# 自动检测（Bun 环境下使用 BunPlatform）
+bun 06-platform/01-auto-detect.ts
+
+# 强制使用 Node.js 适配器
+bun 06-platform/02-explicit-node.ts
+
+# 通过 CLI 参数切换
+bun 06-platform/03-cli-switch.ts --platform=node
+```
+
+详见 [06-platform/README_ZH.md](./06-platform/README_ZH.md)
+
+---
+
 ## 📖 进一步学习
 
 - 📚 [API 文档](../docs/api.md)

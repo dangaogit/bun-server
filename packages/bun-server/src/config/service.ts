@@ -1,4 +1,5 @@
 import type { ConfigFileFormat } from './types';
+import { getRuntime } from '../platform/runtime';
 
 /**
  * 配置服务
@@ -7,16 +8,16 @@ import type { ConfigFileFormat } from './types';
 export class ConfigService<TConfig extends Record<string, unknown> = Record<string, unknown>> {
   /**
    * 解析配置内容，按 JSON -> JSONC -> JSON5 顺序自动尝试
-   * 利用 Bun 1.3.6+ 的 Bun.JSONC 和 Bun 1.3.7+ 的 Bun.JSON5
    * @param content - 配置文本内容
    * @param format - 强制指定格式（可选），省略则自动检测
    */
   public static parseConfigContent(content: string, format?: ConfigFileFormat): unknown {
+    const parser = getRuntime().parser;
     if (format === 'jsonc') {
-      return Bun.JSONC.parse(content);
+      return parser.parseJSONC(content);
     }
     if (format === 'json5') {
-      return Bun.JSON5.parse(content);
+      return parser.parseJSON5(content);
     }
     if (format === 'json') {
       return JSON.parse(content);
@@ -26,9 +27,9 @@ export class ConfigService<TConfig extends Record<string, unknown> = Record<stri
       return JSON.parse(content);
     } catch (_error) {
       try {
-        return Bun.JSONC.parse(content);
+        return parser.parseJSONC(content);
       } catch (_innerError) {
-        return Bun.JSON5.parse(content);
+        return parser.parseJSON5(content);
       }
     }
   }
@@ -38,7 +39,7 @@ export class ConfigService<TConfig extends Record<string, unknown> = Record<stri
    * @param filePath - 配置文件路径（.json / .jsonc / .json5）
    */
   public static async loadConfigFile(filePath: string): Promise<Record<string, unknown>> {
-    const file = Bun.file(filePath);
+    const file = getRuntime().fs.file(filePath);
     const content = await file.text();
 
     let format: ConfigFileFormat | undefined;

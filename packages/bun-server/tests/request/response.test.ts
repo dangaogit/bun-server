@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ResponseBuilder } from '../../src/request/response';
+import { initRuntime } from '../../src/platform/runtime';
+
+initRuntime('bun');
 
 describe('ResponseBuilder', () => {
   let tmpDir: string;
@@ -71,7 +74,7 @@ describe('ResponseBuilder', () => {
 
   test('should create file response from path', async () => {
     const filePath = join(tmpDir, 'hello.txt');
-    await Bun.write(filePath, 'file-content');
+    await writeFile(filePath, 'file-content', 'utf-8');
 
     const response = ResponseBuilder.file(filePath, {
       fileName: 'download.txt',

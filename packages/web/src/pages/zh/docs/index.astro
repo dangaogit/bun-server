@@ -4,18 +4,19 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 const docSections = [
   { href: '/zh/docs/guide', title: '快速开始', desc: '项目初始化、最小应用与基础流程' },
   { href: '/zh/docs/api', title: 'API 参考', desc: '控制器、路由、中间件、DI 核心能力' },
-  { href: '/zh/docs/ai', title: 'AI 模块', desc: '9 个官方 AI 模块：LLM、RAG、MCP 等', highlight: true },
+  { href: '/zh/docs/platform', title: '平台适配器', desc: '多运行时支持 — Bun 与 Node.js 22+', highlight: true },
+  { href: '/zh/docs/ai', title: 'AI 模块', desc: '9 个官方 AI 模块：LLM、RAG、MCP 等' },
   { href: '/zh/docs/testing', title: '测试指南', desc: 'Test.createTestingModule() 与测试客户端' },
   { href: '/zh/docs/microservice', title: '微服务', desc: 'Nacos、服务发现、熔断与治理' },
   { href: '/zh/docs/best-practices', title: '最佳实践', desc: '性能、安全与架构实践' },
-  { href: '/zh/docs/migration', title: '迁移指南', desc: '从 v1.x 升级到 v2.0' },
+  { href: '/zh/docs/migration', title: '迁移指南', desc: '从 v1.x / v2.x 升级到 v3.0' },
 ];
 ---
 
 <BaseLayout title="文档中心" description="Bun Server Framework 文档">
   <div class="mx-auto max-w-4xl px-6 py-12">
     <h1 class="mb-4 text-4xl font-bold text-white">文档中心</h1>
-    <p class="mb-12 text-zinc-400">@dangao/bun-server v2.0.0 完整参考文档</p>
+    <p class="mb-12 text-zinc-400">@dangao/bun-server v3.0.5 完整参考文档</p>
 
     <div class="grid gap-4 sm:grid-cols-2">
       {docSections.map((s) => (
@@ -31,7 +32,7 @@ const docSections = [
           <div class="flex items-center gap-2">
             <h2 class="font-semibold text-white">{s.title}</h2>
             {s.highlight && (
-              <span class="rounded-full bg-brand-500/20 px-2 py-0.5 text-xs font-semibold text-brand-300">v2.0</span>
+              <span class="rounded-full bg-brand-500/20 px-2 py-0.5 text-xs font-semibold text-brand-300">v3.0</span>
             )}
           </div>
           <p class="mt-1 text-sm text-zinc-400">{s.desc}</p>

@@ -2,6 +2,7 @@ import { join, normalize } from 'node:path';
 import { stat } from 'node:fs/promises';
 
 import type { Middleware } from '../middleware';
+import { getRuntime } from '../platform/runtime';
 
 export interface StaticFileOptions {
   root: string;
@@ -35,8 +36,8 @@ export function createStaticFileMiddleware(options: StaticFileOptions): Middlewa
         return await next();
       }
 
-      const file = Bun.file(filePath);
-      return new Response(file, {
+      const file = getRuntime().fs.file(filePath);
+      return new Response(file.stream(), {
         headers: {
           'Content-Type': file.type || 'application/octet-stream',
         },

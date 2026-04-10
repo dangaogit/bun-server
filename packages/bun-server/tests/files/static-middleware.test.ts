@@ -1,17 +1,20 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { createStaticFileMiddleware } from '../../src/files/static-middleware';
 import { Context } from '../../src/core/context';
+import { initRuntime } from '../../src/platform/runtime';
+
+initRuntime('bun');
 
 describe('Static File Middleware', () => {
   let root: string;
 
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'bun-static-'));
-    await Bun.write(join(root, 'hello.txt'), 'hello world');
+    await writeFile(join(root, 'hello.txt'), 'hello world', 'utf-8');
   });
 
   afterEach(async () => {

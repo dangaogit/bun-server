@@ -1,8 +1,9 @@
-import { spawn } from 'bun';
 import { LoggerManager } from '@dangao/logsmith';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { mkdirSync, rmSync, existsSync } from 'fs';
+import type { IServerHandle, IChildProcess } from '../platform/types';
+import { getRuntime } from '../platform/runtime';
 
 /**
  * 集群模式
@@ -38,12 +39,12 @@ export interface ClusterOptions {
  */
 export class ClusterManager {
   private readonly workerCount: number;
-  private readonly workers: ReturnType<typeof spawn>[] = [];
+  private readonly workers: IChildProcess[] = [];
   private readonly scriptPath: string;
   private readonly port: number;
   private readonly hostname?: string;
   private readonly mode: 'reusePort' | 'proxy';
-  private proxyServer?: ReturnType<typeof Bun.serve>;
+  private proxyServer?: IServerHandle;
   private socketPaths: string[] = [];
   private roundRobinIndex = 0;
   private socketDir?: string;
@@ -145,8 +146,8 @@ export class ClusterManager {
     this.monitorReusePortWorkers();
   }
 
-  private spawnReusePortWorker(index: number): ReturnType<typeof spawn> {
-    return spawn({
+  private spawnReusePortWorker(index: number): IChildProcess {
+    return getRuntime().process.spawn({
       cmd: ['bun', 'run', this.scriptPath],
       env: {
         ...process.env,
@@ -185,7 +186,8 @@ export class ClusterManager {
     );
 
     this.socketDir = join(tmpdir(), `bun-cluster-${process.pid}`);
-    // Clean up stale directory from a previous run with the same PID
+    // Bun 1.3.12+：绑定已存在的 unix socket 会正确抛出 EADDRINUSE（不再静默覆盖），
+    // 因此必须在启动前清理同 PID 上一次运行遗留的目录。
     try { rmSync(this.socketDir, { recursive: true, force: true }); } catch (_error) { /* ignore */ }
     mkdirSync(this.socketDir, { recursive: true });
 
@@ -197,7 +199,7 @@ export class ClusterManager {
     }
 
     await this.waitForWorkerSockets();
-    this.startProxyServer();
+    await this.startProxyServer();
 
     logger.info(
       `[Cluster] ${this.workerCount} workers ready (proxy mode, unix sockets)`,
@@ -206,8 +208,8 @@ export class ClusterManager {
     this.monitorProxyWorkers();
   }
 
-  private spawnProxyWorker(index: number, socketPath: string): ReturnType<typeof spawn> {
-    return spawn({
+  private spawnProxyWorker(index: number, socketPath: string): IChildProcess {
+    return getRuntime().process.spawn({
       cmd: ['bun', 'run', this.scriptPath],
       env: {
         ...process.env,
@@ -239,11 +241,11 @@ export class ClusterManager {
 
       if (allReady) {
         // Give workers a moment to finish bind+listen after file creation
-        await Bun.sleep(200);
+        await getRuntime().process.sleep(200);
         return;
       }
 
-      await Bun.sleep(100);
+      await getRuntime().process.sleep(100);
     }
 
     const ready = this.socketPaths.filter((p) => existsSync(p)).length;
@@ -252,11 +254,11 @@ export class ClusterManager {
     );
   }
 
-  private startProxyServer(): void {
+  private async startProxyServer(): Promise<void> {
     const sockets = this.socketPaths;
     const count = sockets.length;
 
-    this.proxyServer = Bun.serve({
+    this.proxyServer = await getRuntime().http.serve({
       port: this.port,
       hostname: this.hostname,
       fetch: async (req) => {
@@ -269,6 +271,7 @@ export class ClusterManager {
             headers: req.headers,
             body: req.body,
             redirect: 'manual',
+            // @ts-ignore — unix fetch is Bun-specific; Node fallback skips this
             unix: socketPath,
           });
         } catch (_error) {
@@ -289,6 +292,9 @@ export class ClusterManager {
           );
 
           const socketPath = this.socketPaths[index]!;
+          // Bun 1.3.12+：worker 正常退出时 Bun.serve stop() 会自动删除 socket 文件；
+          // 但崩溃（SIGKILL / 异常退出）时 stop() 不会被调用，socket 文件仍残留，
+          // 此处手动清理确保新 worker 能成功绑定（否则会得到 EADDRINUSE）。
           try { rmSync(socketPath); } catch (_error) { /* ignore */ }
 
           this.workers[index] = this.spawnProxyWorker(index, socketPath);
@@ -296,11 +302,11 @@ export class ClusterManager {
           const deadline = Date.now() + 15_000;
           while (Date.now() < deadline) {
             if (existsSync(socketPath)) {
-              await Bun.sleep(200);
+              await getRuntime().process.sleep(200);
               logger.info(`[Cluster] Worker ${index} restarted (unix socket)`);
               return;
             }
-            await Bun.sleep(100);
+            await getRuntime().process.sleep(100);
           }
 
           logger.error(`[Cluster] Worker ${index} failed to restart within 15s`);

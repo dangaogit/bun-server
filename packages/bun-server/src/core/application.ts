@@ -21,6 +21,8 @@ import { LoggerManager } from '@dangao/logsmith';
 import { EventModule } from '../events/event-module';
 import { AsyncProviderRegistry } from '../di/async-module';
 import { ServiceRegistryModule } from '../microservice/service-registry/service-registry-module';
+import type { PlatformEngine } from '../platform/types';
+import { initRuntime } from '../platform/runtime';
 
 /**
  * 应用配置选项
@@ -79,6 +81,19 @@ export interface ApplicationOptions {
     /** 心跳间隔（毫秒），默认 15000 */
     intervalMs?: number;
   };
+
+  /**
+   * 运行时平台选择
+   *
+   * 优先级（从高到低）：
+   * 1. 此字段（构造函数选项）
+   * 2. CLI 参数 `--platform=node`
+   * 3. 环境变量 `BUN_SERVER_PLATFORM=node`
+   * 4. 自动检测（有 Bun 全局对象则使用 bun，否则使用 node）
+   *
+   * @default 自动检测
+   */
+  platform?: PlatformEngine;
 }
 
 /**
@@ -94,6 +109,9 @@ export class Application {
   private signalHandlersInstalled: boolean = false;
 
   public constructor(options: ApplicationOptions = {}) {
+    // Initialize platform runtime first — must be the very first operation
+    initRuntime(options.platform);
+
     this.options = options;
     this.middlewarePipeline = new MiddlewarePipeline([createErrorHandlingMiddleware()]);
     this.websocketRegistry = WebSocketGatewayRegistry.getInstance();
@@ -175,7 +193,7 @@ export class Application {
     };
 
     this.server = new BunServer(serverOptions);
-    this.server.start();
+    await this.server.start();
 
     // 安装信号处理器（如果启用）
     if (this.options.enableSignalHandlers !== false) {

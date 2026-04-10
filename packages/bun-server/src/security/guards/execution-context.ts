@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import type { ServerWebSocket } from 'bun';
+import type { IWebSocket } from '../../platform/types';
 import type { Context } from '../../core/context';
 import type { ResponseBuilder } from '../../request/response';
 import type { Constructor } from '../../core/types';
@@ -38,14 +38,14 @@ class HttpArgumentsHostImpl implements HttpArgumentsHost {
  */
 class WsArgumentsHostImpl implements WsArgumentsHost {
   public constructor(
-    private readonly client: ServerWebSocket<unknown>,
+    private readonly client: IWebSocket<unknown>,
     private readonly data: unknown,
   ) {}
 
   /**
    * 获取 WebSocket 客户端
    */
-  public getClient(): ServerWebSocket<unknown> {
+  public getClient(): IWebSocket<unknown> {
     return this.client;
   }
 
@@ -80,7 +80,7 @@ export class ExecutionContextImpl implements ExecutionContext {
    * @param client - WebSocket 客户端
    * @param data - 消息数据
    */
-  public setWsContext(client: ServerWebSocket<unknown>, data: unknown): void {
+  public setWsContext(client: IWebSocket<unknown>, data: unknown): void {
     this.wsHost = new WsArgumentsHostImpl(client, data);
   }
 

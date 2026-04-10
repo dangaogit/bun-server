@@ -1,6 +1,5 @@
-import { Database, type SQLQueryBindings } from 'bun:sqlite';
-
 import type { SqliteV2Config } from './types';
+import { getRuntime } from '../platform/runtime';
 
 export interface DisposableLock {
   [Symbol.dispose](): void;
@@ -39,30 +38,80 @@ export class Semaphore {
   }
 }
 
+/**
+ * SQLite 适配器（自动感知运行时）
+ * Bun 平台下使用 bun:sqlite，Node.js 平台下使用 @vscode/sqlite3
+ */
 export class SqliteAdapter {
-  private readonly db: Database;
+  private readonly db: unknown;
   public readonly semaphore: Semaphore;
+  private readonly isBun: boolean;
 
   public constructor(config: SqliteV2Config) {
-    this.db = new Database(config.database);
-    if (config.wal !== false) {
-      this.db.exec('PRAGMA journal_mode = WAL;');
+    this.isBun = getRuntime().engine === 'bun';
+
+    if (this.isBun) {
+      const { Database } = require('bun:sqlite') as typeof import('bun:sqlite');
+      const db = new Database(config.database);
+      if (config.wal !== false) {
+        db.exec('PRAGMA journal_mode = WAL;');
+      }
+      this.db = db;
+    } else {
+      let sqlite3: any;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        sqlite3 = require('@vscode/sqlite3');
+      } catch {
+        throw new Error(
+          '[bun-server] SQLite on Node.js requires @vscode/sqlite3.\n' +
+          'Install it with: bun add @vscode/sqlite3@5.1.12-vscode',
+        );
+      }
+      const db: any = new sqlite3.Database(config.database);
+      if (config.wal !== false) {
+        // Operations are serialized internally; WAL is queued before any query runs
+        db.run('PRAGMA journal_mode = WAL;');
+      }
+      this.db = db;
     }
+
     this.semaphore = new Semaphore(config.maxWriteConcurrency ?? 1);
   }
 
-  public query<T = unknown>(sql: string, params: SQLQueryBindings[] = []): T[] {
-    const stmt = this.db.query(sql);
-    return stmt.all(...params) as T[];
+  public async query<T = unknown>(sql: string, params: unknown[] = []): Promise<T[]> {
+    if (this.isBun) {
+      const db = this.db as import('bun:sqlite').Database;
+      const stmt = db.query(sql);
+      return stmt.all(...params as Parameters<typeof stmt.all>) as T[];
+    }
+    return new Promise<T[]>((resolve, reject) => {
+      (this.db as any).all(sql, params, (err: Error | null, rows: T[]) => {
+        if (err) reject(err);
+        else resolve(rows ?? []);
+      });
+    });
   }
 
-  public async execute(sql: string, params: SQLQueryBindings[] = []): Promise<void> {
-    const stmt = this.db.query(sql);
-    stmt.run(...params);
+  public async execute(sql: string, params: unknown[] = []): Promise<void> {
+    if (this.isBun) {
+      const db = this.db as import('bun:sqlite').Database;
+      const stmt = db.query(sql);
+      stmt.run(...params as Parameters<typeof stmt.run>);
+    } else {
+      return new Promise<void>((resolve, reject) => {
+        (this.db as any).run(sql, params, (err: Error | null) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    }
   }
 
   public close(): void {
-    this.db.close();
+    if (typeof (this.db as any).close === 'function') {
+      (this.db as any).close();
+    }
   }
 }
 

@@ -110,11 +110,11 @@ export class RequestRecorder {
 
   /**
    * 从 JSONL 内容导入请求记录
-   * 利用 Bun 1.3.7+ 原生 Bun.JSONL.parse() 高性能解析
    * @param content - JSONL 格式文本
    */
   public importFromJsonl(content: string): void {
-    const records = Bun.JSONL.parse(content) as RequestRecord[];
+    const { getRuntime } = require('../platform/runtime') as typeof import('../platform/runtime');
+    const records = getRuntime().parser.parseJSONL(content) as RequestRecord[];
     for (const record of records) {
       if (record.id) {
         const oldRecord = this.buffer[this.writeIndex];
@@ -136,6 +136,7 @@ export class RequestRecorder {
    * @param content - JSONL 格式文本
    */
   public static parseJsonl(content: string): RequestRecord[] {
-    return Bun.JSONL.parse(content) as RequestRecord[];
+    const { getRuntime } = require('../platform/runtime') as typeof import('../platform/runtime');
+    return getRuntime().parser.parseJSONL(content) as RequestRecord[];
   }
 }

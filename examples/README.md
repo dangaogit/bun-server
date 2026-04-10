@@ -404,6 +404,32 @@ See [05-ai/README.md](./05-ai/README.md) for full documentation.
 
 ---
 
+### 06. Platform Adapter — Multi-Runtime Support
+
+**For**: Developers targeting both Bun and Node.js environments
+
+| File | Key Modules | Feature | Port |
+|---|---|---|---|
+| `01-auto-detect.ts` | `Application` | Auto-detects runtime (default) | 3000 |
+| `02-explicit-node.ts` | `Application({ platform: 'node' })` | Force Node.js adapter | 3001 |
+| `03-cli-switch.ts` | CLI / env var | Runtime switch without code changes | 3002 |
+
+**Quick start**:
+```bash
+# Auto-detect (BunPlatform when running under Bun)
+bun 06-platform/01-auto-detect.ts
+
+# Force Node.js adapter
+bun 06-platform/02-explicit-node.ts
+
+# Via CLI argument
+bun 06-platform/03-cli-switch.ts --platform=node
+```
+
+See [06-platform/README.md](./06-platform/README.md) for full documentation.
+
+---
+
 ## 📖 Further Learning
 
 - 📚 [API Documentation](../docs/api.md)

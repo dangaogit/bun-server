@@ -1,7 +1,7 @@
 import type { Context } from '../../core/context';
 import type { ResponseBuilder } from '../../request/response';
 import type { Constructor } from '../../core/types';
-import type { ServerWebSocket } from 'bun';
+import type { IWebSocket } from '../../platform/types';
 
 /**
  * 守卫接口
@@ -43,7 +43,7 @@ export interface WsArgumentsHost {
    * 获取 WebSocket 客户端
    * @returns WebSocket 连接对象
    */
-  getClient(): ServerWebSocket<unknown>;
+  getClient(): IWebSocket<unknown>;
 
   /**
    * 获取消息数据

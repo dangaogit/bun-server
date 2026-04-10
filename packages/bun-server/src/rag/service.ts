@@ -1,5 +1,6 @@
 import { Injectable } from '../di/decorators';
 import { Inject } from '../di/decorators';
+import { getRuntime } from '../platform/runtime';
 import type { EmbeddingService } from '../embedding/service';
 import { EMBEDDING_SERVICE_TOKEN } from '../embedding/types';
 import type { VectorStore } from '../vector-store/types';
@@ -120,7 +121,7 @@ export class RagService {
         return source.content;
 
       case 'file': {
-        const file = Bun.file(source.path);
+        const file = getRuntime().fs.file(source.path);
         return file.text();
       }
 

@@ -6,6 +6,7 @@ import type {
 } from '../types';
 import { extractVariables } from '../types';
 import { InMemoryPromptStore } from './memory-store';
+import { getRuntime } from '../../platform/runtime';
 
 export interface FilePromptStoreConfig {
   /** Directory containing JSON prompt files (default: './.prompts') */
@@ -73,7 +74,7 @@ export class FilePromptStore implements PromptStore {
     if (deleted) {
       try {
         const path = `${this.promptsDir}/${id}.json`;
-        await Bun.file(path).exists() && Bun.write(path, ''); // Soft delete (empty file)
+        await getRuntime().fs.file(path).exists() && getRuntime().fs.write(path, ''); // Soft delete (empty file)
       } catch (_error) {
         // ignore
       }
@@ -86,12 +87,12 @@ export class FilePromptStore implements PromptStore {
     this.loaded = true;
 
     try {
-      const glob = new Bun.Glob('*.json');
-      const files = Array.from(glob.scanSync(this.promptsDir));
+      const runtime = getRuntime();
+      const files = runtime.fs.glob('*.json', this.promptsDir);
 
       for (const file of files) {
         try {
-          const content = await Bun.file(`${this.promptsDir}/${file}`).text();
+          const content = await runtime.fs.file(`${this.promptsDir}/${file}`).text();
           if (!content.trim()) continue;
 
           const data = JSON.parse(content) as {
@@ -127,7 +128,7 @@ export class FilePromptStore implements PromptStore {
         null,
         2,
       );
-      await Bun.write(`${this.promptsDir}/${template.id}.json`, content);
+      await getRuntime().fs.write(`${this.promptsDir}/${template.id}.json`, content);
     } catch (_error) {
       // Ignore write errors (e.g., read-only filesystem)
     }

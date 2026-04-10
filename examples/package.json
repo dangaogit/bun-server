@@ -1,5 +1,6 @@
 {
   "name": "examples",
+  "type": "module",
   "private": true,
   "scripts": {
     "start:hello-world": "bun 00-quick-start/01-hello-world.ts",
@@ -49,6 +50,9 @@
     "start:ai-platform-mvp:api": "bun 05-ai/ai-platform-mvp/index.ts",
     "start:ai-platform-mvp:web": "cd 05-ai/ai-platform-mvp/web && bun run dev",
     "start:ai-platform-mvp": "bun run --parallel start:ai-platform-mvp:api start:ai-platform-mvp:web",
+    "start:platform-auto-detect": "bun 06-platform/01-auto-detect.ts",
+    "start:platform-explicit-node": "bun 06-platform/02-explicit-node.ts",
+    "start:platform-cli-switch": "bun 06-platform/03-cli-switch.ts",
     "start:examples:container": "bun deploy/run-examples.ts"
   },
   "dependencies": {
