@@ -3,10 +3,22 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v3.0.5',
+    version: 'v3.1.0',
     date: '2026-04',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'feat', text: 'NestJS-style ExistingProvider in module providers — { provide, useExisting } resolves to the same instance as the registered useExisting token (no duplicate singleton)' },
+      { type: 'feat', text: 'Export ExistingProvider type from @dangao/bun-server' },
+      { type: 'test', text: 'Cover alias resolution, cross-module Symbol export/inject, and throw when useExisting target is missing' },
+      { type: 'chore', text: 'Bump @dangao/bun-server and @dangao/bun-server-web to 3.1.0 and sync web changelog pages' },
+    ],
+  },
+  {
+    version: 'v3.0.5',
+    date: '2026-04',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'feat', text: 'QueueService.registerCron() now uses native Bun.cron() on Bun platform — full cron expression support, no-overlap guarantee, --hot safe, UTC scheduling; Node.js falls back to setInterval' },
       { type: 'feat', text: 'ConnectionPool.acquireDisposable() — returns a Disposable handle enabling "await using { connection } = await pool.acquireDisposable()" (TC39 Explicit Resource Management, Bun 1.3.12+)' },
