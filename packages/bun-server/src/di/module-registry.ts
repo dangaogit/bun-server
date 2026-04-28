@@ -165,6 +165,15 @@ export class ModuleRegistry {
         continue;
       }
 
+      if ('useExisting' in provider) {
+        container.register(provider.provide, {
+          lifecycle: provider.lifecycle ?? Lifecycle.Singleton,
+          factory: () =>
+            container.resolve(provider.useExisting as Constructor<unknown>),
+        });
+        continue;
+      }
+
       if ('useClass' in provider) {
         const token = provider.provide ?? provider.useClass;
         container.register(token, {
@@ -254,6 +263,12 @@ export class ModuleRegistry {
               instances.push(provider.useValue);
             }
           } else if ('useFactory' in provider) {
+            const instance = ref.container.resolve(provider.provide as Constructor<unknown>);
+            if (!seen.has(instance)) {
+              seen.add(instance);
+              instances.push(instance);
+            }
+          } else if ('useExisting' in provider) {
             const instance = ref.container.resolve(provider.provide as Constructor<unknown>);
             if (!seen.has(instance)) {
               seen.add(instance);

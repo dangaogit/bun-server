@@ -103,6 +103,80 @@ describe('ModuleRegistry', () => {
     expect(featureService.shared).toBe(sharedFromModule);
   });
 
+  test('useExisting: alias token resolves to same instance as useExisting target', () => {
+    const ALIAS = Symbol.for('test.useExisting.alias');
+
+    @Injectable()
+    class SomeService {
+      public readonly n = 42;
+    }
+
+    @Module({
+      providers: [SomeService, { provide: ALIAS, useExisting: SomeService }],
+      exports: [SomeService, ALIAS],
+    })
+    class TestModule {}
+
+    const app = new Application();
+    app.registerModule(TestModule);
+
+    const ref = ModuleRegistry.getInstance().getModuleRef(TestModule)!;
+    const byClass = ref.container.resolve(SomeService);
+    const byAlias = ref.container.resolve(ALIAS);
+    expect(Object.is(byAlias, byClass)).toBe(true);
+  });
+
+  test('useExisting: exported Symbol alias can be resolved from importing module container', () => {
+    const TOKEN = Symbol.for('test.useExisting.export');
+
+    @Injectable()
+    class CoreService {
+      public ping(): string {
+        return 'pong';
+      }
+    }
+
+    @Module({
+      providers: [CoreService, { provide: TOKEN, useExisting: CoreService }],
+      exports: [TOKEN, CoreService],
+    })
+    class CoreModule {}
+
+    @Injectable()
+    class Consumer {
+      public constructor(@Inject(TOKEN) public readonly core: CoreService) {}
+    }
+
+    @Module({
+      imports: [CoreModule],
+      providers: [Consumer],
+    })
+    class AppModule {}
+
+    const app = new Application();
+    app.registerModule(AppModule);
+
+    const appRef = ModuleRegistry.getInstance().getModuleRef(AppModule)!;
+    const consumer = appRef.container.resolve(Consumer);
+    expect(consumer.core.ping()).toBe('pong');
+  });
+
+  test('useExisting: when target token is not registered, resolve throws', () => {
+    const ALIAS = Symbol.for('test.useExisting.orphan');
+    const MISSING = Symbol.for('test.useExisting.missing');
+
+    @Module({
+      providers: [{ provide: ALIAS, useExisting: MISSING }],
+    })
+    class BadModule {}
+
+    const app = new Application();
+    app.registerModule(BadModule);
+
+    const ref = ModuleRegistry.getInstance().getModuleRef(BadModule)!;
+    expect(() => ref.container.resolve(ALIAS)).toThrow(/Provider not found/);
+  });
+
   test('should throw error for circular module dependencies', () => {
     @Module({
       imports: [],

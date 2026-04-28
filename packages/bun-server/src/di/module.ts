@@ -26,7 +26,21 @@ export interface FactoryProvider {
   lifecycle?: Lifecycle;
 }
 
-export type ModuleProvider = Constructor<unknown> | ClassProvider | ValueProvider | FactoryProvider;
+/**
+ * NestJS 风格别名：`provide` 解析为已注册的 `useExisting` 同一实例（不新建）。
+ */
+export interface ExistingProvider {
+  provide: ProviderToken;
+  useExisting: ProviderToken;
+  lifecycle?: Lifecycle;
+}
+
+export type ModuleProvider =
+  | Constructor<unknown>
+  | ClassProvider
+  | ValueProvider
+  | FactoryProvider
+  | ExistingProvider;
 
 export interface ModuleMetadata {
   imports?: ModuleClass[];
