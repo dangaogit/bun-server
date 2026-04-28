@@ -47,6 +47,7 @@ export {
   type ModuleMetadata,
   type ModuleProvider,
   type ModuleClass,
+  type ExistingProvider,
 } from './di/module';
 export { ModuleRegistry } from './di/module-registry';
 export { AsyncProviderRegistry, type AsyncModuleOptions } from './di/async-module';
