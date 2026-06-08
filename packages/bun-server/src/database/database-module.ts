@@ -76,6 +76,7 @@ export class DatabaseModule {
             type: db.type,
             url,
             pool: options.bunSqlPool,
+            driver: db.driver ?? options.driver,
           },
         },
       ];
@@ -103,6 +104,7 @@ export class DatabaseModule {
             type: options.type,
             url: options.url,
             pool: options.bunSqlPool,
+            driver: options.driver,
           },
         },
       ];
@@ -119,6 +121,7 @@ export class DatabaseModule {
             type: options.type,
             url,
             pool: options.bunSqlPool,
+            driver: options.driver,
           },
         },
       ];
@@ -245,6 +248,9 @@ export class DatabaseModule {
                     user: options.username ?? 'root',
                     password: options.password ?? '',
                   },
+                  driver:
+                    (normalized[0]?.config as BunSQLConfig | undefined)?.driver ??
+                    options.driver,
                 },
         };
 

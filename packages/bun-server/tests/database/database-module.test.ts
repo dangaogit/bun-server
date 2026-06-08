@@ -9,9 +9,13 @@ import {
   SQLITE_MANAGER_TOKEN,
 } from '../../src/database';
 import { MODULE_METADATA_KEY } from '../../src/di/module';
+import { initRuntime } from '../../src/platform/runtime';
 
 describe('DatabaseModule V2', () => {
   beforeEach(() => {
+    // forRoot() 会在创建 sqlite/sql 管理器时读取 getRuntime()，确保运行时已初始化
+    // （避免依赖其他测试文件的执行顺序）
+    initRuntime('bun');
     Reflect.deleteMetadata(MODULE_METADATA_KEY, DatabaseModule);
   });
 

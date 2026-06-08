@@ -2,6 +2,7 @@ import { Injectable } from '../di/decorators';
 
 import { DatabaseConnectionManager } from './connection-manager';
 import { getCurrentSession } from './database-context';
+import { queryViaDriver } from './driver';
 import type {
   ConnectionInfo,
   DatabaseConfig,
@@ -131,7 +132,8 @@ export class DatabaseService {
     if (dbType === 'sqlite') {
       return this.querySqlite(connection, sql, params);
     } else if (dbType === 'postgres' || dbType === 'mysql') {
-      return this.queryBunSQL(connection, sql, params);
+      // 按连接 driver tag 分流（bun-sql 模板 / mysql2 / postgres）
+      return queryViaDriver(connection, sql, params);
     }
 
     throw new Error(`Query not supported for database type: ${dbType}`);
@@ -183,78 +185,5 @@ export class DatabaseService {
     }
 
     throw new Error('Invalid SQLite connection');
-  }
-
-  /**
-   * Bun.SQL 查询实现（PostgreSQL/MySQL）
-   * 通过模板字符串调用 Bun.SQL，确保参数走 Bun.SQL 转义逻辑
-   */
-  private async queryBunSQL<T = unknown>(
-    connection: unknown,
-    sql: string,
-    params?: unknown[],
-  ): Promise<T[]> {
-    // Bun.SQL 对象可以作为函数调用（模板字符串）
-    if (connection && typeof connection === 'function') {
-      try {
-        const { strings, values } = this.buildTemplateFromSql(sql, params);
-        const template = Object.assign(strings, {
-          raw: strings,
-        }) as unknown as TemplateStringsArray;
-        const result = await (connection as (
-          template: TemplateStringsArray,
-          ...values: unknown[]
-        ) => Promise<Array<Record<string, unknown>>>)(template, ...values);
-        return result as T[];
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        // 如果模板字符串方式失败，保留原始错误，便于排查参数/SQL 构造问题
-        throw new Error(
-          `Bun.SQL parameterized queries are not fully supported. Consider using template string queries. Original error: ${errorMessage}`,
-        );
-      }
-    }
-
-    // 尝试使用 query 方法（如果存在）
-    if (
-      connection &&
-      typeof connection === 'object' &&
-      'query' in connection &&
-      typeof connection.query === 'function'
-    ) {
-      const db = connection as {
-        query: (
-          sql: string,
-          ...params: unknown[]
-        ) => Promise<Array<Record<string, unknown>>>;
-      };
-      const result = await db.query(sql, ...(params ?? []));
-      return result as T[];
-    }
-
-    throw new Error('Invalid Bun.SQL connection');
-  }
-
-  /**
-   * 将 SQL 与 ? 占位符参数转换为模板字符串片段
-   * 让参数通过 Bun.SQL 的 values 通道注入，避免手工拼接 SQL
-   */
-  private buildTemplateFromSql(
-    sql: string,
-    params?: unknown[],
-  ): { strings: string[]; values: unknown[] } {
-    if (!params || params.length === 0) {
-      return { strings: [sql], values: [] };
-    }
-
-    const strings = sql.split('?');
-    if (strings.length !== params.length + 1) {
-      throw new Error(
-        'SQL placeholders count does not match parameters count',
-      );
-    }
-
-    return { strings, values: params };
   }
 }

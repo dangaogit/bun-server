@@ -4,6 +4,12 @@ import type {
   DatabaseType,
 } from './types';
 import { getRuntime } from '../platform/runtime';
+import {
+  closeViaDriver,
+  createMysqlConnection,
+  createPostgresConnection,
+  resolveDriver,
+} from './driver';
 
 /**
  * 连接池中的连接项
@@ -215,7 +221,7 @@ export class ConnectionPool {
   }
 
   /**
-   * 创建 PostgreSQL 连接（自动感知运行时）
+   * 创建 PostgreSQL 连接（按所选 driver 分流，与运行时平台解耦）
    */
   private async createPostgresConnection(
     config: {
@@ -227,18 +233,16 @@ export class ConnectionPool {
       ssl?: boolean;
     },
   ): Promise<unknown> {
-    const url = `postgres://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`;
-    if (getRuntime().engine === 'bun') {
-      const { SQL } = await import('bun');
-      return new SQL(url, { max: 1, tls: config.ssl ?? false });
-    }
-    // Node.js：使用 postgres 包
-    const postgres = require('postgres') as typeof import('postgres');
-    return postgres(url, { max: 1, ssl: config.ssl ? 'require' : false });
+    const driver = resolveDriver(
+      'postgres',
+      this.config.type === 'postgres' ? this.config.driver : undefined,
+      getRuntime().engine,
+    );
+    return await createPostgresConnection(config, driver);
   }
 
   /**
-   * 创建 MySQL 连接（自动感知运行时）
+   * 创建 MySQL 连接（按所选 driver 分流，与运行时平台解耦）
    */
   private async createMysqlConnection(
     config: {
@@ -249,21 +253,12 @@ export class ConnectionPool {
       password: string;
     },
   ): Promise<unknown> {
-    if (getRuntime().engine === 'bun') {
-      const url = `mysql://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`;
-      const { SQL } = await import('bun');
-      return new SQL(url, { max: 1 });
-    }
-    // Node.js：使用 mysql2 包
-    const mysql2 = require('mysql2/promise') as typeof import('mysql2/promise');
-    const conn = await mysql2.createConnection({
-      host: config.host,
-      port: config.port,
-      database: config.database,
-      user: config.user,
-      password: config.password,
-    });
-    return conn;
+    const driver = resolveDriver(
+      'mysql',
+      this.config.type === 'mysql' ? this.config.driver : undefined,
+      getRuntime().engine,
+    );
+    return await createMysqlConnection(config, driver);
   }
 
   /**
@@ -295,35 +290,17 @@ export class ConnectionPool {
   }
 
   /**
-   * 关闭 PostgreSQL 连接（Bun.SQL 会自动管理连接）
+   * 关闭 PostgreSQL 连接（按连接 driver tag 分流：bun-sql → close()，postgres → end()）
    */
-  private async closePostgresConnection(_connection: unknown): Promise<void> {
-    // Bun.SQL 会自动管理连接池，这里不需要手动关闭
-    // 如果需要强制关闭，可以调用 connection.close()
-    if (
-      _connection &&
-      typeof _connection === 'object' &&
-      'close' in _connection &&
-      typeof (_connection as { close: () => void }).close === 'function'
-    ) {
-      (_connection as { close: () => void }).close();
-    }
+  private async closePostgresConnection(connection: unknown): Promise<void> {
+    await closeViaDriver(connection);
   }
 
   /**
-   * 关闭 MySQL 连接（Bun.SQL 会自动管理连接）
+   * 关闭 MySQL 连接（按连接 driver tag 分流：bun-sql → close()，mysql2 → end()）
    */
-  private async closeMysqlConnection(_connection: unknown): Promise<void> {
-    // Bun.SQL 会自动管理连接池，这里不需要手动关闭
-    // 如果需要强制关闭，可以调用 connection.close()
-    if (
-      _connection &&
-      typeof _connection === 'object' &&
-      'close' in _connection &&
-      typeof (_connection as { close: () => void }).close === 'function'
-    ) {
-      (_connection as { close: () => void }).close();
-    }
+  private async closeMysqlConnection(connection: unknown): Promise<void> {
+    await closeViaDriver(connection);
   }
 
   /**

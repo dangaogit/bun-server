@@ -5,6 +5,13 @@ export { ConnectionPool } from './connection-pool';
 export { DatabaseHealthIndicator } from './health-indicator';
 export { DatabaseExtension } from './database-extension';
 export { BunSQLManager } from './sql-manager';
+export {
+  resolveDriver,
+  tagConnection,
+  getConnectionDriver,
+  type ResolvedDriver,
+  type RuntimeEngine,
+} from './driver';
 export { SqliteAdapter, SqliteManager, Semaphore } from './sqlite-adapter';
 export {
   db,
@@ -37,6 +44,7 @@ export {
   type ConnectionInfo,
   type ConnectionPoolOptions,
   type DatabaseConfig,
+  type DatabaseDriver,
   type DatabaseModuleOptions,
   type DatabaseType,
   type MysqlConfig,
