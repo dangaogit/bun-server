@@ -1,6 +1,8 @@
 import type { SqliteV2Config } from './types';
 import { getRuntime } from '../platform/runtime';
 
+type SqliteV2InputConfig = SqliteV2Config | Omit<SqliteV2Config, 'type'>;
+
 export interface DisposableLock {
   [Symbol.dispose](): void;
 }
@@ -47,7 +49,7 @@ export class SqliteAdapter {
   public readonly semaphore: Semaphore;
   private readonly isBun: boolean;
 
-  public constructor(config: SqliteV2Config) {
+  public constructor(config: SqliteV2InputConfig) {
     this.isBun = getRuntime().engine === 'bun';
 
     if (this.isBun) {
@@ -119,7 +121,7 @@ export class SqliteManager {
   private readonly instances = new Map<string, SqliteAdapter>();
   private defaultTenantId = 'default';
 
-  public getOrCreate(tenantId: string, config: SqliteV2Config): SqliteAdapter {
+  public getOrCreate(tenantId: string, config: SqliteV2InputConfig): SqliteAdapter {
     const existing = this.instances.get(tenantId);
     if (existing) {
       return existing;
@@ -167,4 +169,3 @@ export class SqliteManager {
     }
   }
 }
-

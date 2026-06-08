@@ -1,4 +1,5 @@
 import type { ServiceInstance } from '../service-registry/types';
+export type { ServiceInstance } from '../service-registry/types';
 
 /**
  * 负载均衡策略类型
@@ -183,4 +184,3 @@ export class ServiceCallError extends Error {
     this.name = 'ServiceCallError';
   }
 }
-

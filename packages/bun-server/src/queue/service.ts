@@ -17,7 +17,7 @@ import { getRuntime } from '../platform/runtime';
  */
 @Injectable()
 export class QueueService {
-  private store: QueueStore;
+  public readonly store: QueueStore;
   private defaultQueue: string;
   private enableWorker: boolean;
   private concurrency: number;

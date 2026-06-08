@@ -13,11 +13,14 @@ export class CacheService {
   private keyPrefix: string;
 
   public constructor(
-    @Inject(CACHE_OPTIONS_TOKEN) options: CacheModuleOptions,
+    @Inject(CACHE_OPTIONS_TOKEN) options: CacheModuleOptions | CacheStore,
   ) {
-    this.store = options.store!;
-    this.defaultTtl = options.defaultTtl ?? 3600000; // 1 小时
-    this.keyPrefix = options.keyPrefix ?? '';
+    const resolvedOptions: CacheModuleOptions = isCacheStore(options)
+      ? { store: options }
+      : options;
+    this.store = resolvedOptions.store!;
+    this.defaultTtl = resolvedOptions.defaultTtl ?? 3600000; // 1 小时
+    this.keyPrefix = resolvedOptions.keyPrefix ?? '';
   }
 
   /**
@@ -25,7 +28,7 @@ export class CacheService {
    * @param key - 缓存键
    * @returns 缓存值，如果不存在则返回 undefined
    */
-  public async get<T = unknown>(key: string): Promise<T | undefined> {
+  public async get<T = any>(key: string): Promise<T | undefined> {
     return this.store.get<T>(this.getKey(key));
   }
 
@@ -36,7 +39,7 @@ export class CacheService {
    * @param ttl - 过期时间（毫秒），0 表示永不过期，undefined 使用默认 TTL
    * @returns 是否设置成功
    */
-  public async set<T = unknown>(
+  public async set<T = any>(
     key: string,
     value: T,
     ttl?: number,
@@ -76,7 +79,7 @@ export class CacheService {
    * @param keys - 缓存键数组
    * @returns 缓存值映射
    */
-  public async getMany<T = unknown>(
+  public async getMany<T = any>(
     keys: string[],
   ): Promise<Map<string, T>> {
     const prefixedKeys = keys.map((k) => this.getKey(k));
@@ -97,7 +100,7 @@ export class CacheService {
    * @param ttl - 过期时间（毫秒），0 表示永不过期，undefined 使用默认 TTL
    * @returns 是否设置成功
    */
-  public async setMany<T = unknown>(
+  public async setMany<T = any>(
     entries: Array<{ key: string; value: T }>,
     ttl?: number,
   ): Promise<boolean> {
@@ -148,4 +151,10 @@ export class CacheService {
   private getKey(key: string): string {
     return this.keyPrefix ? `${this.keyPrefix}${key}` : key;
   }
+}
+
+function isCacheStore(value: CacheModuleOptions | CacheStore): value is CacheStore {
+  return typeof (value as CacheStore).get === 'function' &&
+    typeof (value as CacheStore).set === 'function' &&
+    typeof (value as CacheStore).delete === 'function';
 }

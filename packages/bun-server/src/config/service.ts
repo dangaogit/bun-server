@@ -67,12 +67,12 @@ export class ConfigService<TConfig extends Record<string, unknown> = Record<stri
    * 更新配置（用于配置中心动态刷新）
    * @param newConfig - 新配置对象
    */
-  public updateConfig(newConfig: TConfig): void {
-    this.config = newConfig;
+  public updateConfig(newConfig: TConfig | Record<string, unknown>): void {
+    this.config = newConfig as TConfig;
     // 通知所有监听器
     for (const listener of this.configUpdateListeners) {
       try {
-        listener(newConfig);
+        listener(this.config);
       } catch (error) {
         console.error('[ConfigService] Error in config update listener:', error);
       }
@@ -83,7 +83,7 @@ export class ConfigService<TConfig extends Record<string, unknown> = Record<stri
    * 合并配置（用于配置中心增量更新）
    * @param partialConfig - 部分配置对象
    */
-  public mergeConfig(partialConfig: Partial<TConfig>): void {
+  public mergeConfig(partialConfig: Partial<TConfig> | Record<string, unknown>): void {
     this.config = {
       ...this.config,
       ...partialConfig,
@@ -125,6 +125,8 @@ export class ConfigService<TConfig extends Record<string, unknown> = Record<stri
    * @param key - 配置键（如 "db.host"）
    * @param defaultValue - 默认值（可选）
    */
+  public get(key: string): any;
+  public get<T>(key: string, defaultValue?: T): T | undefined;
   public get<T = unknown>(key: string, defaultValue?: T): T | undefined {
     const namespacedKey = this.applyNamespace(key);
     const value = this.getValueByPath(this.config, namespacedKey);
@@ -138,6 +140,8 @@ export class ConfigService<TConfig extends Record<string, unknown> = Record<stri
    * 获取必需的配置值，如果不存在则抛出错误
    * @param key - 配置键
    */
+  public getRequired(key: string): any;
+  public getRequired<T>(key: string): T;
   public getRequired<T = unknown>(key: string): T {
     const value = this.get<T>(key);
     if (value === undefined) {
@@ -191,5 +195,3 @@ export class ConfigService<TConfig extends Record<string, unknown> = Record<stri
     return current;
   }
 }
-
-

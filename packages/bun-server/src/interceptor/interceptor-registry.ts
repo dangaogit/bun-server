@@ -22,8 +22,11 @@ export class InterceptorRegistry {
   public register(
     metadataKey: symbol,
     interceptor: Interceptor,
-    priority: number = 100,
+    priority: number | { priority?: number } = 100,
   ): void {
+    const resolvedPriority = typeof priority === 'number'
+      ? priority
+      : priority.priority ?? 100;
     if (!this.interceptors.has(metadataKey)) {
       this.interceptors.set(metadataKey, []);
     }
@@ -39,7 +42,7 @@ export class InterceptorRegistry {
       metadataList.push({
         metadataKey,
         interceptor,
-        priority,
+        priority: resolvedPriority,
       });
       
       // 按优先级排序（数字越小优先级越高）
@@ -129,4 +132,3 @@ export class InterceptorRegistry {
     return total;
   }
 }
-

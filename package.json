@@ -11,6 +11,10 @@
     "build:deps": "bun run --filter '@dangao/logsmith' build && bun run --filter '@dangao/nacos-client' build",
     "build:server": "bun run --filter '@dangao/bun-server' build",
     "build:web": "bun run --filter '@dangao/bun-server-web' build",
+    "typecheck": "bun run typecheck:packages && bun run typecheck:examples && bun run typecheck:benchmark",
+    "typecheck:packages": "bun run --cwd packages/logsmith typecheck && bun run --cwd packages/nacos-client typecheck && bun run --cwd packages/bun-server typecheck && bun run --cwd packages/web typecheck",
+    "typecheck:examples": "bun run --cwd examples typecheck",
+    "typecheck:benchmark": "bun run --cwd benchmark typecheck",
     "dev:web": "bun run --filter '@dangao/bun-server-web' dev",
     "security:audit": "bun audit",
     "security:check-dev-host": "if rg --line-number --glob '**/package.json' '0\\\\.0\\\\.0\\\\.0' benchmark examples packages; then echo 'Found insecure dev host bindings'; exit 1; else echo 'No insecure dev host bindings found'; fi"

@@ -155,7 +155,7 @@ describe('@Context() Decorator', () => {
     // 这个测试验证 ContextService 可以在服务层使用
     const { ContextService, CONTEXT_SERVICE_TOKEN } = await import('../../src/core/context-service');
     const container = app.getContainer();
-    const contextService = container.resolve<ContextService>(CONTEXT_SERVICE_TOKEN);
+    const contextService = container.resolve<InstanceType<typeof ContextService>>(CONTEXT_SERVICE_TOKEN);
 
     @Controller('/api/test')
     class TestController {
@@ -180,4 +180,3 @@ describe('@Context() Decorator', () => {
     expect(data.method).toBe('GET');
   });
 });
-

@@ -80,8 +80,19 @@ export class Container {
    */
   public register<T>(
     token: Constructor<T> | string | symbol,
+    implementation: Constructor<unknown>,
+  ): void;
+  public register<T>(
+    token: Constructor<T> | string | symbol,
     config?: ProviderConfig,
+  ): void;
+  public register<T>(
+    token: Constructor<T> | string | symbol,
+    configOrImplementation?: ProviderConfig | Constructor<unknown>,
   ): void {
+    const config: ProviderConfig | undefined = typeof configOrImplementation === 'function'
+      ? { implementation: configOrImplementation }
+      : configOrImplementation;
     const tokenKey = this.getTokenKey(token);
 
     // 如果配置中没有指定生命周期，尝试从装饰器元数据获取
@@ -170,6 +181,8 @@ export class Container {
    * @param token - 提供者标识符
    * @returns 解析后的实例
    */
+  public resolve(token: string | symbol): any;
+  public resolve<T>(token: Constructor<T> | string | symbol): T;
   public resolve<T>(token: Constructor<T> | string | symbol): T {
     const tokenKey = this.getTokenKey(token);
     const provider = this.providers.get(tokenKey);

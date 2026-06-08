@@ -145,6 +145,11 @@ export const AI_MODULE_OPTIONS_TOKEN = Symbol('@dangao/bun-server:ai:options');
 export const AI_TOOL_REGISTRY_TOKEN = Symbol('@dangao/bun-server:ai:tool-registry');
 
 /**
+ * Metadata key for AiModule options.
+ */
+export const MODULE_METADATA_KEY = '@dangao/bun-server:ai:module';
+
+/**
  * Metadata key for @AiTool decorator
  */
 export const AI_TOOL_METADATA_KEY = '@dangao/bun-server:ai:tool';

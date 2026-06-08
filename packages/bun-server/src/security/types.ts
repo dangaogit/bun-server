@@ -35,7 +35,7 @@ export interface Credentials {
   /**
    * 凭据数据
    */
-  data: unknown;
+  data: any;
 }
 
 /**
@@ -162,4 +162,3 @@ export interface SecurityContext {
    */
   getAuthorities(): string[];
 }
-

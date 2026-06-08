@@ -93,6 +93,10 @@ export interface OAuth2Client {
    * 允许的授权类型
    */
   grantTypes: ('authorization_code' | 'refresh_token')[];
+  /**
+   * 允许的 OAuth2 scope 列表
+   */
+  scopes?: string[];
 }
 
 /**
@@ -245,4 +249,3 @@ export interface AuthContext {
    */
   isAuthenticated: boolean;
 }
-

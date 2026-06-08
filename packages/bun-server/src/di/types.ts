@@ -71,7 +71,7 @@ export interface ProviderConfig {
   /**
    * 实际实现类（当 token 为 string/symbol 时用于实例化）
    */
-  implementation?: new (...args: unknown[]) => unknown;
+  implementation?: Constructor<unknown>;
 }
 
 /**
@@ -93,4 +93,3 @@ export interface DependencyMetadata {
    */
   token?: string | symbol;
 }
-

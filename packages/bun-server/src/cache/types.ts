@@ -7,7 +7,7 @@ export interface CacheStore {
    * @param key - 缓存键
    * @returns 缓存值，如果不存在则返回 undefined
    */
-  get<T = unknown>(key: string): Promise<T | undefined>;
+  get<T = any>(key: string): Promise<T | undefined>;
 
   /**
    * 设置缓存值
@@ -16,7 +16,7 @@ export interface CacheStore {
    * @param ttl - 过期时间（毫秒），0 表示永不过期
    * @returns 是否设置成功
    */
-  set<T = unknown>(key: string, value: T, ttl?: number): Promise<boolean>;
+  set<T = any>(key: string, value: T, ttl?: number): Promise<boolean>;
 
   /**
    * 删除缓存
@@ -43,7 +43,7 @@ export interface CacheStore {
    * @param keys - 缓存键数组
    * @returns 缓存值映射
    */
-  getMany<T = unknown>(keys: string[]): Promise<Map<string, T>>;
+  getMany<T = any>(keys: string[]): Promise<Map<string, T>>;
 
   /**
    * 设置多个缓存值
@@ -51,7 +51,7 @@ export interface CacheStore {
    * @param ttl - 过期时间（毫秒），0 表示永不过期
    * @returns 是否设置成功
    */
-  setMany<T = unknown>(
+  setMany<T = any>(
     entries: Array<{ key: string; value: T }>,
     ttl?: number,
   ): Promise<boolean>;
@@ -84,7 +84,7 @@ export class MemoryCacheStore implements CacheStore {
     }
   }
 
-  public async get<T = unknown>(key: string): Promise<T | undefined> {
+  public async get<T = any>(key: string): Promise<T | undefined> {
     const entry = this.store.get(key);
     if (!entry) {
       return undefined;
@@ -99,7 +99,7 @@ export class MemoryCacheStore implements CacheStore {
     return entry.value as T;
   }
 
-  public async set<T = unknown>(
+  public async set<T = any>(
     key: string,
     value: T,
     ttl?: number,
@@ -133,7 +133,7 @@ export class MemoryCacheStore implements CacheStore {
     return true;
   }
 
-  public async getMany<T = unknown>(
+  public async getMany<T = any>(
     keys: string[],
   ): Promise<Map<string, T>> {
     const result = new Map<string, T>();
@@ -154,7 +154,7 @@ export class MemoryCacheStore implements CacheStore {
     return result;
   }
 
-  public async setMany<T = unknown>(
+  public async setMany<T = any>(
     entries: Array<{ key: string; value: T }>,
     ttl?: number,
   ): Promise<boolean> {
@@ -239,7 +239,7 @@ export class RedisCacheStore implements CacheStore {
     return `${this.keyPrefix}${key}`;
   }
 
-  public async get<T = unknown>(key: string): Promise<T | undefined> {
+  public async get<T = any>(key: string): Promise<T | undefined> {
     const value = await this.client.get(this.getKey(key));
     if (value === null) {
       return undefined;
@@ -251,7 +251,7 @@ export class RedisCacheStore implements CacheStore {
     }
   }
 
-  public async set<T = unknown>(
+  public async set<T = any>(
     key: string,
     value: T,
     ttl?: number,
@@ -296,7 +296,7 @@ export class RedisCacheStore implements CacheStore {
     }
   }
 
-  public async getMany<T = unknown>(
+  public async getMany<T = any>(
     keys: string[],
   ): Promise<Map<string, T>> {
     const result = new Map<string, T>();
@@ -325,7 +325,7 @@ export class RedisCacheStore implements CacheStore {
     return result;
   }
 
-  public async setMany<T = unknown>(
+  public async setMany<T = any>(
     entries: Array<{ key: string; value: T }>,
     ttl?: number,
   ): Promise<boolean> {

@@ -3,10 +3,37 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v3.1.0',
-    date: '2026-04',
+    version: 'v3.3.0',
+    date: '2026-06',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'fix', text: 'Sync FactoryProvider now honors optional inject in @Module providers; previously inject was ignored and the Container was passed instead, making this a potential breaking-fix for factories that declared inject' },
+      { type: 'fix', text: 'Backward compatibility preserved: factories without inject, or with an empty inject array, still receive the current Container as the only argument' },
+      { type: 'test', text: 'Add regression coverage for injected dependencies, cross-module exported tokens, argument order, and mixed useExisting/useValue/useClass providers' },
+      { type: 'chore', text: 'Add monorepo typecheck scripts and fix strict type errors across core modules, examples, and benchmark' },
+      { type: 'chore', text: 'Bump @dangao/bun-server and @dangao/bun-server-web to 3.3.0 and sync web changelog pages' },
+    ],
+  },
+  {
+    version: 'v3.2.0',
+    date: '2026-06',
+    tag: '',
+    highlight: false,
+    changes: [
+      { type: 'feat', text: 'Database: add optional driver field (auto | bun-sql | mysql2 | postgres) to decouple SQL driver from runtime platform — fixes MySQL under bun build --compile' },
+      { type: 'feat', text: 'Export resolveDriver, tagConnection, getConnectionDriver, and DatabaseDriver type from @dangao/bun-server' },
+      { type: 'fix', text: 'Construct Bun.SQL MySQL connections via options object to work around oven-sh/bun#26648' },
+      { type: 'fix', text: 'Normalize mysql2 query results to rows (was returning [rows, fields] tuple)' },
+      { type: 'test', text: 'Cover driver resolution, connection tagging, per-driver dispatch, and mysql2 lifecycle under Bun runtime' },
+      { type: 'chore', text: 'Bump @dangao/bun-server to 3.2.0' },
+    ],
+  },
+  {
+    version: 'v3.1.0',
+    date: '2026-04',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'feat', text: 'NestJS-style ExistingProvider in module providers — { provide, useExisting } resolves to the same instance as the registered useExisting token (no duplicate singleton)' },
       { type: 'feat', text: 'Export ExistingProvider type from @dangao/bun-server' },

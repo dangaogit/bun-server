@@ -7,6 +7,12 @@ import type { Context } from '../core/context';
  */
 export interface Interceptor {
   /**
+   * Optional priority used by registries/tests that carry interceptor metadata
+   * alongside the executable interceptor instance.
+   */
+  priority?: number;
+
+  /**
    * 执行拦截器逻辑
    * @param target - 目标对象（控制器实例的原型）
    * @param propertyKey - 方法名
@@ -19,11 +25,11 @@ export interface Interceptor {
   execute<T>(
     target: unknown,
     propertyKey: string | symbol,
-    originalMethod: (...args: unknown[]) => T | Promise<T>,
-    args: unknown[],
+    originalMethod: (...args: any[]) => T | Promise<T>,
+    args: any[],
     container: Container,
     context?: Context,
-  ): Promise<T>;
+  ): Promise<any>;
 }
 
 /**
@@ -49,4 +55,3 @@ export interface InterceptorMetadata {
  * 拦截器注册表 Token
  */
 export const INTERCEPTOR_REGISTRY_TOKEN = Symbol('@dangao/bun-server:interceptor-registry');
-

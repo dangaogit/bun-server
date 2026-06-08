@@ -1,6 +1,6 @@
 {
   "name": "@dangao/bun-server",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -48,7 +48,7 @@
     "test:bun": "bun test tests/platform/bun",
     "test:node": "vitest run tests/platform/node",
     "test:platform": "bun run test:bun && bun run test:node",
-    "type-check": "tsc --noEmit",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "clean": "rm -rf dist",
     "bundle": "bun build src/index.ts --target=bun --format=esm --outfile=dist/index.js --external reflect-metadata --external @dangao/logsmith --external @dangao/nacos-client --external @vscode/sqlite3",
     "bundle:node": "bun build src/index.ts --target=node --packages=external --outfile=dist/index.node.mjs",

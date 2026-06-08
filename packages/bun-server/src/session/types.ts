@@ -318,6 +318,11 @@ export interface SessionModuleOptions {
   maxAge?: number;
 
   /**
+   * Session 最大存活时间别名。
+   */
+  ttl?: number;
+
+  /**
    * 是否在每次访问时更新过期时间
    * @default true
    */
@@ -327,6 +332,11 @@ export interface SessionModuleOptions {
    * Cookie 选项
    */
   cookie?: {
+    /**
+     * Cookie 名称别名，优先使用顶层 name。
+     */
+    name?: string;
+
     /**
      * 是否只在 HTTPS 下发送
      * @default false

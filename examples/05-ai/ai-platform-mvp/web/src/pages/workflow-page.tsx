@@ -147,7 +147,7 @@ export function WorkflowPage() {
         highlight: true,
         connector: 'rounded',
       },
-    });
+    } as any);
     graphRef.current = graph;
 
     graph.on('node:click', ({ node }) => {

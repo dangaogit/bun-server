@@ -15,11 +15,11 @@ export abstract class BaseInterceptor implements Interceptor {
   public abstract execute<T>(
     target: unknown,
     propertyKey: string | symbol,
-    originalMethod: (...args: unknown[]) => T | Promise<T>,
-    args: unknown[],
+    originalMethod: (...args: any[]) => T | Promise<T>,
+    args: any[],
     container: Container,
     context?: Context,
-  ): Promise<T>;
+  ): Promise<any>;
 
   /**
    * 前置处理（可选）
@@ -33,7 +33,7 @@ export abstract class BaseInterceptor implements Interceptor {
   protected async before(
     target: unknown,
     propertyKey: string | symbol,
-    args: unknown[],
+    args: any[],
     container: Container,
     context?: Context,
   ): Promise<void> {
@@ -141,7 +141,7 @@ export abstract class BaseInterceptor implements Interceptor {
    */
   protected resolveService<T>(
     container: Container,
-    token: (new (...args: unknown[]) => T) | string | symbol,
+    token: (new (...args: any[]) => T) | string | symbol,
   ): T {
     return container.resolve<T>(token);
   }
@@ -200,4 +200,3 @@ export abstract class BaseInterceptor implements Interceptor {
     return context.getParam(paramName);
   }
 }
-

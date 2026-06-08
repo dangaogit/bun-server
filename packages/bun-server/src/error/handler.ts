@@ -4,6 +4,7 @@ import { ExceptionFilterRegistry } from './filter';
 import { ValidationError } from '../validation';
 import { ErrorMessageI18n } from './i18n';
 import { LoggerManager } from '@dangao/logsmith';
+import { ERROR_CODE_MESSAGES, type ErrorCode } from './error-codes';
 
 /**
  * 全局错误处理
@@ -29,12 +30,12 @@ export async function handleError(error: unknown, context: Context): Promise<Res
 
     // 如果异常有错误码，尝试国际化消息
     let errorMessage = error.message;
-    if (error.code) {
+    if (error.code && error.code in ERROR_CODE_MESSAGES) {
       const acceptLanguage = context.getHeader('accept-language');
       const language = ErrorMessageI18n.parseLanguageFromHeader(acceptLanguage);
       // 如果提供了消息模板参数，使用参数替换占位符
       errorMessage = ErrorMessageI18n.getMessage(
-        error.code,
+        error.code as ErrorCode,
         language,
         error.messageParams,
       );
@@ -79,5 +80,3 @@ export async function handleError(error: unknown, context: Context): Promise<Res
     details: process.env.NODE_ENV === 'production' ? undefined : message,
   });
 }
-
-

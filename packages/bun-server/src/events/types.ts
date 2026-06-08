@@ -3,7 +3,7 @@
  * @template T - 事件负载类型
  */
 export interface EventListener<T = unknown> {
-  (payload: T): void | Promise<void>;
+  (payload: T): unknown | Promise<unknown>;
 }
 
 /**
@@ -62,14 +62,14 @@ export interface EventEmitter {
    * @param event - 事件名称或标识符
    * @param payload - 事件负载
    */
-  emit<T>(event: string | symbol, payload: T): void;
+  emit<T = undefined>(event: string | symbol, payload?: T): void;
 
   /**
    * 异步发布事件（等待所有监听器完成）
    * @param event - 事件名称或标识符
    * @param payload - 事件负载
    */
-  emitAsync<T>(event: string | symbol, payload: T): Promise<void>;
+  emitAsync<T = undefined>(event: string | symbol, payload?: T): Promise<void>;
 
   /**
    * 订阅事件
@@ -167,12 +167,23 @@ export interface EventModuleOptions {
   maxListeners?: number;
 
   /**
+   * 默认是否异步处理监听器，兼容早期模块配置。
+   * @default false
+   */
+  async?: boolean;
+
+  /**
    * 错误处理函数
    * @param error - 错误对象
    * @param event - 事件名称
    * @param payload - 事件负载
    */
   onError?: (error: Error, event: string | symbol, payload: unknown) => void;
+
+  /**
+   * 错误处理函数别名，参数顺序为 (event, error)。
+   */
+  errorHandler?: (event: string, error: Error, payload: unknown) => void;
 
   /**
    * 是否自动扫描和注册事件监听器

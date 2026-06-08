@@ -22,8 +22,28 @@ export interface ValueProvider {
 
 export interface FactoryProvider {
   provide: ProviderToken;
-  useFactory: (container: Container) => unknown;
+  /**
+   * 同步工厂函数。
+   * - 当 inject 存在且非空时，按 inject 顺序解析 token，并作为位置参数传入。
+   * - 当 inject 缺省或为空时，为保持向后兼容，将当前 Container 作为唯一参数传入。
+   */
+  useFactory: (...args: any[]) => unknown;
+  /**
+   * 可选的依赖 token 列表。依赖会在工厂被调用时按容器规则惰性解析。
+   */
+  inject?: ProviderToken[];
   lifecycle?: Lifecycle;
+}
+
+export function invokeFactoryProvider(
+  provider: FactoryProvider,
+  container: Container,
+): unknown {
+  const inject = provider.inject ?? [];
+  if (inject.length > 0) {
+    return provider.useFactory(...inject.map((token) => container.resolve(token)));
+  }
+  return provider.useFactory(container);
 }
 
 /**
@@ -76,4 +96,3 @@ export function getModuleMetadata(moduleClass: ModuleClass): Required<Omit<Modul
     middlewares: metadata.middlewares ?? [],
   };
 }
-

@@ -257,7 +257,7 @@ describe('EventEmitterService', () => {
     });
 
     test('should use custom error handler when provided', () => {
-      const errorHandler = mock(() => {});
+      const errorHandler = mock((_error: Error) => {});
       const emitterWithErrorHandler = new EventEmitterService({
         onError: errorHandler,
       });
@@ -274,7 +274,7 @@ describe('EventEmitterService', () => {
 
   describe('maxListeners warning', () => {
     test('should warn when exceeding maxListeners', () => {
-      const consoleSpy = mock(() => {});
+      const consoleSpy = mock((_message: string) => {});
       const originalWarn = console.warn;
       console.warn = consoleSpy;
 

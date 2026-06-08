@@ -60,7 +60,7 @@ export interface ApiParamMetadata {
     enum?: unknown[];
     default?: unknown;
   };
-  in: 'query' | 'path' | 'header' | 'cookie';
+  in?: 'query' | 'path' | 'header' | 'cookie';
 }
 
 /**
@@ -185,4 +185,3 @@ export interface SwaggerDocument {
     patch?: SwaggerPathItem;
   }>;
 }
-

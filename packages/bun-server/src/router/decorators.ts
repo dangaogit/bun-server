@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-import type { RouteHandler } from './types';
 import { RouteRegistry } from './registry';
 import type { HttpMethod } from './types';
 import { CONTROLLER_METADATA_KEY } from '../controller/controller';
@@ -15,7 +14,7 @@ export const ROUTE_METADATA_KEY = Symbol('route');
 export interface RouteMetadata {
   method: HttpMethod;
   path: string;
-  handler: RouteHandler;
+  handler: (...args: any[]) => unknown;
   /**
    * 属性键（用于控制器方法）
    */
@@ -75,7 +74,7 @@ function createRouteDecorator(method: HttpMethod, path: string = '') {
     existingRoutes.push({
       method,
       path: path ?? '',
-      handler: descriptor.value as RouteHandler,
+      handler: descriptor.value as (...args: any[]) => unknown,
       propertyKey: propertyKeyStr || undefined,
     });
     Reflect.defineMetadata(ROUTE_METADATA_KEY, existingRoutes, target);

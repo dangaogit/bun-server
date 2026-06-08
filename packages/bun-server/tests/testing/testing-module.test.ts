@@ -126,4 +126,24 @@ describe('TestingModule', () => {
     const greeter = module.get<Greeter>(GREETER_TOKEN);
     expect(greeter.greet('X')).toBe('Factory: X');
   });
+
+  test('should inject dependencies into provider factories', async () => {
+    const FACTORY_TOKEN = Symbol('FactoryGreeter');
+
+    const module = await Test.createTestingModule({
+      providers: [
+        { provide: GREETER_TOKEN, useClass: RealGreeter },
+        {
+          provide: FACTORY_TOKEN,
+          useFactory: (greeter: Greeter) => ({
+            greet: (name: string) => greeter.greet(name).toUpperCase(),
+          }),
+          inject: [GREETER_TOKEN],
+        },
+      ],
+    }).compile();
+
+    const greeter = module.get<Greeter>(FACTORY_TOKEN);
+    expect(greeter.greet('Test')).toBe('HELLO, TEST!');
+  });
 });

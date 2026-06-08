@@ -1,5 +1,6 @@
 import { BodyParser } from '../request/body-parser';
 import type { UploadedFileInfo } from '../files';
+import type { Container } from '../di/container';
 import type { BodyInit } from 'bun'
 import { type URLSearchParams, URL } from 'url';
 
@@ -32,7 +33,7 @@ export class Context {
   /**
    * 请求路径
    */
-  public readonly path: string;
+  public path: string;
 
   /**
    * 查询参数
@@ -80,8 +81,11 @@ export class Context {
    */
   public readonly signal: AbortSignal;
 
-  public constructor(request: Request) {
+  public readonly container?: Container;
+
+  public constructor(request: Request, container?: Container) {
     this.request = request;
+    this.container = container;
     this.url = new URL(request.url);
     this.method = request.method;
     this.path = this.url.pathname;
@@ -304,4 +308,3 @@ export class Context {
     return sanitized;
   }
 }
-

@@ -5,7 +5,7 @@ import { Container } from '../di/container';
 import { ModuleRegistry } from '../di/module-registry';
 import { ControllerRegistry } from '../controller/controller';
 import { RouteRegistry } from '../router/registry';
-import { MODULE_METADATA_KEY, type ModuleMetadata, type ModuleClass, type ModuleProvider, type ProviderToken } from '../di/module';
+import { MODULE_METADATA_KEY, invokeFactoryProvider, type ModuleMetadata, type ModuleClass, type ModuleProvider, type ProviderToken } from '../di/module';
 import type { Constructor } from '../core/types';
 import { TestHttpClient } from './test-client';
 
@@ -13,7 +13,7 @@ interface ProviderOverride {
   token: ProviderToken;
   useValue?: unknown;
   useClass?: Constructor<unknown>;
-  useFactory?: () => unknown;
+  useFactory?: (...args: any[]) => unknown;
 }
 
 /**
@@ -75,7 +75,7 @@ export class TestingModuleBuilder {
         } else if (override.useClass) {
           result.push({ provide: override.token, useClass: override.useClass });
         } else if (override.useFactory) {
-          result.push({ provide: override.token, useFactory: override.useFactory as (container: Container) => unknown });
+          result.push({ provide: override.token, useFactory: override.useFactory });
         }
         overrideMap.delete(key as string | symbol);
       } else {
@@ -121,7 +121,7 @@ class ProviderOverrideBuilder {
   /**
    * 使用工厂函数覆盖
    */
-  public useFactory(factory: () => unknown): TestingModuleBuilder {
+  public useFactory(factory: (...args: any[]) => unknown): TestingModuleBuilder {
     this.builder.addOverride({ token: this.token, useFactory: factory });
     return this.builder;
   }
@@ -177,7 +177,7 @@ export class TestingModule {
         container.registerInstance(provider.provide, provider.useValue);
       } else if ('useFactory' in provider && provider.provide) {
         container.register(provider.provide as Constructor<unknown>, {
-          factory: () => (provider as { useFactory: (container: Container) => unknown }).useFactory(container),
+          factory: () => invokeFactoryProvider(provider, container),
         });
       } else if ('useClass' in provider) {
         const token = (provider as { provide?: ProviderToken }).provide ?? (provider as { useClass: Constructor<unknown> }).useClass;

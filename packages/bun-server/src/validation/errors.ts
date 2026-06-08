@@ -10,9 +10,14 @@ export interface ValidationIssue {
   property?: string;
 
   /**
+   * 属性路径别名，兼容早期错误对象形状。
+   */
+  path?: string;
+
+  /**
    * 失败的规则名称
    */
-  rule: string;
+  rule?: string;
 
   /**
    * 错误信息
@@ -72,5 +77,4 @@ export class ValidationError extends Error {
     };
   }
 }
-
 
