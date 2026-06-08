@@ -11,6 +11,7 @@ import {
 } from '../../src/database/orm';
 import { DatabaseService, DATABASE_SERVICE_TOKEN } from '../../src/database';
 import { Container } from '../../src/di/container';
+import { initRuntime } from '../../src/platform/runtime';
 
 // 测试实体
 @Entity('test_users')
@@ -71,6 +72,9 @@ describe('BaseRepository', () => {
   let databaseService: DatabaseService;
 
   beforeEach(async () => {
+    // DatabaseService.initialize() 会读取 getRuntime()，确保运行时已初始化
+    // （避免依赖其他测试文件的执行顺序）
+    initRuntime('bun');
     container = new Container();
     databaseService = new DatabaseService({
       database: {

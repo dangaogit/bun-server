@@ -1,5 +1,6 @@
 import type { BunSQLConfig } from './types';
 import { getRuntime } from '../platform/runtime';
+import { resolveDriver, tagConnection } from './driver';
 
 /**
  * SQL 连接管理器
@@ -17,39 +18,52 @@ export class BunSQLManager {
     }
 
     const pool = config.pool ?? {};
+    const driver = resolveDriver(config.type, config.driver, getRuntime().engine);
     let sql: unknown;
 
-    if (getRuntime().engine === 'bun') {
+    if (driver === 'bun-sql') {
       const { SQL } = require('bun') as typeof import('bun');
-      sql = new SQL(config.url, {
-        max: pool.max ?? 10,
-        idleTimeout: pool.idleTimeout ?? 30,
-        maxLifetime: pool.maxLifetime ?? 0,
-        connectionTimeout: pool.connectionTimeout ?? 30000,
-      });
-    } else {
-      // Node.js: detect dialect from URL
-      const url = config.url.toLowerCase();
-      if (url.startsWith('mysql://') || url.startsWith('mysql2://')) {
-        const mysql2 = require('mysql2/promise') as typeof import('mysql2/promise');
-        // Create a pool in Node.js
-        sql = mysql2.createPool({
-          uri: config.url,
-          connectionLimit: pool.max ?? 10,
-          waitForConnections: true,
-        });
-      } else {
-        // postgres (default)
-        const postgres = require('postgres') as typeof import('postgres');
-        sql = postgres(config.url, {
+      if (config.type === 'mysql') {
+        // 走 options-object 形式而非连接字符串，绕开 oven-sh/bun#26648
+        const parsed = new URL(config.url);
+        sql = new SQL({
+          adapter: 'mysql',
+          hostname: parsed.hostname,
+          port: parsed.port ? Number(parsed.port) : 3306,
+          username: decodeURIComponent(parsed.username),
+          password: decodeURIComponent(parsed.password),
+          database: parsed.pathname.replace(/^\//, ''),
           max: pool.max ?? 10,
-          idle_timeout: pool.idleTimeout ?? 30,
-          max_lifetime: pool.maxLifetime ?? 0,
-          connect_timeout: (pool.connectionTimeout ?? 30000) / 1000,
+          idleTimeout: pool.idleTimeout ?? 30,
+          maxLifetime: pool.maxLifetime ?? 0,
+          connectionTimeout: pool.connectionTimeout ?? 30000,
+        } as unknown as string);
+      } else {
+        sql = new SQL(config.url, {
+          max: pool.max ?? 10,
+          idleTimeout: pool.idleTimeout ?? 30,
+          maxLifetime: pool.maxLifetime ?? 0,
+          connectionTimeout: pool.connectionTimeout ?? 30000,
         });
       }
+    } else if (driver === 'mysql2') {
+      const mysql2 = require('mysql2/promise') as typeof import('mysql2/promise');
+      sql = mysql2.createPool({
+        uri: config.url,
+        connectionLimit: pool.max ?? 10,
+        waitForConnections: true,
+      });
+    } else {
+      const postgres = require('postgres') as typeof import('postgres');
+      sql = postgres(config.url, {
+        max: pool.max ?? 10,
+        idle_timeout: pool.idleTimeout ?? 30,
+        max_lifetime: pool.maxLifetime ?? 0,
+        connect_timeout: (pool.connectionTimeout ?? 30000) / 1000,
+      });
     }
 
+    tagConnection(sql, driver);
     this.instances.set(tenantId, sql);
     return sql;
   }

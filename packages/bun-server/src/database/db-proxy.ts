@@ -1,5 +1,6 @@
 import type { BunSQLManager } from './sql-manager';
 import { getCurrentSession } from './database-context';
+import { templateQueryViaDriver } from './driver';
 import type { TransactionManager } from './orm/transaction-manager';
 
 type DbResult = Promise<unknown>;
@@ -49,10 +50,10 @@ const baseDb = async (
   if (tenantId) {
     const tenantSql = sqlManager.get(tenantId);
     if (tenantSql) {
-      return await (tenantSql as any)(strings, ...values);
+      return await templateQueryViaDriver(tenantSql, strings, values);
     }
   }
-  return await (sqlManager.getDefault() as any)(strings, ...values);
+  return await templateQueryViaDriver(sqlManager.getDefault(), strings, values);
 };
 
 function createDb(tenantId?: string): DbProxy {

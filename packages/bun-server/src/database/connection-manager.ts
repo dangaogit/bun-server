@@ -7,6 +7,7 @@ import type {
 } from './types';
 
 import { ConnectionPool } from './connection-pool';
+import { healthCheckViaDriver } from './driver';
 
 /**
  * 数据库连接管理器
@@ -189,58 +190,16 @@ export class DatabaseConnectionManager {
   }
 
   /**
-   * PostgreSQL 健康检查（使用 Bun.SQL）
+   * PostgreSQL 健康检查（按连接 driver tag 分流）
    */
   private async healthCheckPostgres(connection: unknown): Promise<boolean> {
-    try {
-      // Bun.SQL 对象可以作为函数调用（模板字符串）
-      if (connection && typeof connection === 'function') {
-        const result = await (connection as (template: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>)`SELECT 1`;
-        return Array.isArray(result) && result.length > 0;
-      }
-      // 或者使用 query 方法（如果存在）
-      if (
-        connection &&
-        typeof connection === 'object' &&
-        'query' in connection &&
-        typeof connection.query === 'function'
-      ) {
-        await (connection as { query: (sql: string) => Promise<unknown> }).query(
-          'SELECT 1',
-        );
-        return true;
-      }
-      return false;
-    } catch (_error) {
-      return false;
-    }
+    return await healthCheckViaDriver(connection);
   }
 
   /**
-   * MySQL 健康检查（使用 Bun.SQL）
+   * MySQL 健康检查（按连接 driver tag 分流）
    */
   private async healthCheckMysql(connection: unknown): Promise<boolean> {
-    try {
-      // Bun.SQL 对象可以作为函数调用（模板字符串）
-      if (connection && typeof connection === 'function') {
-        const result = await (connection as (template: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>)`SELECT 1`;
-        return Array.isArray(result) && result.length > 0;
-      }
-      // 或者使用 query 方法（如果存在）
-      if (
-        connection &&
-        typeof connection === 'object' &&
-        'query' in connection &&
-        typeof connection.query === 'function'
-      ) {
-        await (connection as { query: (sql: string) => Promise<unknown> }).query(
-          'SELECT 1',
-        );
-        return true;
-      }
-      return false;
-    } catch (_error) {
-      return false;
-    }
+    return await healthCheckViaDriver(connection);
   }
 }

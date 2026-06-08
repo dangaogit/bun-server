@@ -4,6 +4,19 @@
 export type DatabaseType = 'sqlite' | 'postgres' | 'mysql';
 
 /**
+ * SQL 驱动选择
+ *
+ * 与运行时平台（fs/crypto/http server 等）解耦，仅决定 Postgres/MySQL 连接走哪套底层驱动。
+ *
+ * - `'auto'`（默认）：Bun 运行时使用内建 `Bun.SQL`，Node.js 运行时使用 `mysql2` / `postgres` 纯 JS 驱动（保持历史行为）。
+ * - `'mysql2'`：无论运行时是 Bun 还是 Node，都使用 `mysql2`（仅适用于 `type: 'mysql'`）。
+ *   适合 `bun build --compile` 场景，绕开编译二进制内焊死的 `Bun.SQL` MySQL 适配 bug。
+ * - `'postgres'`：无论运行时如何，都使用 `postgres` 纯 JS 驱动（仅适用于 `type: 'postgres'`）。
+ * - `'bun-sql'`：强制使用 `Bun.SQL`（仅在 Bun 运行时合法，Node.js 下会抛出清晰错误）。
+ */
+export type DatabaseDriver = 'auto' | 'bun-sql' | 'mysql2' | 'postgres';
+
+/**
  * SQLite 配置
  */
 export interface SqliteConfig {
@@ -72,11 +85,13 @@ export interface MysqlConfig {
 
 /**
  * 数据库配置（联合类型）
+ *
+ * Postgres/MySQL 支持可选的 `driver` 字段，用于显式选择底层驱动（与运行时平台解耦）。
  */
 export type DatabaseConfig =
   | { type: 'sqlite'; config: SqliteConfig }
-  | { type: 'postgres'; config: PostgresConfig }
-  | { type: 'mysql'; config: MysqlConfig };
+  | { type: 'postgres'; config: PostgresConfig; driver?: DatabaseDriver }
+  | { type: 'mysql'; config: MysqlConfig; driver?: DatabaseDriver };
 
 /**
  * Bun.SQL 连接池配置
@@ -111,6 +126,11 @@ export interface BunSQLConfig {
   type: 'postgres' | 'mysql';
   url: string;
   pool?: BunSQLPoolOptions;
+  /**
+   * 显式选择底层驱动（与运行时平台解耦）。
+   * @default 'auto'
+   */
+  driver?: DatabaseDriver;
 }
 
 /**
@@ -183,6 +203,11 @@ export interface DatabaseModuleOptions {
    * 单租户：数据库类型（V2）
    */
   type?: DatabaseType;
+  /**
+   * 单租户：显式选择底层驱动（V2，与运行时平台解耦）
+   * @default 'auto'
+   */
+  driver?: DatabaseDriver;
   /**
    * 单租户：Postgres/MySQL URL（V2）
    */
