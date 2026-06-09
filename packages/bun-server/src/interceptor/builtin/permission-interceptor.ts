@@ -91,8 +91,8 @@ export class PermissionInterceptor extends BaseInterceptor {
   public async execute<T>(
     target: unknown,
     propertyKey: string | symbol,
-    originalMethod: (...args: unknown[]) => T | Promise<T>,
-    args: unknown[],
+    originalMethod: (...args: any[]) => T | Promise<T>,
+    args: any[],
     container: Container,
     context?: Context,
   ): Promise<T> {
@@ -170,4 +170,3 @@ export class PermissionInterceptor extends BaseInterceptor {
     return null;
   }
 }
-

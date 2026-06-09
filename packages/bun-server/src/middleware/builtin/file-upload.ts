@@ -3,13 +3,15 @@ import { FileHandler } from '../../request/file-handler';
 
 export interface FileUploadOptions {
   maxSize?: number;
+  maxFileSize?: number;
+  uploadDir?: string;
 }
 
 /**
  * 简单的文件上传中间件：解析 multipart/form-data 并将文件附加到 context.body
  */
 export function createFileUploadMiddleware(options: FileUploadOptions = {}): Middleware {
-  const maxSize = options.maxSize ?? 10 * 1024 * 1024;
+  const maxSize = options.maxSize ?? options.maxFileSize ?? 10 * 1024 * 1024;
 
   return async (context, next) => {
     const contentType = context.getHeader('Content-Type');
@@ -38,5 +40,4 @@ export function createFileUploadMiddleware(options: FileUploadOptions = {}): Mid
     return await next();
   };
 }
-
 

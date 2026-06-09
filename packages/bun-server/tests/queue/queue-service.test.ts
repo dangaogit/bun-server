@@ -47,6 +47,16 @@ function createMockStore(): QueueStore {
       return first as Job<T> | undefined;
     },
 
+    async updateStatus(queueName: string, jobId: string, status: Job['status']): Promise<boolean> {
+      const job = queues.get(queueName)?.get(jobId);
+      if (!job) {
+        return false;
+      }
+      job.status = status;
+      job.updatedAt = Date.now();
+      return true;
+    },
+
     async complete(queueName: string, jobId: string, result?: any): Promise<boolean> {
       const job = queues.get(queueName)?.get(jobId);
       if (job) {
@@ -83,6 +93,10 @@ function createMockStore(): QueueStore {
         }
       }
       return { waiting, active, completed, failed };
+    },
+
+    async count(queueName: string): Promise<number> {
+      return queues.get(queueName)?.size ?? 0;
     },
   };
 }

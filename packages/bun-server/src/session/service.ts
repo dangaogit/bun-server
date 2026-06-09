@@ -25,7 +25,7 @@ export class SessionService {
   ) {
     this.store = options.store!;
     this.name = options.name ?? 'sessionId';
-    this.maxAge = options.maxAge ?? 86400000; // 24 小时
+    this.maxAge = options.maxAge ?? options.ttl ?? 86400000; // 24 小时
     this.rolling = options.rolling ?? true;
     this.cookieOptions = {
       secure: options.cookie?.secure ?? false,

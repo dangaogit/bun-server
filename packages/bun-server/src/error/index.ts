@@ -12,5 +12,5 @@ export { handleError } from './handler';
 export { ErrorCode, ERROR_CODE_MESSAGES, ERROR_CODE_TO_STATUS } from './error-codes';
 export { ErrorMessageI18n } from './i18n';
 export type { SupportedLanguage, MessageParams } from './i18n';
-
+export type { Context } from '../core/context';
 

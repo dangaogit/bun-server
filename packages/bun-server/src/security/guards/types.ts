@@ -16,6 +16,8 @@ export interface CanActivate {
   canActivate(context: ExecutionContext): boolean | Promise<boolean>;
 }
 
+export type Guard = CanActivate;
+
 /**
  * HTTP 参数主机接口
  * 提供 HTTP 请求相关的上下文信息
@@ -141,4 +143,3 @@ export const GUARD_REGISTRY_TOKEN = Symbol('@dangao/bun-server:guard-registry');
  * Roles 元数据键
  */
 export const ROLES_METADATA_KEY = Symbol('@dangao/bun-server:roles');
-

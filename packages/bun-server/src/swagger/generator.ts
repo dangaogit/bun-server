@@ -139,7 +139,7 @@ export class SwaggerGenerator {
         for (const match of pathParamMatches) {
           const paramName = match[1];
           // 检查是否已经有手动定义的参数
-          const existingParam = params.find((p) => p.metadata.name === paramName && p.metadata.in === 'path');
+          const existingParam = params.find((p) => p.metadata.name === paramName && (p.metadata.in ?? 'path') === 'path');
           if (!existingParam) {
             // 自动添加路径参数
             pathParams.push({
@@ -155,7 +155,7 @@ export class SwaggerGenerator {
         for (const param of params) {
           pathParams.push({
             name: param.metadata.name,
-            in: param.metadata.in,
+            in: param.metadata.in ?? 'path',
             description: param.metadata.description,
             required: param.metadata.required,
             schema: param.metadata.schema,
@@ -332,4 +332,3 @@ export class SwaggerGenerator {
     return path;
   }
 }
-

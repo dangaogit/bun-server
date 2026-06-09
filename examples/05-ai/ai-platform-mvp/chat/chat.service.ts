@@ -3,7 +3,7 @@ import { AiService, AI_SERVICE_TOKEN } from '@dangao/bun-server';
 import { ConversationService, CONVERSATION_SERVICE_TOKEN } from '@dangao/bun-server';
 import { AiGuardService, AI_GUARD_SERVICE_TOKEN } from '@dangao/bun-server';
 import { RagService, RAG_SERVICE_TOKEN } from '@dangao/bun-server';
-import { OpenAIProvider, type OpenAIProviderConfig } from '@dangao/bun-server';
+import { OpenAIProvider, type AiRequest, type OpenAIProviderConfig } from '@dangao/bun-server';
 
 export interface ChatRequest {
   message: string;
@@ -62,12 +62,12 @@ export class ChatService {
     }
 
     // 5. Call LLM
-    const completeRequest = {
+    const completeRequest: AiRequest = {
       messages: [
         { role: 'system', content: systemPrompt },
         ...history,
         { role: 'user', content: sanitizedMessage },
-      ],
+      ] as AiRequest['messages'],
       provider: request.provider,
       model: request.model,
       temperature: request.temperature,
@@ -94,11 +94,11 @@ export class ChatService {
 
   public streamChat(request: ChatRequest): { stream: ReadableStream<Uint8Array>; conversationId: string } {
     const convId = request.conversationId ?? crypto.randomUUID();
-    const streamRequest = {
+    const streamRequest: AiRequest = {
       messages: [
         { role: 'system', content: request.systemPrompt ?? 'You are a helpful AI assistant.' },
         { role: 'user', content: request.message },
-      ],
+      ] as AiRequest['messages'],
       provider: request.provider,
       model: request.model,
       temperature: request.temperature,

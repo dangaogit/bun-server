@@ -1,7 +1,7 @@
 import { ControllerRegistry } from '../controller/controller';
 import { Container } from './container';
 import { Lifecycle } from './types';
-import { getModuleMetadata, type ModuleClass, type ModuleProvider, type ProviderToken } from './module';
+import { getModuleMetadata, invokeFactoryProvider, type ModuleClass, type ModuleProvider, type ProviderToken } from './module';
 import { isGlobalModule } from './decorators';
 import type { Constructor } from '@/core/types';
 import type { ApplicationExtension } from '../extensions/types';
@@ -160,7 +160,7 @@ export class ModuleRegistry {
       if ('useFactory' in provider) {
         container.register(provider.provide, {
           lifecycle: provider.lifecycle ?? Lifecycle.Singleton,
-          factory: () => provider.useFactory(container),
+          factory: () => invokeFactoryProvider(provider, container),
         });
         continue;
       }
@@ -378,4 +378,3 @@ export class ModuleRegistry {
     });
   }
 }
-

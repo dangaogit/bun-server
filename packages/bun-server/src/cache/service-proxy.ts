@@ -87,9 +87,9 @@ export class CacheServiceProxy {
 
         // 返回包装后的方法
         // 使用原型方法以确保拦截器能获取到正确的元数据
-        const originalMethod = prototypeMethod as (...args: unknown[]) => unknown;
+        const originalMethod = prototypeMethod as (...args: any[]) => unknown;
 
-        return async function (this: T, ...args: unknown[]): Promise<unknown> {
+        return async function (this: T, ...args: any[]): Promise<unknown> {
           // 按优先级执行拦截器：CacheEvict (beforeInvocation) -> Cacheable/CachePut -> CacheEvict (afterInvocation)
 
           // 如果有 @CacheEvict 且配置了 beforeInvocation

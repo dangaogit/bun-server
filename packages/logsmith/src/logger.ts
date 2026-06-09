@@ -11,6 +11,7 @@ export interface LogEntry {
   levelLabel: string;
   message: string;
   args: unknown[];
+  data?: unknown;
   prefix?: string;
   timestamp: Date;
 }
@@ -93,6 +94,7 @@ export class SimpleLogger implements Logger {
       levelLabel: LEVEL_LABELS[level],
       message,
       args,
+      data: args[0],
       prefix: this.prefix,
       timestamp: new Date(),
     };
@@ -184,4 +186,3 @@ export class LoggerManager {
     return this.current;
   }
 }
-

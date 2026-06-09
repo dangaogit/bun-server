@@ -17,7 +17,7 @@ import {
   SessionModule,
   SessionService,
 } from '@dangao/bun-server';
-import type { Session as SessionType } from '@dangao/bun-server';
+import type { SessionType } from '@dangao/bun-server';
 
 /**
  * 用户服务

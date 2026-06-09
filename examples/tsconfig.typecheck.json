@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "baseUrl": "..",
+    "paths": {
+      "@/*": [
+        "packages/bun-server/src/*"
+      ],
+      "@dangao/bun-server": [
+        "packages/bun-server/src/index.ts"
+      ],
+      "@dangao/logsmith": [
+        "packages/logsmith/src/index.ts"
+      ]
+    },
+    "strict": false,
+    "noImplicitAny": false,
+    "noImplicitOverride": false,
+    "noUncheckedIndexedAccess": false,
+    "strictFunctionTypes": false,
+    "verbatimModuleSyntax": false,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true
+  }
+}

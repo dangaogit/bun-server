@@ -50,13 +50,25 @@ export function ApiOperation(metadata: ApiOperationMetadata): MethodDecorator {
  * 用于描述 API 参数
  * @param metadata - 参数元数据
  */
-export function ApiParam(metadata: ApiParamMetadata): ParameterDecorator {
-  return function (target: unknown, propertyKey: string | symbol | undefined, parameterIndex: number) {
+export function ApiParam(metadata: ApiParamMetadata): ParameterDecorator & MethodDecorator {
+  const decorator = (
+    target: Object,
+    propertyKey: string | symbol | undefined,
+    descriptorOrParameterIndex: TypedPropertyDescriptor<any> | number,
+  ): void => {
+    const paramMetadata: ApiParamMetadata = {
+      in: 'path',
+      ...metadata,
+    };
     const existingParams: Array<{ index: number; metadata: ApiParamMetadata }> =
       Reflect.getMetadata(API_PARAM_METADATA_KEY, target as Object, propertyKey!) || [];
-    existingParams.push({ index: parameterIndex, metadata });
+    const index = typeof descriptorOrParameterIndex === 'number'
+      ? descriptorOrParameterIndex
+      : -1;
+    existingParams.push({ index, metadata: paramMetadata });
     Reflect.defineMetadata(API_PARAM_METADATA_KEY, existingParams, target as Object, propertyKey!);
   };
+  return decorator as ParameterDecorator & MethodDecorator;
 }
 
 /**
@@ -130,4 +142,3 @@ export function getApiResponses(
 ): ApiResponseMetadata[] {
   return Reflect.getMetadata(API_RESPONSE_METADATA_KEY, target as Object, propertyKey) || [];
 }
-

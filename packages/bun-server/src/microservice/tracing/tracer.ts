@@ -172,14 +172,27 @@ export class Tracer {
   /**
    * 添加 Span 事件
    */
-  public addSpanEvent(spanId: SpanId, event: Omit<SpanEvent, 'timestamp'>): void {
+  public addSpanEvent(
+    spanId: SpanId,
+    event: string,
+    attributes?: Record<string, string | number | boolean>,
+  ): void;
+  public addSpanEvent(spanId: SpanId, event: Omit<SpanEvent, 'timestamp'>): void;
+  public addSpanEvent(
+    spanId: SpanId,
+    event: string | Omit<SpanEvent, 'timestamp'>,
+    attributes?: Record<string, string | number | boolean>,
+  ): void {
     const span = this.activeSpans.get(spanId);
     if (span) {
       if (!span.events) {
         span.events = [];
       }
+      const spanEvent = typeof event === 'string'
+        ? { name: event, attributes }
+        : event;
       span.events.push({
-        ...event,
+        ...spanEvent,
         timestamp: Date.now(),
       });
     }
@@ -290,4 +303,3 @@ export class Tracer {
     this.activeSpans.clear();
   }
 }
-

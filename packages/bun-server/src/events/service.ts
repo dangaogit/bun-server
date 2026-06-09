@@ -36,7 +36,7 @@ export class EventEmitterService implements EventEmitter {
   /**
    * 发布事件（同步触发所有监听器，不等待异步监听器完成）
    */
-  public emit<T>(event: string | symbol, payload: T): void {
+  public emit<T = undefined>(event: string | symbol, payload?: T): void {
     const eventName = this.resolveEventName(event);
     const matchedListeners = this.getMatchedListeners(eventName);
 
@@ -70,7 +70,7 @@ export class EventEmitterService implements EventEmitter {
   /**
    * 异步发布事件（等待所有监听器完成）
    */
-  public async emitAsync<T>(event: string | symbol, payload: T): Promise<void> {
+  public async emitAsync<T = undefined>(event: string | symbol, payload?: T): Promise<void> {
     const eventName = this.resolveEventName(event);
     const matchedListeners = this.getMatchedListeners(eventName);
 
@@ -342,6 +342,8 @@ export class EventEmitterService implements EventEmitter {
   ): void {
     if (this.options.onError) {
       this.options.onError(error, event, payload);
+    } else if (this.options.errorHandler) {
+      this.options.errorHandler(String(event), error, payload);
     } else {
       console.error(
         `[EventEmitter] Error in listener for event "${String(event)}":`,

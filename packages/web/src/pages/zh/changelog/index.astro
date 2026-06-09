@@ -3,10 +3,37 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 
 const versions = [
   {
-    version: 'v3.1.0',
-    date: '2026-04',
+    version: 'v3.3.0',
+    date: '2026-06',
     tag: 'latest',
     highlight: true,
+    changes: [
+      { type: 'fix', text: '同步 FactoryProvider 现在支持 @Module providers 中可选的 inject；此前 inject 会被忽略并改传 Container，因此对已声明 inject 的工厂属于潜在 breaking-fix' },
+      { type: 'fix', text: '保留向后兼容策略：未声明 inject 或 inject 为空数组的工厂，仍然只接收当前 Container' },
+      { type: 'test', text: '补充回归测试，覆盖依赖实例注入、跨模块导出 token、参数顺序，以及与 useExisting/useValue/useClass 混用' },
+      { type: 'chore', text: '新增 monorepo typecheck 脚本，并修复 core 模块、examples 与 benchmark 的严格类型错误' },
+      { type: 'chore', text: '将 @dangao/bun-server 与 @dangao/bun-server-web 升级到 3.3.0，并同步 web changelog 页面' },
+    ],
+  },
+  {
+    version: 'v3.2.0',
+    date: '2026-06',
+    tag: '',
+    highlight: false,
+    changes: [
+      { type: 'feat', text: 'Database：新增可选 driver 字段（auto | bun-sql | mysql2 | postgres），将 SQL 驱动与运行时平台解耦——修复 bun build --compile 下 MySQL 不可用问题' },
+      { type: 'feat', text: '从 @dangao/bun-server 导出 resolveDriver、tagConnection、getConnectionDriver 与 DatabaseDriver 类型' },
+      { type: 'fix', text: '通过 options 对象构造 Bun.SQL MySQL 连接，规避 oven-sh/bun#26648' },
+      { type: 'fix', text: '将 mysql2 查询结果规范化为 rows（此前返回 [rows, fields] 元组）' },
+      { type: 'test', text: '覆盖 driver 解析、连接标记、按 driver 分发，以及 Bun 运行时下的 mysql2 全生命周期' },
+      { type: 'chore', text: '将 @dangao/bun-server 升级到 3.2.0' },
+    ],
+  },
+  {
+    version: 'v3.1.0',
+    date: '2026-04',
+    tag: '',
+    highlight: false,
     changes: [
       { type: 'feat', text: '模块 providers 支持 NestJS 风格的 ExistingProvider — { provide, useExisting } 解析为与已注册 token 同一实例，不重复创建单例' },
       { type: 'feat', text: '从 @dangao/bun-server 导出 ExistingProvider 类型' },

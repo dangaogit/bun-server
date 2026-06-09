@@ -1,0 +1,31 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strictNullChecks": false,
+    "strictFunctionTypes": false,
+    "noImplicitOverride": false,
+    "noImplicitAny": false,
+    "verbatimModuleSyntax": false,
+    "noUncheckedIndexedAccess": false,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ],
+      "bun:test": [
+        "tests/bun-test-shim.d.ts"
+      ],
+      "@dangao/logsmith": [
+        "../logsmith/src/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "tests/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

@@ -6,7 +6,7 @@ import type { MessageParams } from './i18n';
  */
 export class HttpException extends Error {
   public readonly status: number;
-  public readonly code?: ErrorCode;
+  public readonly code?: ErrorCode | string;
   public readonly details?: unknown;
   public readonly messageParams?: MessageParams;
 
@@ -14,7 +14,7 @@ export class HttpException extends Error {
     status: number,
     message: string,
     details?: unknown,
-    code?: ErrorCode,
+    code?: ErrorCode | string,
     messageParams?: MessageParams,
   ) {
     super(message);
@@ -46,13 +46,14 @@ export class HttpException extends Error {
    * ```
    */
   public static withCode(
-    code: ErrorCode,
+    code: ErrorCode | string,
     message?: string,
     details?: unknown,
     messageParams?: MessageParams,
   ): HttpException {
-    const status = ERROR_CODE_TO_STATUS[code] || 500;
-    const finalMessage = message || ERROR_CODE_MESSAGES[code] || 'Internal Server Error';
+    const knownCode = code as ErrorCode;
+    const status = ERROR_CODE_TO_STATUS[knownCode] || 500;
+    const finalMessage = message || ERROR_CODE_MESSAGES[knownCode] || 'Internal Server Error';
     return new HttpException(status, finalMessage, details, code, messageParams);
   }
 }
@@ -61,7 +62,7 @@ export class BadRequestException extends HttpException {
   public constructor(
     message: string = 'Bad Request',
     details?: unknown,
-    code?: ErrorCode,
+    code?: ErrorCode | string,
     messageParams?: MessageParams,
   ) {
     super(400, message, details, code, messageParams);
@@ -72,7 +73,7 @@ export class UnauthorizedException extends HttpException {
   public constructor(
     message: string = 'Unauthorized',
     details?: unknown,
-    code?: ErrorCode,
+    code?: ErrorCode | string,
     messageParams?: MessageParams,
   ) {
     super(401, message, details, code, messageParams);
@@ -83,7 +84,7 @@ export class ForbiddenException extends HttpException {
   public constructor(
     message: string = 'Forbidden',
     details?: unknown,
-    code?: ErrorCode,
+    code?: ErrorCode | string,
     messageParams?: MessageParams,
   ) {
     super(403, message, details, code, messageParams);
@@ -94,7 +95,7 @@ export class NotFoundException extends HttpException {
   public constructor(
     message: string = 'Not Found',
     details?: unknown,
-    code?: ErrorCode,
+    code?: ErrorCode | string,
     messageParams?: MessageParams,
   ) {
     super(404, message, details, code, messageParams);
@@ -105,11 +106,10 @@ export class InternalServerErrorException extends HttpException {
   public constructor(
     message: string = 'Internal Server Error',
     details?: unknown,
-    code?: ErrorCode,
+    code?: ErrorCode | string,
     messageParams?: MessageParams,
   ) {
     super(500, message, details, code, messageParams);
   }
 }
-
 

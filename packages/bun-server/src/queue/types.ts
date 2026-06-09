@@ -25,6 +25,11 @@ export interface JobOptions {
   attempts?: number;
 
   /**
+   * 任务重试次数别名，兼容早期 API。
+   */
+  retries?: number;
+
+  /**
    * 任务重试延迟（毫秒）
    */
   backoff?: {
@@ -90,7 +95,22 @@ export interface Job<T = JobData> {
   /**
    * 更新时间
    */
-  updatedAt: number;
+  updatedAt?: number;
+
+  /**
+   * 完成结果
+   */
+  result?: unknown;
+
+  /**
+   * 完成时间
+   */
+  completedAt?: number;
+
+  /**
+   * 失败错误信息
+   */
+  error?: string;
 }
 
 /**
@@ -140,6 +160,25 @@ export interface QueueStore {
     jobId: string,
     status: Job['status'],
   ): Promise<boolean>;
+
+  complete?(
+    queueName: string,
+    jobId: string,
+    result?: unknown,
+  ): Promise<boolean>;
+
+  fail?(
+    queueName: string,
+    jobId: string,
+    error: Error,
+  ): Promise<boolean>;
+
+  getStats?(queueName: string): Promise<{
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+  }>;
 
   /**
    * 删除任务

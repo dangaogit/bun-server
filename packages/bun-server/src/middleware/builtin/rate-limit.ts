@@ -88,7 +88,12 @@ export interface RateLimitOptions {
   /**
    * 时间窗口内的最大请求数
    */
-  max: number;
+  max?: number;
+
+  /**
+   * 时间窗口内的最大请求数别名，兼容装饰器早期写法。
+   */
+  limit?: number;
 
   /**
    * 时间窗口（毫秒）
@@ -107,6 +112,11 @@ export interface RateLimitOptions {
    * @returns 限流键
    */
   keyGenerator?: (context: Context) => string | Promise<string>;
+
+  /**
+   * 返回 true 时跳过限流。
+   */
+  skip?: (context: Context) => boolean | Promise<boolean>;
 
   /**
    * 是否跳过成功响应（只对错误响应计数）
@@ -157,9 +167,11 @@ function defaultKeyGenerator(context: Context): string {
 export function createRateLimitMiddleware(options: RateLimitOptions): Middleware {
   const {
     max,
+    limit,
     windowMs = 60000, // 默认 1 分钟
     store = new MemoryRateLimitStore(),
     keyGenerator = defaultKeyGenerator,
+    skip,
     skipSuccessfulRequests = false,
     skipFailedRequests = false,
     message = 'Too Many Requests',
@@ -167,31 +179,36 @@ export function createRateLimitMiddleware(options: RateLimitOptions): Middleware
     standardHeaders = true,
     legacyHeaders = true,
   } = options;
+  const requestLimit = limit ?? max ?? 100;
 
   return async (context: Context, next) => {
+    if (skip && await skip(context)) {
+      return await next();
+    }
+
     // 生成限流键
     const key = await keyGenerator(context);
     const currentCount = await store.increment(key, windowMs);
 
     // 计算剩余请求数和重置时间
-    const remaining = Math.max(0, max - currentCount);
+    const remaining = Math.max(0, requestLimit - currentCount);
     const resetTime = Date.now() + windowMs;
 
     // 设置响应头
     if (standardHeaders) {
-      context.setHeader('RateLimit-Limit', max.toString());
+      context.setHeader('RateLimit-Limit', requestLimit.toString());
       context.setHeader('RateLimit-Remaining', remaining.toString());
       context.setHeader('RateLimit-Reset', Math.ceil(resetTime / 1000).toString());
     }
 
     if (legacyHeaders) {
-      context.setHeader('X-RateLimit-Limit', max.toString());
+      context.setHeader('X-RateLimit-Limit', requestLimit.toString());
       context.setHeader('X-RateLimit-Remaining', remaining.toString());
       context.setHeader('X-RateLimit-Reset', Math.ceil(resetTime / 1000).toString());
     }
 
     // 检查是否超过限制
-    if (currentCount > max) {
+    if (currentCount > requestLimit) {
       context.setStatus(statusCode);
       return context.createErrorResponse({
         error: message,

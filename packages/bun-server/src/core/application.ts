@@ -491,6 +491,13 @@ export class Application {
   }
 
   /**
+   * 获取底层平台服务器实例
+   */
+  public getNativeServer(): unknown {
+    return this.server?.getNativeServer();
+  }
+
+  /**
    * 自动注册服务到注册中心
    * 扫描所有使用 @ServiceRegistry 装饰器的控制器，自动注册服务
    */
@@ -639,4 +646,3 @@ export class Application {
     this.signalHandlersInstalled = false;
   }
 }
-

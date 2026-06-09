@@ -22,8 +22,8 @@ export class InterceptorChain {
     interceptors: Interceptor[],
     target: unknown,
     propertyKey: string | symbol,
-    originalMethod: (...args: unknown[]) => T | Promise<T>,
-    args: unknown[],
+    originalMethod: (...args: any[]) => T | Promise<T>,
+    args: any[],
     container: Container,
     context?: Context,
   ): Promise<T> {
@@ -36,7 +36,7 @@ export class InterceptorChain {
     let index = 0;
     let currentArgs = args; // Track arguments that might be modified by interceptors
     
-    const next = async (modifiedArgs?: unknown[]): Promise<T> => {
+    const next = async (modifiedArgs?: any[]): Promise<T> => {
       // 如果拦截器传递了新参数，使用新参数；否则使用当前参数
       if (modifiedArgs && modifiedArgs.length > 0) {
         currentArgs = modifiedArgs;
@@ -50,11 +50,11 @@ export class InterceptorChain {
       const interceptor = interceptors[index++];
       
       // 执行当前拦截器，传递 next 作为下一个执行函数
-      // 注意：拦截器接口要求 originalMethod 的类型是 (...args: unknown[]) => T | Promise<T>
+      // 注意：拦截器接口要求 originalMethod 的类型是 (...args: any[]) => T | Promise<T>
       // 这允许原始方法可以是同步（返回 T）或异步（返回 Promise<T>）
       // 虽然 next 函数是异步的（总是返回 Promise<T>），但我们保持类型签名为 T | Promise<T>
       // 以符合拦截器接口的要求。拦截器应该使用 Promise.resolve() 来统一处理同步和异步返回值
-      const wrappedNext = (...nextArgs: unknown[]): T | Promise<T> => {
+      const wrappedNext = (...nextArgs: any[]): T | Promise<T> => {
         // 如果拦截器传递了新参数，传递给 next；否则传递 undefined（使用当前参数）
         // next 是异步函数，总是返回 Promise<T>，但类型签名允许 T | Promise<T>
         const result = next(nextArgs.length > 0 ? nextArgs : undefined);
@@ -70,10 +70,9 @@ export class InterceptorChain {
         currentArgs, // Pass current args to the interceptor
         container,
         context,
-      );
+      ) as T;
     };
 
     return await next();
   }
 }
-

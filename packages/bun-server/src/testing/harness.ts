@@ -22,7 +22,7 @@ export class PerformanceHarness {
   public static async benchmark(
     name: string,
     iterations: number,
-    runner: (iteration: number) => void | Promise<void>,
+    runner: (iteration: number) => unknown | Promise<unknown>,
   ): Promise<BenchmarkResult> {
     if (iterations <= 0) {
       throw new Error('iterations must be greater than 0');
@@ -93,4 +93,3 @@ export class StressTester {
     };
   }
 }
-

@@ -9,7 +9,7 @@ interface RequestOptions {
 interface TestResponse {
   status: number;
   headers: Headers;
-  body: unknown;
+  body: any;
   text: string;
   ok: boolean;
 }
@@ -94,7 +94,7 @@ export class TestHttpClient {
     const response = await fetch(url, fetchOptions);
     const text = await response.text();
 
-    let body: unknown;
+    let body: any;
     try {
       body = JSON.parse(text);
     } catch (_error) {

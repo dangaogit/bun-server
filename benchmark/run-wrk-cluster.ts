@@ -273,7 +273,11 @@ async function main(): Promise<void> {
   }
 
   // Wait for WRK_READY from the first worker, then probe the port
-  const firstReader = workers[0].stdout.getReader();
+  const firstWorker = workers[0];
+  if (!firstWorker || typeof firstWorker.stdout === 'number') {
+    throw new Error('worker stdout stream is unavailable');
+  }
+  const firstReader = firstWorker.stdout.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
   while (true) {
