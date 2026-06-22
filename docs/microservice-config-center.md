@@ -21,6 +21,8 @@ The configuration center provides centralized configuration management capabilit
 - **Configuration Priority**: Config center > Environment variables > Default configuration
 - **Configuration Watching**: Watch for configuration changes and automatically refresh application configuration
 
+> **Namespace**: For the Nacos public namespace (console default), omit `namespaceId`. Do not use the literal `"public"`. See [Nacos Integration - Namespace](./microservice-nacos.md#namespace).
+
 ## Quick Start
 
 ### 1. Register Configuration Center Module
@@ -37,7 +39,6 @@ app.registerModule(
     nacos: {
       client: {
         serverList: ['http://localhost:8848'],
-        namespaceId: 'public',
         username: 'nacos',
         password: 'nacos',
       },

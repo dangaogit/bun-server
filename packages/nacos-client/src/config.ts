@@ -16,16 +16,14 @@ export class NacosConfigClient {
    * API: GET /nacos/v3/client/cs/config
    */
   public async getConfig(options: GetConfigOptions): Promise<ConfigResult> {
-    const namespaceId = options.namespaceId ?? this.client.getNamespaceId();
+    /** Nacos 3.x：public 命名空间需在查询串中带 `namespaceId=`（空），省略会 20004 */
+    const namespaceId = options.namespaceId ?? this.client.getNamespaceId() ?? '';
 
-    const params: Record<string, string | undefined> = {
+    const params: Record<string, string> = {
       dataId: options.dataId,
       groupName: options.groupName,
+      namespaceId,
     };
-
-    if (namespaceId) {
-      params.namespaceId = namespaceId;
-    }
 
     // Nacos API 返回格式: { code: 0, data: ConfigResult, message: "success" }
     const response = await this.client.get<{

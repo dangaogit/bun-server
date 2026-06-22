@@ -40,7 +40,6 @@ app.registerModule(
     nacos: {
       client: {
         serverList: ['http://localhost:8848'],
-        namespaceId: 'public',
         username: 'nacos',
         password: 'nacos',
       },
@@ -55,7 +54,6 @@ app.registerModule(
     nacos: {
       client: {
         serverList: ['http://localhost:8848'],
-        namespaceId: 'public',
         username: 'nacos',
         password: 'nacos',
       },
@@ -230,7 +228,6 @@ class MyService {
 ```typescript
 const instances = await serviceRegistry.getInstances('user-service', {
   healthyOnly: true,
-  namespaceId: 'public',
 });
 
 // Watch for service instance changes

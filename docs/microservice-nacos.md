@@ -5,6 +5,7 @@ This document introduces how to use Nacos as a configuration center and service 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Namespace](#namespace)
 - [Nacos Installation](#nacos-installation)
 - [Configuration Center Integration](#configuration-center-integration)
 - [Service Registry Integration](#service-registry-integration)
@@ -19,6 +20,26 @@ Bun Server Framework provides Nacos 3.X support through the `@dangao/nacos-clien
 - **Service Registration**: Service instance registration, renewal, and deregistration
 - **Service Discovery**: Service instance querying and watching
 - **Open API**: Based on Nacos 3.X Open API implementation
+
+## Namespace
+
+The default namespace shown as **public** in the Nacos console maps to an **empty string** `""` in the Open API, not the literal `"public"`.
+
+`@dangao/nacos-client` **0.1.2+** automatically sends `namespaceId=` (empty value) when `namespaceId` is not configured, for both configuration and service discovery. Versions 0.1.1 and earlier omitted the parameter entirely, causing Nacos 3.x to return `code=20004`.
+
+**Recommended**: omit `namespaceId` in client config for the public namespace:
+
+```typescript
+nacos: {
+  client: {
+    serverList: ['http://localhost:8848'],
+    username: 'nacos',
+    password: 'nacos',
+  },
+},
+```
+
+For a custom namespace, pass the ID from the console (usually a UUID). If you patched `@dangao/nacos-client@0.1.1` with `bun patch`, remove `patchedDependencies` and the patch file after upgrading to 0.1.2+.
 
 ## Nacos Installation
 
@@ -48,7 +69,6 @@ app.registerModule(
     nacos: {
       client: {
         serverList: ['http://localhost:8848'],
-        namespaceId: 'public',
         username: 'nacos',
         password: 'nacos',
       },
@@ -125,7 +145,6 @@ app.registerModule(
     nacos: {
       client: {
         serverList: ['http://localhost:8848'],
-        namespaceId: 'public',
         username: 'nacos',
         password: 'nacos',
       },
@@ -197,7 +216,6 @@ import {
 
 const instances = await serviceRegistry.getInstances('user-service', {
   healthyOnly: true,
-  namespaceId: 'public',
 });
 
 // Watch for service instance changes
@@ -226,7 +244,6 @@ ConfigCenterModule.forRoot({
   nacos: {
     client: {
       serverList: ['http://localhost:8848'],
-      namespaceId: 'public',
       username: 'nacos',
       password: 'nacos',
     },
@@ -239,7 +256,6 @@ ServiceRegistryModule.forRoot({
   nacos: {
     client: {
       serverList: ['http://localhost:8848'],
-      namespaceId: 'public',
       username: 'nacos',
       password: 'nacos',
     },
@@ -336,6 +352,17 @@ await app.listen(3000);
 - Check if `watchInterval` setting is reasonable
 - Check if configuration watch callback is correctly implemented
 - Check logs to confirm if configuration changes are detected
+
+### 6. Public Namespace Returns 20004
+
+**Issue**: `getConfig` or service registration/discovery returns `code=20004` when `namespaceId` is not configured
+
+**Cause**: Nacos 3.x requires `namespaceId=` (empty value) in requests; `@dangao/nacos-client` 0.1.1 and earlier omitted the parameter
+
+**Solutions**:
+- Upgrade `@dangao/nacos-client` to **0.1.2+** (pulled in via framework dependency, or pin explicitly in downstream projects)
+- Remove any `bun patch` workaround
+- Do not set `namespaceId` to the literal `"public"`; public maps to an empty string—omit the config instead
 
 ## Reference Resources
 

@@ -22,6 +22,8 @@
 - **健康检查**：自动根据健康检查状态更新服务健康状态
 - **实例监听**：监听服务实例变更
 
+> **命名空间**：使用 Nacos public 命名空间时省略 `namespaceId`。详见 [Nacos 集成文档 - 命名空间](./microservice-nacos.md#命名空间)。
+
 ## 快速开始
 
 ### 1. 注册服务注册中心模块
@@ -39,7 +41,6 @@ app.registerModule(
     nacos: {
       client: {
         serverList: ['http://localhost:8848'],
-        namespaceId: 'public',
         username: 'nacos',
         password: 'nacos',
       },
@@ -94,7 +95,6 @@ await app.listen(3000);
     region: 'us-east',
   },
   clusterName: 'default',
-  namespaceId: 'public',
   groupName: 'DEFAULT_GROUP',
 })
 @Controller('/api/users')
@@ -112,7 +112,7 @@ class UserController {
 - `healthy`：初始健康状态
 - `metadata`：服务元数据（版本、区域等）
 - `clusterName`：集群名
-- `namespaceId`：命名空间
+- `namespaceId`：命名空间 ID；省略表示 public（空字符串）。详见 [Nacos 集成文档 - 命名空间](./microservice-nacos.md#命名空间)
 - `groupName`：分组名
 
 ### 手动注册
@@ -181,7 +181,6 @@ import type { ServiceInstance } from '@dangao/bun-server';
 class MyService {
   @ServiceDiscovery('user-service', {
     healthyOnly: true, // 只获取健康实例
-    namespaceId: 'public',
     groupName: 'DEFAULT_GROUP',
   })
   public instances: ServiceInstance[] = [];
@@ -199,7 +198,6 @@ class MyService {
 // 获取服务实例列表
 const instances = await serviceRegistry.getInstances('user-service', {
   healthyOnly: true,
-  namespaceId: 'public',
   groupName: 'DEFAULT_GROUP',
   clusterName: 'default',
 });
@@ -213,7 +211,6 @@ const unsubscribe = serviceRegistry.watchInstances(
     updateLocalCache(newInstances);
   },
   {
-    namespaceId: 'public',
     groupName: 'DEFAULT_GROUP',
   },
 );

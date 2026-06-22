@@ -24,10 +24,9 @@ bun add @dangao/nacos-client
 ```typescript
 import { NacosClient, NacosConfigClient } from "@dangao/nacos-client";
 
-// Create client
+// Create client (omit namespaceId for the public namespace)
 const client = new NacosClient({
   serverList: ["http://localhost:8848"],
-  namespaceId: "public",
   username: "nacos",
   password: "nacos",
 });
@@ -52,7 +51,6 @@ import { NacosClient, NacosServiceClient } from "@dangao/nacos-client";
 
 const client = new NacosClient({
   serverList: ["http://localhost:8848"],
-  namespaceId: "public",
 });
 
 const serviceClient = new NacosServiceClient(client);
@@ -93,7 +91,7 @@ The base HTTP client that handles communication with Nacos server.
 | Option        | Type       | Required | Default | Description                           |
 | ------------- | ---------- | -------- | ------- | ------------------------------------- |
 | `serverList`  | `string[]` | Yes      | -       | Nacos server addresses                |
-| `namespaceId` | `string`   | No       | -       | Namespace ID                          |
+| `namespaceId` | `string`   | No       | `""`    | Namespace ID; omit for public (empty string, not the literal `"public"`) |
 | `username`    | `string`   | No       | -       | Username for authentication           |
 | `password`    | `string`   | No       | -       | Password for authentication           |
 | `timeout`     | `number`   | No       | `5000`  | Request timeout in milliseconds       |
@@ -116,7 +114,7 @@ Get configuration from Nacos config center.
 | ------------- | -------- | -------- | --------------------------------------- |
 | `dataId`      | `string` | Yes      | Configuration ID                        |
 | `groupName`   | `string` | Yes      | Configuration group                     |
-| `namespaceId` | `string` | No       | Namespace ID (overrides client setting) |
+| `namespaceId` | `string` | No       | Namespace ID (overrides client setting; defaults to `""` when omitted) |
 
 **Returns:** `ConfigResult`
 
@@ -304,7 +302,6 @@ class AppController {
       nacos: {
         client: {
           serverList: ["http://localhost:8848"],
-          namespaceId: "public",
           username: "nacos",
           password: "nacos",
         },
@@ -395,7 +392,6 @@ class DiscoveryController {
       nacos: {
         client: {
           serverList: ["http://localhost:8848"],
-          namespaceId: "public",
           username: "nacos",
           password: "nacos",
         },
@@ -508,6 +504,26 @@ serviceClient.setDefaultRetryStrategy({
   exponentialBackoff: true,
   baseDelay: 1000,
   maxDelay: 30000,
+});
+```
+
+## Namespace
+
+Nacos 3.x Open API requires every request to include a `namespaceId` parameter. The default namespace shown as **public** in the console maps to an **empty string** `""`, not the literal `"public"`.
+
+- When `namespaceId` is not set on `NacosClient`, the client automatically sends `namespaceId=` (empty value) on `getConfig`, `registerInstance`, `deregisterInstance`, `getInstances`, and related calls
+- For a custom namespace, pass the namespace ID from the console (usually a UUID)
+- **0.1.1 and earlier** omitted the parameter when unset, causing Nacos 3.x to return `code=20004`; use **0.1.2+**
+- If you patched `@dangao/nacos-client@0.1.1` with `bun patch`, remove `patchedDependencies` and the patch file after upgrading
+
+```typescript
+// Public namespace (recommended: omit namespaceId)
+const publicClient = new NacosClient({ serverList: ["http://localhost:8848"] });
+
+// Custom namespace
+const customClient = new NacosClient({
+  serverList: ["http://localhost:8848"],
+  namespaceId: "your-namespace-uuid",
 });
 ```
 

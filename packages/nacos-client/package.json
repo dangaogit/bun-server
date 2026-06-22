@@ -1,7 +1,7 @@
 {
   "name": "@dangao/nacos-client",
   "description": "Nacos 3.X Open API client for Bun runtime",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -31,6 +31,7 @@
     "LICENSE"
   ],
   "scripts": {
+    "test": "bun test",
     "build": "bun run clean && bun run bundle && bun run dts",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "clean": "rm -rf dist",

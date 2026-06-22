@@ -21,6 +21,8 @@
 - **配置优先级**：配置中心配置 > 环境变量 > 默认配置
 - **配置监听**：监听配置变更，自动刷新应用配置
 
+> **命名空间**：使用 Nacos public 命名空间（控制台默认）时，省略 `namespaceId` 即可。请勿设为字面量 `"public"`。详见 [Nacos 集成文档 - 命名空间](./microservice-nacos.md#命名空间)。
+
 ## 快速开始
 
 ### 1. 注册配置中心模块
@@ -37,7 +39,6 @@ app.registerModule(
     nacos: {
       client: {
         serverList: ['http://localhost:8848'],
-        namespaceId: 'public',
         username: 'nacos',
         password: 'nacos',
       },

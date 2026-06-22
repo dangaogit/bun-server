@@ -23,10 +23,9 @@ bun add @dangao/nacos-client
 ```typescript
 import { NacosClient, NacosConfigClient } from '@dangao/nacos-client';
 
-// 创建客户端
+// 创建客户端（省略 namespaceId 即 public 命名空间）
 const client = new NacosClient({
   serverList: ['http://localhost:8848'],
-  namespaceId: 'public',
   username: 'nacos',
   password: 'nacos',
 });
@@ -51,7 +50,6 @@ import { NacosClient, NacosServiceClient } from '@dangao/nacos-client';
 
 const client = new NacosClient({
   serverList: ['http://localhost:8848'],
-  namespaceId: 'public',
 });
 
 const serviceClient = new NacosServiceClient(client);
@@ -92,7 +90,7 @@ await serviceClient.deregisterInstance('my-service', '192.168.1.100', 8080);
 | 选项 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | `serverList` | `string[]` | 是 | - | Nacos 服务器地址列表 |
-| `namespaceId` | `string` | 否 | - | 命名空间 ID |
+| `namespaceId` | `string` | 否 | `""` | 命名空间 ID；省略表示 public（空字符串，非字面量 `"public"`） |
 | `username` | `string` | 否 | - | 认证用户名 |
 | `password` | `string` | 否 | - | 认证密码 |
 | `timeout` | `number` | 否 | `5000` | 请求超时时间（毫秒） |
@@ -115,7 +113,7 @@ await serviceClient.deregisterInstance('my-service', '192.168.1.100', 8080);
 |------|------|------|------|
 | `dataId` | `string` | 是 | 配置 ID |
 | `groupName` | `string` | 是 | 配置分组 |
-| `namespaceId` | `string` | 否 | 命名空间 ID（覆盖客户端设置） |
+| `namespaceId` | `string` | 否 | 命名空间 ID（覆盖客户端设置；省略时使用客户端默认值 `""`） |
 
 **返回值：** `ConfigResult`
 
@@ -296,7 +294,6 @@ class AppController {
       nacos: {
         client: {
           serverList: ['http://localhost:8848'],
-          namespaceId: 'public',
           username: 'nacos',
           password: 'nacos',
         },
@@ -384,7 +381,6 @@ class DiscoveryController {
       nacos: {
         client: {
           serverList: ['http://localhost:8848'],
-          namespaceId: 'public',
           username: 'nacos',
           password: 'nacos',
         },
@@ -497,6 +493,26 @@ serviceClient.setDefaultRetryStrategy({
   exponentialBackoff: true,
   baseDelay: 1000,
   maxDelay: 30000,
+});
+```
+
+## 命名空间
+
+Nacos 3.x Open API 要求请求中**始终**携带 `namespaceId` 参数。控制台默认命名空间（显示为 **public**）对应的 ID 是**空字符串** `""`，不是字面量 `"public"`。
+
+- 未在 `NacosClient` 中配置 `namespaceId` 时，客户端会在 `getConfig`、`registerInstance`、`deregisterInstance`、`getInstances` 等调用中自动附带 `namespaceId=`（空值）
+- 使用自定义命名空间时，传入控制台中的命名空间 ID（通常为 UUID）
+- **0.1.1 及更早版本**在未配置 `namespaceId` 时会省略该参数，导致 Nacos 3.x 返回 `code=20004`；请使用 **0.1.2+**
+- 若曾对 `@dangao/nacos-client@0.1.1` 使用 `bun patch` 规避此问题，升级后请移除 `package.json` 中的 `patchedDependencies` 及对应 patch 文件
+
+```typescript
+// public 命名空间（推荐：省略 namespaceId）
+const publicClient = new NacosClient({ serverList: ['http://localhost:8848'] });
+
+// 自定义命名空间
+const customClient = new NacosClient({
+  serverList: ['http://localhost:8848'],
+  namespaceId: 'your-namespace-uuid',
 });
 ```
 

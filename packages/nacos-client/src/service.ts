@@ -21,17 +21,15 @@ export class NacosServiceClient {
    * API: POST /nacos/v3/client/ns/instance
    */
   public async registerInstance(options: RegisterInstanceOptions): Promise<void> {
-    const namespaceId = options.namespaceId ?? this.client.getNamespaceId();
+    /** Nacos 3.x：public 命名空间需带 `namespaceId=`（空），省略会 20004 */
+    const namespaceId = options.namespaceId ?? this.client.getNamespaceId() ?? '';
 
     const params: Record<string, string | number | boolean | undefined> = {
       serviceName: options.serviceName,
       ip: options.ip,
       port: options.port,
+      namespaceId,
     };
-
-    if (namespaceId) {
-      params.namespaceId = namespaceId;
-    }
 
     if (options.groupName) {
       params.groupName = options.groupName;
@@ -81,17 +79,15 @@ export class NacosServiceClient {
       clusterName?: string;
     },
   ): Promise<void> {
-    const namespaceId = options?.namespaceId ?? this.client.getNamespaceId();
+    /** Nacos 3.x：public 命名空间需在查询串中带 `namespaceId=`（空），省略会 20004 */
+    const namespaceId = options?.namespaceId ?? this.client.getNamespaceId() ?? '';
 
-    const params: Record<string, string | number | undefined> = {
+    const params: Record<string, string | number> = {
       serviceName,
       ip,
       port,
+      namespaceId,
     };
-
-    if (namespaceId) {
-      params.namespaceId = namespaceId;
-    }
 
     if (options?.groupName) {
       params.groupName = options.groupName;
@@ -109,15 +105,13 @@ export class NacosServiceClient {
    * API: GET /nacos/v3/client/ns/instance/list
    */
   public async getInstances(options: GetInstancesOptions): Promise<ServiceInstance[]> {
-    const namespaceId = options.namespaceId ?? this.client.getNamespaceId();
+    /** Nacos 3.x：public 命名空间需在查询串中带 `namespaceId=`（空），省略会 20004 */
+    const namespaceId = options.namespaceId ?? this.client.getNamespaceId() ?? '';
 
-    const params: Record<string, string | boolean | undefined> = {
+    const params: Record<string, string | boolean> = {
       serviceName: options.serviceName,
+      namespaceId,
     };
-
-    if (namespaceId) {
-      params.namespaceId = namespaceId;
-    }
 
     if (options.groupName) {
       params.groupName = options.groupName;

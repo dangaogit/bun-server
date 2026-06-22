@@ -22,6 +22,8 @@ Service registration and discovery provides core capabilities in microservice ar
 - **Health Check**: Automatically update service health status based on health check results
 - **Instance Watching**: Watch for service instance changes
 
+> **Namespace**: Omit `namespaceId` for the Nacos public namespace. See [Nacos Integration - Namespace](./microservice-nacos.md#namespace).
+
 ## Quick Start
 
 ### 1. Register Service Registry Module
@@ -39,7 +41,6 @@ app.registerModule(
     nacos: {
       client: {
         serverList: ['http://localhost:8848'],
-        namespaceId: 'public',
         username: 'nacos',
         password: 'nacos',
       },
@@ -95,7 +96,6 @@ The simplest way is to use the `@ServiceRegistry` decorator:
     region: 'us-east',
   },
   clusterName: 'default',
-  namespaceId: 'public',
   groupName: 'DEFAULT_GROUP',
 })
 @Controller('/api/users')
@@ -113,7 +113,7 @@ class UserController {
 - `healthy`: Initial health status
 - `metadata`: Service metadata (version, region, etc.)
 - `clusterName`: Cluster name
-- `namespaceId`: Namespace
+- `namespaceId`: Namespace ID; omit for public (empty string). See [Nacos Integration - Namespace](./microservice-nacos.md#namespace)
 - `groupName`: Group name
 
 ### Manual Registration
@@ -182,7 +182,6 @@ import type { ServiceInstance } from '@dangao/bun-server';
 class MyService {
   @ServiceDiscovery('user-service', {
     healthyOnly: true, // Only get healthy instances
-    namespaceId: 'public',
     groupName: 'DEFAULT_GROUP',
   })
   public instances: ServiceInstance[] = [];
@@ -200,7 +199,6 @@ class MyService {
 // Get service instance list
 const instances = await serviceRegistry.getInstances('user-service', {
   healthyOnly: true,
-  namespaceId: 'public',
   groupName: 'DEFAULT_GROUP',
   clusterName: 'default',
 });
@@ -214,7 +212,6 @@ const unsubscribe = serviceRegistry.watchInstances(
     updateLocalCache(newInstances);
   },
   {
-    namespaceId: 'public',
     groupName: 'DEFAULT_GROUP',
   },
 );

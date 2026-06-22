@@ -5,6 +5,7 @@
 ## 目录
 
 - [概述](#概述)
+- [命名空间](#命名空间)
 - [Nacos 安装](#nacos-安装)
 - [配置中心集成](#配置中心集成)
 - [服务注册中心集成](#服务注册中心集成)
@@ -19,6 +20,26 @@ Bun Server Framework 通过 `@dangao/nacos-client` 包提供 Nacos 3.X 支持，
 - **服务注册**：服务实例注册、续约、注销
 - **服务发现**：服务实例查询和监听
 - **Open API**：基于 Nacos 3.X Open API 实现
+
+## 命名空间
+
+Nacos 控制台默认命名空间显示为 **public**，但其 Open API 中的 ID 是**空字符串** `""`，不是字面量 `"public"`。
+
+`@dangao/nacos-client` **0.1.2+** 在未配置 `namespaceId` 时会自动在请求中附带 `namespaceId=`（空值），适用于配置读取与服务发现。0.1.1 及更早版本会完全省略该参数，导致 Nacos 3.x 返回 `code=20004`。
+
+**推荐做法**：使用 public 命名空间时，省略客户端配置中的 `namespaceId`：
+
+```typescript
+nacos: {
+  client: {
+    serverList: ['http://localhost:8848'],
+    username: 'nacos',
+    password: 'nacos',
+  },
+},
+```
+
+自定义命名空间时传入控制台中的 ID（通常为 UUID）。若曾对 `@dangao/nacos-client@0.1.1` 使用 `bun patch`，升级至 0.1.2+ 后请移除 `patchedDependencies` 及对应 patch 文件。
 
 ## Nacos 安装
 
@@ -48,7 +69,6 @@ app.registerModule(
     nacos: {
       client: {
         serverList: ['http://localhost:8848'],
-        namespaceId: 'public',
         username: 'nacos',
         password: 'nacos',
       },
@@ -125,7 +145,6 @@ app.registerModule(
     nacos: {
       client: {
         serverList: ['http://localhost:8848'],
-        namespaceId: 'public',
         username: 'nacos',
         password: 'nacos',
       },
@@ -197,7 +216,6 @@ import {
 
 const instances = await serviceRegistry.getInstances('user-service', {
   healthyOnly: true,
-  namespaceId: 'public',
 });
 
 // 监听服务实例变更
@@ -226,7 +244,6 @@ ConfigCenterModule.forRoot({
   nacos: {
     client: {
       serverList: ['http://localhost:8848'],
-      namespaceId: 'public',
       username: 'nacos',
       password: 'nacos',
     },
@@ -239,7 +256,6 @@ ServiceRegistryModule.forRoot({
   nacos: {
     client: {
       serverList: ['http://localhost:8848'],
-      namespaceId: 'public',
       username: 'nacos',
       password: 'nacos',
     },
@@ -336,6 +352,17 @@ await app.listen(3000);
 - 检查 `watchInterval` 设置是否合理
 - 检查配置监听回调是否正确实现
 - 查看日志确认配置变更是否被检测到
+
+### 6. public 命名空间返回 20004
+
+**问题**：未配置 `namespaceId` 时，`getConfig` / 服务注册或发现返回 `code=20004`
+
+**原因**：Nacos 3.x 要求请求携带 `namespaceId=`（空值）；0.1.1 及更早的 `@dangao/nacos-client` 会完全省略该参数
+
+**解决方案**：
+- 升级 `@dangao/nacos-client` 至 **0.1.2+**（框架依赖会自动带入，也可在下游项目中显式升级）
+- 移除 `bun patch`（如有）
+- 不要将 `namespaceId` 设为字面量 `"public"`；public 对应空字符串，推荐直接省略配置
 
 ## 参考资源
 
